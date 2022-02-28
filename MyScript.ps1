@@ -1,4 +1,4 @@
-function Get-FieldSet {
+function Get-FieldValidators {
     [CmdletBinding(DefaultParameterSetName = 'ByInputObject')]
     Param(
         [Parameter(ParameterSetName = 'ByParameterInfo')]
@@ -69,13 +69,13 @@ function Get-FieldSet {
                     [PsCustomObject]@{
                         Name = $parameter.Name;
                         Parameter = $parameter;
-                        Fields = Get-FieldSet -ParameterInfo $parameter;
+                        Fields = Get-FieldValidators -ParameterInfo $parameter;
                     }
                 }
             }
 
             'ByCommandName' {
-                return Get-Command $CommandName | Get-FieldSet
+                return Get-Command $CommandName | Get-FieldValidators
             }
         }
     }
