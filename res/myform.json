@@ -1,0 +1,83 @@
+{
+    "Preferences": {
+        "Title": "System Prep Preferences",
+        "FontFamily": "Microsoft Sans Serif",
+        "Point": 10,
+        "Width": 500,
+        "Height": 200,
+        "Margin": 10,
+        "ConfirmType": "AllowOrDeny"
+    },
+    "Controls": [
+        {
+            "Name": "GeoLocation",
+            "Type": "Check",
+            "Text": "Allow device geolocation services"
+        },
+        {
+            "Name": "AutoTimeSync",
+            "Type": "Check",
+            "Text": "Allow automatic time synchronization"
+        },
+        {
+            "Name": "AutoSetTimeZone",
+            "Type": "Check",
+            "Text": "Allow automatic time zone update"
+        },
+        {
+            "Name": "RemoteDesktop",
+            "Type": "Check",
+            "Text": "Allow Remote Desktop connections to this device"
+        },
+        {
+            "Name": "UserAccountControl",
+            "Type": "Check",
+            "Text": "Enable User Account Control"
+        },
+        {
+            "Name": "NetworkDiscovery",
+            "Type": "Check",
+            "Text": "Enable Network Discovery"
+        },
+        {
+            "Name": "FileSharing",
+            "Type": "Check",
+            "Text": "Enable File Sharing"
+        },
+        {
+            "Name": "ExplorerAnimations",
+            "Type": "Check",
+            "Text": "Allow animations in Windows Explorer"
+        },
+        {
+            "Name": "WindowsFeed",
+            "Type": "Check",
+            "Text": "Enable Windows Feed"
+        },
+        {
+            "Name": "UpdatePsHelp",
+            "Type": "Check",
+            "Text": "Update PowerShell Help docs"
+        },
+        {
+            "Name": "NewHostname",
+            "Type": "Field",
+            "Text": "New hostname"
+        },
+        {
+            "Name": "AppxDebloatingPreference",
+            "Type": "Enum",
+            "Text": "Appx package debloat preference",
+            "Symbols": [
+                {
+                    "Name": "Personal",
+                    "Text": "Personal"
+                },
+                {
+                    "Name": "Thin",
+                    "Text": "Thin"
+                }
+            ]
+        }
+    ]
+}
