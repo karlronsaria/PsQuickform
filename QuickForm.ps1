@@ -24,6 +24,7 @@ $script:DEFAULT_PREFERENCES = [PsCustomObject]@{
     FontFamily = "Microsoft Sans Serif";
     Point = 10;
     Width = 500;
+    Height = 800;
     Margin = 10;
     ConfirmType = "TrueOrFalse";
 }
@@ -80,7 +81,7 @@ function New-QuickformObject {
             -Preferences $myPreferences
 
         $form = $what.MainForm
-        $layout = $what.FlowLayoutPanel
+        $layouts = $what.Layouts
 
         $controls = @{}
         $list = @()
@@ -104,7 +105,7 @@ function New-QuickformObject {
             $value = switch ($item.Type) {
                 "Check" {
                     Add-QuickformCheckBox `
-                        -Parent $layout `
+                        -Layouts $layouts `
                         -Text $text `
                         -Default $default `
                         -Preferences $myPreferences
@@ -117,7 +118,7 @@ function New-QuickformObject {
                         -Name MaxLength;
 
                     Add-QuickformFieldBox `
-                        -Parent $layout `
+                        -Layouts $layouts `
                         -Text $text `
                         -MinLength $minLength `
                         -MaxLength $maxLength `
@@ -127,7 +128,7 @@ function New-QuickformObject {
 
                 "Enum" {
                     Add-QuickformRadioBox `
-                        -Parent $layout `
+                        -Layouts $layouts `
                         -Text $text `
                         -Symbols $item.Symbols `
                         -Default $default `
@@ -148,7 +149,7 @@ function New-QuickformObject {
                         -Default $false;
 
                     Add-QuickformSlider `
-                        -Parent $layout `
+                        -Layouts $layouts `
                         -Text $text `
                         -DecimalPlaces $places `
                         -Minimum $min `
@@ -162,7 +163,7 @@ function New-QuickformObject {
             $controls.Add($item.Name, $value)
         }
 
-        $endButtons = Add-QuickformOkCancelButtons -Parent $layout
+        $endButtons = Add-QuickformOkCancelButtons -Layouts $layouts
         $okButton = $endButtons.OkButton
         $cancelButton = $endButtons.CancelButton
         $out = [PsCustomObject]@{}
@@ -235,6 +236,88 @@ function New-QuickformObject {
     }
 }
 
+function Add-QuickformLayout {
+    Param(
+        [System.Windows.Forms.Control]
+        $Parent,
+
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES
+    )
+
+    $layout = New-Object System.Windows.Forms.FlowLayoutPanel
+    $layout.FlowDirection = `
+        [System.Windows.Forms.FlowDirection]::TopDown
+    $layout.Left = $Preferences.Margin
+    $layout.Width = $Preferences.Width - (2 * $Preferences.Margin)
+    $layout.AutoSize = $true
+    $layout.WrapContents = $false
+    $Parent.Controls.Add($layout)
+    return $layout
+}
+
+function Add-QuickformMultilayout {
+    Param(
+        [System.Windows.Forms.Control]
+        $Parent,
+
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES
+    )
+
+    $multilayout = New-Object System.Windows.Forms.FlowLayoutPanel
+    $multilayout.Left = $Preferences.Margin
+    $multilayout.AutoSize = $true
+    $multilayout.FlowDirection = `
+        [System.Windows.Forms.FlowDirection]::LeftToRight
+
+    $layout = Add-QuickformLayout `
+        -Parent $multilayout `
+        -Preferences $Preferences
+
+    $form.Controls.Add($multilayout)
+
+    return [PsCustomObject]@{
+        Multilayout = $multilayout;
+        Sublayouts = @($layout);
+    }
+}
+
+function Add-ControlToMultilayout {
+    Param(
+        [PsCustomObject]
+        $Layouts,
+
+        [System.Windows.Forms.Control[]]
+        $Control,
+
+        [PsCustomObject]
+        $Preferences
+    )
+
+    $final = $Layouts.Sublayouts[-1]
+    $totalHeight = $final.Height
+
+    $Control | % {
+        $totalHeight += $Control.Height
+    }
+
+    if ($totalHeight -gt $Preferences.Height) {
+        $layout = Add-QuickformLayout `
+            -Parent $Layouts.Multilayout `
+            -Preferences $Preferences
+
+        $Layouts.Sublayouts += @($layout)
+        $final = $Layouts.Sublayouts[-1]
+    }
+
+    $Control | % {
+        $final.Controls.Add($_)
+    }
+
+    return $Layouts
+}
+
 function New-QuickformMainForm {
     Param(
         [PsCustomObject]
@@ -250,30 +333,24 @@ function New-QuickformMainForm {
     $form = New-Object System.Windows.Forms.Form
     $form.Text = $Preferences.Title
     $form.Font = $font
-    $form.Width = $Preferences.Width
     $form.AutoSize = $true
     $form.FormBorderStyle = `
         [System.Windows.Forms.FormBorderStyle]::FixedSingle
 
-    $layout = New-Object System.Windows.Forms.FlowLayoutPanel
-    $layout.FlowDirection = `
-        [System.Windows.Forms.FlowDirection]::TopDown
-    $layout.Left = $Preferences.Margin
-    $layout.Width = $Preferences.Width - (2 * $Preferences.Margin)
-    $layout.AutoSize = $true
-    $layout.WrapContents = $false
-    $form.Controls.Add($layout)
+    $layouts = Add-QuickformMultilayout `
+        -Parent $form `
+        -Preferences $Preferences
 
     return [PsCustomObject]@{
         MainForm = $form;
-        FlowLayoutPanel = $layout;
+        Layouts = $layouts;
     }
 }
 
 function Add-QuickformCheckBox {
     Param(
-        [System.Windows.Forms.Control]
-        $Parent,
+        [PsCustomObject]
+        $Layouts,
 
         [String]
         $Text,
@@ -293,14 +370,18 @@ function Add-QuickformCheckBox {
         $checkBox.Checked = $Default
     }
 
-    $Parent.Controls.Add($checkBox)
+    $Layouts = Add-ControlToMultilayout `
+        -Layouts $Layouts `
+        -Control $checkBox `
+        -Preferences $Preferences
+
     return $checkBox
 }
 
 function Add-QuickformFieldBox {
     Param(
-        [System.Windows.Forms.Control]
-        $Parent,
+        [PsCustomObject]
+        $Layouts,
 
         [String]
         $Text,
@@ -349,14 +430,19 @@ function Add-QuickformFieldBox {
 
     $flowPanel.Controls.Add($label)
     $flowPanel.Controls.Add($textBox)
-    $Parent.Controls.Add($flowPanel)
+
+    $Layouts = Add-ControlToMultilayout `
+        -Layouts $Layouts `
+        -Control $flowPanel `
+        -Preferences $Preferences
+
     return $textBox
 }
 
 function Add-QuickformSlider {
     Param(
-        [System.Windows.Forms.Control]
-        $Parent,
+        [PsCustomObject]
+        $Layouts,
 
         [String]
         $Text,
@@ -410,14 +496,19 @@ function Add-QuickformSlider {
 
     $flowPanel.Controls.Add($label)
     $flowPanel.Controls.Add($slider)
-    $Parent.Controls.Add($flowPanel)
+
+    $Layouts = Add-ControlToMultilayout `
+        -Layouts $Layouts `
+        -Control $flowPanel `
+        -Preferences $Preferences
+
     return $slider
 }
 
 function Add-QuickformRadioBox {
     Param(
-        [System.Windows.Forms.Control]
-        $Parent,
+        [PsCustomObject]
+        $Layouts,
 
         [String]
         $Text,
@@ -469,14 +560,21 @@ function Add-QuickformRadioBox {
         $buttons[$Symbols[0].Name].Checked = $true
     }
 
-    $Parent.Controls.Add($groupBox)
+    $Layouts = Add-ControlToMultilayout `
+        -Layouts $Layouts `
+        -Control $groupBox `
+        -Preferences $Preferences
+
     return $buttons
 }
 
 function Add-QuickformOkCancelButtons {
     Param(
-        [System.Windows.Forms.Control]
-        $Parent
+        [PsCustomObject]
+        $Layouts,
+
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES
     )
 
     $endButtons = New-Object System.Windows.Forms.FlowLayoutPanel
@@ -497,11 +595,14 @@ function Add-QuickformOkCancelButtons {
 
     $endButtons.Controls.Add($okButton)
     $endButtons.Controls.Add($cancelButton)
-    $endButtons.Left = ($Parent.Width - $endButtons.Width) / 2
+    $endButtons.Left = ($Preferences.Width - $endButtons.Width) / 2
     $endButtons.Anchor = `
         [System.Windows.Forms.AnchorStyles]::None
 
-    $Parent.Controls.Add($endButtons)
+    $Layouts = Add-ControlToMultilayout `
+        -Layouts $Layouts `
+        -Control $endButtons `
+        -Preferences $Preferences
 
     return [PsCustomObject]@{
         OkButton = $okButton;
