@@ -19,6 +19,15 @@ function Get-QuickformObject {
             -AsHashtable:$AsHashtable
 }
 
+$script:DEFAULT_PREFERENCES = [PsCustomObject]@{
+    Title = "Preferences";
+    FontFamily = "Microsoft Sans Serif";
+    Point = 10;
+    Width = 500;
+    Margin = 10;
+    ConfirmType = "TrueOrFalse";
+}
+
 function New-QuickformObject {
     [CmdletBinding()]
     Param(
@@ -34,14 +43,25 @@ function New-QuickformObject {
     )
 
     Begin {
-        $myPreferences = [PsCustomObject]@{
-            Title = "Preferences";
-            FontFamily = "Microsoft Sans Serif";
-            Point = 10;
-            Width = 500;
-            Margin = 10;
-            ConfirmType = "TrueOrFalse";
+        function Get-PropertyOrDefault {
+            Param(
+                [Parameter(ValueFromPipeline = $true)]
+                $InputObject,
+
+                [String]
+                $Name,
+
+                $Default = $null
+            )
+
+            $default = if ($item.PsObject.Properties.Name -contains $Name) {
+                $item.$Name
+            } else {
+                $Default
+            }
         }
+
+        $myPreferences = $script:DEFAULT_PREFERENCES
 
         if ($Preferences) {
             foreach ($property in $myPreferences.PsObject.Properties.Name) {
@@ -70,11 +90,7 @@ function New-QuickformObject {
 
     End {
         foreach ($item in $list) {
-            $default = if ($item.PsObject.Properties.Name -contains "Default") {
-                $item.Default
-            } else {
-                $null
-            }
+            $default = Get-PropertyOrDefault $item -Name "Default"
 
             $value = switch ($item.Type) {
                 "Check" {
@@ -86,9 +102,16 @@ function New-QuickformObject {
                 }
 
                 "Field" {
+                    $minLength = $item | Get-PropertyOrDefault `
+                        -Name MinLength;
+                    $maxLength = $item | Get-PropertyOrDefault `
+                        -Name MaxLength;
+
                     Add-QuickformFieldBox `
                         -Parent $layout `
                         -Text $item.Text `
+                        -MinLength $minLength `
+                        -MaxLength $maxLength `
                         -Default $default `
                         -Preferences $myPreferences
                 }
@@ -101,6 +124,31 @@ function New-QuickformObject {
                         -Default $default `
                         -Preferences $myPreferences
                 }
+
+                "Numeric" {
+                    $places = $item | Get-PropertyOrDefault `
+                        -Name DecimalPlaces;
+                    $min = $item | Get-PropertyOrDefault `
+                        -Name Minimum `
+                        -Default $script:DEFAULT_SLIDER_MINIMUM;
+                    $max = $item | Get-PropertyOrDefault `
+                        -Name Maximum `
+                        -Default $script:DEFAULT_SLIDER_MAXIMUM;
+                    $asFloat = $item | Get-PropertyOrDefault `
+                        -Name AsFloat `
+                        -Default $false;
+
+                    Add-QuickformSlider `
+                        -Parent $layout `
+                        -Text $item.Text `
+                        -Symbols $item.Symbols `
+                        -DecimalPlaces $places `
+                        -Minimum $Minimum `
+                        -Maximum $Maximum `
+                        -AsFloat:$AsFloat `
+                        -Default $default `
+                        -Preferences $myPreferences
+                    }
             }
 
             $controls.Add($item.Name, $value)
@@ -143,8 +191,16 @@ function New-QuickformObject {
                     $buttons = $controls[$item.Name];
 
                     if ($buttons) {
-                        $buttons.Keys | ? { $buttons[$_].Checked } | % { $_ }
+                        $buttons.Keys | where {
+                            $buttons[$_].Checked
+                        } | foreach {
+                            $_
+                        }
                     }
+                }
+
+                "Numeric" {
+                    $controls[$item.Name].Value
                 }
             }
 
@@ -174,7 +230,7 @@ function New-QuickformObject {
 function New-QuickformMainForm {
     Param(
         [PsCustomObject]
-        $Preferences
+        $Preferences = $script:DEFAULT_PREFERENCES
     )
 
     $font = New-Object System.Drawing.Font( `
@@ -217,7 +273,7 @@ function Add-QuickformCheckBox {
         $Default,
 
         [PsCustomObject]
-        $Preferences
+        $Preferences = $script:DEFAULT_PREFERENCES
     )
 
     $checkBox = New-Object System.Windows.Forms.CheckBox
@@ -241,10 +297,12 @@ function Add-QuickformFieldBox {
         [String]
         $Text,
 
+        $MinLength,
+        $MaxLength,
         $Default,
 
         [PsCustomObject]
-        $Preferences
+        $Preferences = $script:DEFAULT_PREFERENCES
     )
 
     $flowPanel = New-Object System.Windows.Forms.FlowLayoutPanel
@@ -269,6 +327,14 @@ function Add-QuickformFieldBox {
         [System.Windows.Forms.AnchorStyles]::Left + `
         [System.Windows.Forms.AnchorStyles]::Right
 
+    if ($null -ne $MinLength) {
+        $textBox.MinLength = $MinLength
+    }
+
+    if ($null -ne $MaxLength) {
+        $textBox.MaxLength = $MaxLength
+    }
+
     if ($null -ne $Default) {
         $textBox.Text = $Default
     }
@@ -277,6 +343,71 @@ function Add-QuickformFieldBox {
     $flowPanel.Controls.Add($textBox)
     $Parent.Controls.Add($flowPanel)
     return $textBox
+}
+
+$script:DEFAULT_SLIDER_MINIMUM = -99999
+$script:DEFAULT_SLIDER_MAXIMUM = 99999
+$script:DEFAULT_SLIDER_DECIMALPLACES = 2
+
+function Add-QuickformSlider {
+    Param(
+        [System.Windows.Forms.Control]
+        $Parent,
+
+        [String]
+        $Text,
+
+        $Default,
+        $Minimum = $script:DEFAULT_SLIDER_MINIMUM,
+        $Maximum = $script:DEFAULT_SLIDER_MAXIMUM,
+        $DecimalPlaces,
+
+        [Switch]
+        $AsFloat,
+
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES
+    )
+
+    $flowPanel = New-Object System.Windows.Forms.FlowLayoutPanel
+    $flowPanel.FlowDirection = `
+        [System.Windows.Forms.FlowDirection]::TopDown
+    $flowPanel.Left = $Preferences.Margin
+    $flowPanel.Width = $Preferences.Width - (3 * $Preferences.Margin)
+    $flowPanel.AutoSize = $true
+    $flowPanel.WrapContents = $false
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = $Text
+    $label.Left = $Preferences.Margin
+    $label.Width = $Preferences.Width - (4 * $Preferences.Margin)
+    $label.Anchor = `
+        [System.Windows.Forms.AnchorStyles]::Right
+
+    $slider = New-Object System.Windows.Forms.NumericUpDown
+    $slider.Left = $Preferences.Margin
+    $slider.Width = $Preferences.Width - (4 * $Preferences.Margin)
+    $slider.Anchor = `
+        [System.Windows.Forms.AnchorStyles]::Left + `
+        [System.Windows.Forms.AnchorStyles]::Right
+    $slider.Minimum = $Minimum
+    $slider.Maximum = $Maximum
+
+    if ($null -ne $DecimalPlaces) {
+        $slider.DecimalPlaces = $DecimalPlaces
+    }
+    elseif ($AsFloat) {
+        $slider.DecimalPlaces = $script:DEFAULT_SLIDER_DECIMALPLACES
+    }
+
+    if ($null -ne $Default) {
+        $slider.Value = $Default
+    }
+
+    $flowPanel.Controls.Add($label)
+    $flowPanel.Controls.Add($slider)
+    $Parent.Controls.Add($flowPanel)
+    return $slider
 }
 
 function Add-QuickformRadioBox {
@@ -293,7 +424,7 @@ function Add-QuickformRadioBox {
         $Symbols,
 
         [PsCustomObject]
-        $Preferences
+        $Preferences = $script:DEFAULT_PREFERENCES
     )
 
     $groupBox = New-Object System.Windows.Forms.GroupBox
@@ -369,3 +500,4 @@ function Add-QuickformOkCancelButtons {
         CancelButton = $cancelButton;
     }
 }
+
