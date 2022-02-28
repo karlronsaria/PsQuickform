@@ -35,7 +35,6 @@
         {
             "Name": "TheFloat",
             "Type": "Numeric",
-            "Text": "A float",
             "AsFloat": true,
             "Default": 47.7
         },

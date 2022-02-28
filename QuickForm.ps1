@@ -68,7 +68,7 @@ function New-QuickformObject {
         $myPreferences = $script:DEFAULT_PREFERENCES
 
         if ($Preferences) {
-            foreach ($property in $myPreferences.PsObject.Properties.Name) {
+            foreach ($property in $Preferences.PsObject.Properties.Name) {
                 $myPreferences.$property = $Preferences.$property
             }
         }
@@ -97,11 +97,15 @@ function New-QuickformObject {
             $default = $item | Get-PropertyOrDefault `
                 -Name "Default"
 
+            $text = $item | Get-PropertyOrDefault `
+                -Name "Text" `
+                -Default $item.Name
+
             $value = switch ($item.Type) {
                 "Check" {
                     Add-QuickformCheckBox `
                         -Parent $layout `
-                        -Text $item.Text `
+                        -Text $text `
                         -Default $default `
                         -Preferences $myPreferences
                 }
@@ -114,7 +118,7 @@ function New-QuickformObject {
 
                     Add-QuickformFieldBox `
                         -Parent $layout `
-                        -Text $item.Text `
+                        -Text $text `
                         -MinLength $minLength `
                         -MaxLength $maxLength `
                         -Default $default `
@@ -124,7 +128,7 @@ function New-QuickformObject {
                 "Enum" {
                     Add-QuickformRadioBox `
                         -Parent $layout `
-                        -Text $item.Text `
+                        -Text $text `
                         -Symbols $item.Symbols `
                         -Default $default `
                         -Preferences $myPreferences
@@ -145,7 +149,7 @@ function New-QuickformObject {
 
                     Add-QuickformSlider `
                         -Parent $layout `
-                        -Text $item.Text `
+                        -Text $text `
                         -DecimalPlaces $places `
                         -Minimum $min `
                         -Maximum $max `
@@ -163,7 +167,7 @@ function New-QuickformObject {
         $cancelButton = $endButtons.CancelButton
         $out = [PsCustomObject]@{}
 
-        $confirmChanges = switch ($form.ShowDialog()) {
+        $confirm = switch ($form.ShowDialog()) {
             "OK" { $true }
             "Cancel" { $false }
         }
@@ -225,7 +229,7 @@ function New-QuickformObject {
         }
 
         return [PsCustomObject]@{
-            Success = $confirmChanges;
+            Confirm = $confirm;
             FormResult = $out;
         }
     }
@@ -449,7 +453,11 @@ function Add-QuickformRadioBox {
         $button = New-Object System.Windows.Forms.RadioButton
         $button.Left = $Preferences.Margin
         $button.Width = $Preferences.Width - (4 * $Preferences.Margin)
-        $button.Text = $symbol.Text
+
+        $button.Text = $symbol | Get-PropertyOrDefault `
+            -Name Text `
+            -Default $symbol.Name
+
         $buttons.Add($symbol.Name, $button)
         $flowPanel.Controls.Add($button)
     }
@@ -498,6 +506,275 @@ function Add-QuickformOkCancelButtons {
     return [PsCustomObject]@{
         OkButton = $okButton;
         CancelButton = $cancelButton;
+    }
+}
+
+function Get-FieldValidators {
+    [CmdletBinding(DefaultParameterSetName = 'ByInputObject')]
+    Param(
+        [Parameter(ParameterSetName = 'ByParameterInfo')]
+        [System.Management.Automation.ParameterMetadata]
+        $ParameterInfo,
+
+        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [System.Management.Automation.CommandInfo]
+        $CommandInfo,
+
+        [Parameter(ParameterSetName = 'ByCommandName')]
+        [String]
+        $CommandName
+    )
+
+    Begin {
+        function Get-PropertyOrDefault {
+            Param(
+                [Parameter(ValueFromPipeline = $true)]
+                $InputObject,
+
+                [String]
+                $Name,
+
+                $Default = $null
+            )
+
+            if ($item.PsObject.Properties.Name -contains $Name) {
+                return $item.$Name
+            }
+
+            return $Default
+        }
+    }
+
+    Process {
+        switch ($PsCmdlet.ParameterSetName) {
+            'ByParameterInfo' {
+                $isEnum = $ParameterInfo.ParameterType.PsObject.Properties.Name `
+                    -contains 'BaseType' `
+                    -and $ParameterInfo.ParameterType.BaseType.Name `
+                    -eq 'Enum'
+
+                if ($isEnum) {
+                    [PsCustomObject]@{
+                        Type = 'Enum';
+                        Values = $ParameterInfo.ParameterType.GetFields();
+                    }
+                }
+
+                foreach ($attribute in $ParameterInfo.Attributes) {
+                    switch ($attribute.TypeId.Name) {
+                        'ValidateSetAttribute' {
+                            [PsCustomObject]@{
+                                Type = 'ValidSet';
+                                Values = $attribute.ValidValues;
+                            }
+                        }
+
+                        'ValidateRangeAttribute' {
+                            [PsCustomObject]@{
+                                Type = 'ValidRange';
+                                Minimum = $attribute.MinRange;
+                                Maximum = $attribute.MaxRange;
+                            }
+                        }
+
+                        'ValidateCountAttribute' {
+                            [PsCustomObject]@{
+                                Type = 'ValidCount';
+                                Minimum = $attribute.MinLength;
+                                Maximum = $attribute.MaxLength;
+                            }
+                        }
+
+                        'ValidateLengthAttribute' {
+                            [PsCustomObject]@{
+                                Type = 'ValidLength';
+                                Minimum = $attribute.MinLength;
+                                Maximum = $attribute.MaxLength;
+                            }
+                        }
+                    }
+                }
+            }
+
+            'ByCommandInfo' {
+                $parameters = $CommandInfo.Parameters.Keys | % {
+                    $CommandInfo.Parameters[$_]
+                }
+
+                foreach ($parameter in $parameters) {
+                    [PsCustomObject]@{
+                        Name = $parameter.Name;
+                        Parameter = $parameter;
+                        Fields = Get-FieldValidators -ParameterInfo $parameter;
+                    }
+                }
+            }
+
+            'ByCommandName' {
+                return Get-Command $CommandName | Get-FieldValidators
+            }
+        }
+    }
+}
+
+function Test-IsCommonParameter {
+    Param(
+        [System.Management.Automation.ParameterMetadata]
+        $ParameterInfo
+    )
+
+    # link: https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_commonparameters?view=powershell-7.2
+    # retrieved: 2022_02_28
+    $names = @(
+        'Debug',
+        'ErrorAction',
+        'ErrorVariable',
+        'InformationAction',
+        'InformationVariable',
+        'OutVariable',
+        'OutBuffer',
+        'PipelineVariable',
+        'Verbose',
+        'WarningAction',
+        'WarningVariable'
+    )
+
+    return $names -contains $ParameterInfo.Name
+
+    # $nonCommon = @($ParameterInfo.Attributes `
+    #     | where TypeId -like System.Management.Automation.Internal.CommonParameters*)
+
+    # return $null -ne $nonCommon -and $nonCommon.Count -gt 0
+}
+
+function ConvertTo-QuickformParameter {
+    Param(
+        [System.Management.Automation.ParameterMetadata]
+        $ParameterInfo
+    )
+
+    $type = $ParameterInfo.ParameterType
+    $validators = Get-FieldValidators -ParameterInfo $ParameterInfo
+    $validatorType = $null
+
+    $obj = [PsCustomObject]@{
+        Name = $ParameterInfo.Name;
+        Type = '';
+    }
+
+    if ($validators) {
+        $validatorType = $validators.Type
+
+        switch ($validatorType) {
+            'Enum' {
+                $obj.Type = 'Enum'
+
+                $values = $validators.Values.Name | ? {
+                    $_ -ne 'value__'
+                }
+
+                $obj | Add-Member `
+                    -MemberType NoteProperty `
+                    -Name Symbols `
+                    -Value ($values | % {
+                        [PsCustomObject]@{
+                            Name = $_;
+                        }
+                    })
+            }
+
+            'ValidSet' {
+                $obj.Type = 'Enum'
+                $values = $validators.Values
+
+                $obj | Add-Member `
+                    -MemberType NoteProperty `
+                    -Name Symbols `
+                    -Value ($values | % {
+                        [PsCustomObject]@{
+                            Name = $_;
+                        }
+                    })
+            }
+
+            'ValidRange' {
+                $obj.Type = 'Numeric'
+
+                $obj | Add-Member `
+                    -MemberType NoteProperty `
+                    -Name Minimum `
+                    -Value $validators.Minimum
+
+                $obj | Add-Member `
+                    -MemberType NoteProperty `
+                    -Name Maximum `
+                    -Value $validators.Maximum
+            }
+
+            'ValidCount' {
+                $obj | Add-Member `
+                    -MemberType NoteProperty `
+                    -Name MinCount `
+                    -Value $validators.Minimum
+
+                $obj | Add-Member `
+                    -MemberType NoteProperty `
+                    -Name MaxCount `
+                    -Value $validators.Maximum
+            }
+
+            'ValidLength' {
+                $obj | Add-Member `
+                    -MemberType NoteProperty `
+                    -Name MinLength `
+                    -Value $validators.Minimum
+
+                $obj | Add-Member `
+                    -MemberType NoteProperty `
+                    -Name MaxLength `
+                    -Value $validators.Maximum
+            }
+        }
+    }
+
+    if ($obj.Type -eq '') {
+        $obj.Type = switch -Wildcard ($type.Name) {
+            'String' { 'Field' }
+            'Int*' { 'Numeric' }
+            'Float' { 'Numeric' }
+            'Double' { 'Numeric' }
+            'Switch*' { 'Check' }
+            'Bool*' { 'Check' }
+            default { 'Field' }
+        }
+    }
+
+    return $obj
+}
+
+function ConvertTo-QuickformCommand {
+    Param(
+        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [System.Management.Automation.CommandInfo]
+        $CommandInfo,
+
+        [Switch]
+        $IncludeCommonParameters
+    )
+
+    return [PsCustomObject]@{
+        Preferences = [PsCustomObject]@{
+            Title = $CommandInfo.Name;
+        };
+
+        Controls = $CommandInfo.Parameters.Keys | % {
+            $CommandInfo.Parameters[$_]
+        } | where {
+            $IncludeCommonParameters `
+                -or -not (Test-IsCommonParameter -ParameterInfo $_)
+        } | foreach {
+            ConvertTo-QuickformParameter -ParameterInfo $_
+        };
     }
 }
 
