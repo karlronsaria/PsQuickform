@@ -154,11 +154,6 @@ function New-QuickformObject {
                 -Value $value
         }
 
-        $out | Add-Member `
-            -MemberType NoteProperty `
-            -Name ConfirmChanges `
-            -Value $confirmChanges
-
         if ($AsHashtable) {
             $table = @{}
 
@@ -166,10 +161,13 @@ function New-QuickformObject {
                 $table[$property] = $out.$property
             }
 
-            return $table
+            $out = $table
         }
 
-        return $out
+        return [PsCustomObject]@{
+            Success = $confirmChanges;
+            FormResult = $out;
+        }
     }
 }
 
