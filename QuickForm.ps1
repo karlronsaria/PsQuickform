@@ -54,11 +54,11 @@ function New-QuickformObject {
                 $Default = $null
             )
 
-            $default = if ($item.PsObject.Properties.Name -contains $Name) {
-                $item.$Name
-            } else {
-                $Default
+            if ($item.PsObject.Properties.Name -contains $Name) {
+                return $item.$Name
             }
+
+            return $Default
         }
 
         $myPreferences = $script:DEFAULT_PREFERENCES
@@ -90,7 +90,8 @@ function New-QuickformObject {
 
     End {
         foreach ($item in $list) {
-            $default = Get-PropertyOrDefault $item -Name "Default"
+            $default = $item | Get-PropertyOrDefault `
+                -Name "Default"
 
             $value = switch ($item.Type) {
                 "Check" {
@@ -141,11 +142,10 @@ function New-QuickformObject {
                     Add-QuickformSlider `
                         -Parent $layout `
                         -Text $item.Text `
-                        -Symbols $item.Symbols `
                         -DecimalPlaces $places `
-                        -Minimum $Minimum `
-                        -Maximum $Maximum `
-                        -AsFloat:$AsFloat `
+                        -Minimum $min `
+                        -Maximum $max `
+                        -AsFloat:$asFloat `
                         -Default $default `
                         -Preferences $myPreferences
                     }
