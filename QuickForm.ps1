@@ -9,7 +9,7 @@ function Get-QuickformObject {
         $AsHashtable
     )
 
-    if (-not $InputObject) {
+    if ($null -eq $InputObject) {
         return New-ObjectForm
     }
 
@@ -148,7 +148,7 @@ function New-QuickformObject {
                         -AsFloat:$asFloat `
                         -Default $default `
                         -Preferences $myPreferences
-                    }
+                }
             }
 
             $controls.Add($item.Name, $value)
