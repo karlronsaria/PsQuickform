@@ -10,7 +10,7 @@ function Get-QuickformObject {
     )
 
     if ($null -eq $InputObject) {
-        return New-ObjectForm
+        return New-QuickformObject
     }
 
     return $InputObject.Controls `
@@ -27,6 +27,10 @@ $script:DEFAULT_PREFERENCES = [PsCustomObject]@{
     Margin = 10;
     ConfirmType = "TrueOrFalse";
 }
+
+$script:DEFAULT_SLIDER_MINIMUM = -99999
+$script:DEFAULT_SLIDER_MAXIMUM = 99999
+$script:DEFAULT_SLIDER_DECIMALPLACES = 2
 
 function New-QuickformObject {
     [CmdletBinding()]
@@ -344,10 +348,6 @@ function Add-QuickformFieldBox {
     $Parent.Controls.Add($flowPanel)
     return $textBox
 }
-
-$script:DEFAULT_SLIDER_MINIMUM = -99999
-$script:DEFAULT_SLIDER_MAXIMUM = 99999
-$script:DEFAULT_SLIDER_DECIMALPLACES = 2
 
 function Add-QuickformSlider {
     Param(
