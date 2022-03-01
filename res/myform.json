@@ -4,7 +4,6 @@
         "FontFamily": "Microsoft Sans Serif",
         "Point": 10,
         "Width": 500,
-        "Height": 200,
         "Margin": 10,
         "ConfirmType": "AllowOrDeny"
     },

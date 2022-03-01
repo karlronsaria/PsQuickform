@@ -20,18 +20,201 @@ function Get-QuickformObject {
 }
 
 $script:DEFAULT_PREFERENCES = [PsCustomObject]@{
-    Title = "Preferences";
-    FontFamily = "Microsoft Sans Serif";
+    Title = 'Preferences';
+    FontFamily = 'Microsoft Sans Serif';
     Point = 10;
     Width = 500;
     Height = 800;
     Margin = 10;
-    ConfirmType = "TrueOrFalse";
+    ConfirmType = 'TrueOrFalse';
 }
 
 $script:DEFAULT_SLIDER_MINIMUM = -99999
 $script:DEFAULT_SLIDER_MAXIMUM = 99999
 $script:DEFAULT_SLIDER_DECIMALPLACES = 2
+
+function Get-PropertyOrDefault {
+    Param(
+        [Parameter(ValueFromPipeline = $true)]
+        [PsCustomObject]
+        $InputObject,
+
+        [String]
+        $Name,
+
+        $Default = $null
+    )
+
+    if ($InputObject.PsObject.Properties.Name -contains $Name) {
+        return $InputObject.$Name
+    }
+
+    return $Default
+}
+
+function Set-QuickformLayout {
+    [CmdletBinding()]
+    Param(
+        [Parameter(ValueFromPipeline = $true)]
+        [PsCustomObject[]]
+        $Control,
+
+        [PsCustomObject]
+        $Layouts,
+
+        [PsCustomObject]
+        $Preferences
+    )
+
+    Begin {
+        $controls = @{}
+    }
+
+    Process {
+        foreach ($item in $Control) {
+            $default = Get-PropertyOrDefault `
+                -InputObject $item `
+                -Name 'Default'
+
+            $text = Get-PropertyOrDefault `
+                -InputObject $item `
+                -Name 'Text' `
+                -Default $item.Name
+
+            $value = switch ($item.Type) {
+                'Check' {
+                    Add-QuickformCheckBox `
+                        -Layouts $Layouts `
+                        -Text $text `
+                        -Default $default `
+                        -Preferences $Preferences
+                }
+
+                'Field' {
+                    $minLength = $item | Get-PropertyOrDefault `
+                        -Name MinLength;
+                    $maxLength = $item | Get-PropertyOrDefault `
+                        -Name MaxLength;
+
+                    Add-QuickformFieldBox `
+                        -Layouts $Layouts `
+                        -Text $text `
+                        -MinLength $minLength `
+                        -MaxLength $maxLength `
+                        -Default $default `
+                        -Preferences $Preferences
+                }
+
+                'Enum' {
+                    Add-QuickformRadioBox `
+                        -Layouts $Layouts `
+                        -Text $text `
+                        -Symbols $item.Symbols `
+                        -Default $default `
+                        -Preferences $Preferences
+                }
+
+                'Numeric' {
+                    $places = $item | Get-PropertyOrDefault `
+                        -Name DecimalPlaces;
+                    $min = $item | Get-PropertyOrDefault `
+                        -Name Minimum `
+                        -Default $script:DEFAULT_SLIDER_MINIMUM;
+                    $max = $item | Get-PropertyOrDefault `
+                        -Name Maximum `
+                        -Default $script:DEFAULT_SLIDER_MAXIMUM;
+                    $asFloat = $item | Get-PropertyOrDefault `
+                        -Name AsFloat `
+                        -Default $false;
+
+                    Add-QuickformSlider `
+                        -Layouts $Layouts `
+                        -Text $text `
+                        -DecimalPlaces $places `
+                        -Minimum $min `
+                        -Maximum $max `
+                        -AsFloat:$asFloat `
+                        -Default $default `
+                        -Preferences $Preferences
+                }
+            }
+
+            $controls.Add($item.Name, $value)
+        }
+    }
+
+    End {
+        $endButtons = Add-QuickformOkCancelButtons `
+            -Layouts $Layouts `
+            -Preferences $Preferences
+
+        $controls.Add('EndButtons__', $endButtons)
+        return $controls
+    }
+}
+
+function Start-QuickformEvaluate {
+    [CmdletBinding()]
+    Param(
+        [Parameter(ValueFromPipeline = $true)]
+        [PsCustomObject[]]
+        $Control
+    )
+
+    Begin {
+        $out = [PsCustomObject]@{}
+    }
+
+    Process {
+        foreach ($item in $Control) {
+            $value = switch ($item.Type) {
+                'Check' {
+                    $tempValue = $controls[$item.Name].Checked;
+
+                    switch ($myPreferences.ConfirmType) {
+                        'TrueOrFalse' {
+                            $tempValue
+                        }
+
+                        'AllowOrDeny' {
+                            switch ($tempValue) {
+                                'True' { 'Allow' }
+                                'False' { 'Deny' }
+                            }
+                        }
+                    }
+                }
+
+                'Field' {
+                    $controls[$item.Name].Text
+                }
+
+                'Enum' {
+                    $buttons = $controls[$item.Name];
+
+                    if ($buttons) {
+                        $buttons.Keys | where {
+                            $buttons[$_].Checked
+                        }
+                    }
+                }
+
+                'Numeric' {
+                    $controls[$item.Name].Value
+                }
+            }
+
+            $out | Add-Member `
+                -MemberType NoteProperty `
+                -Name $item.Name `
+                -Value $value
+        }
+    }
+
+    End {
+        return $out
+    }
+}
 
 function New-QuickformObject {
     [CmdletBinding()]
@@ -48,24 +231,6 @@ function New-QuickformObject {
     )
 
     Begin {
-        function Get-PropertyOrDefault {
-            Param(
-                [Parameter(ValueFromPipeline = $true)]
-                $InputObject,
-
-                [String]
-                $Name,
-
-                $Default = $null
-            )
-
-            if ($item.PsObject.Properties.Name -contains $Name) {
-                return $item.$Name
-            }
-
-            return $Default
-        }
-
         $myPreferences = $script:DEFAULT_PREFERENCES
 
         if ($Preferences) {
@@ -77,147 +242,31 @@ function New-QuickformObject {
         Add-Type -AssemblyName System.Windows.Forms
         Add-Type -AssemblyName System.Drawing
 
-        $what = New-QuickformMainForm `
+        $what = New-QuickformMain `
             -Preferences $myPreferences
 
         $form = $what.MainForm
         $layouts = $what.Layouts
-
-        $controls = @{}
         $list = @()
     }
 
     Process {
-        foreach ($item in $Control) {
-            $list += @($item)
-        }
+        $list += @($Control)
     }
 
     End {
-        foreach ($item in $list) {
-            $default = $item | Get-PropertyOrDefault `
-                -Name "Default"
+        $controls = $list | Set-QuickformLayout `
+            -Layouts $layouts `
+            -Preferences $myPreferences
 
-            $text = $item | Get-PropertyOrDefault `
-                -Name "Text" `
-                -Default $item.Name
-
-            $value = switch ($item.Type) {
-                "Check" {
-                    Add-QuickformCheckBox `
-                        -Layouts $layouts `
-                        -Text $text `
-                        -Default $default `
-                        -Preferences $myPreferences
-                }
-
-                "Field" {
-                    $minLength = $item | Get-PropertyOrDefault `
-                        -Name MinLength;
-                    $maxLength = $item | Get-PropertyOrDefault `
-                        -Name MaxLength;
-
-                    Add-QuickformFieldBox `
-                        -Layouts $layouts `
-                        -Text $text `
-                        -MinLength $minLength `
-                        -MaxLength $maxLength `
-                        -Default $default `
-                        -Preferences $myPreferences
-                }
-
-                "Enum" {
-                    Add-QuickformRadioBox `
-                        -Layouts $layouts `
-                        -Text $text `
-                        -Symbols $item.Symbols `
-                        -Default $default `
-                        -Preferences $myPreferences
-                }
-
-                "Numeric" {
-                    $places = $item | Get-PropertyOrDefault `
-                        -Name DecimalPlaces;
-                    $min = $item | Get-PropertyOrDefault `
-                        -Name Minimum `
-                        -Default $script:DEFAULT_SLIDER_MINIMUM;
-                    $max = $item | Get-PropertyOrDefault `
-                        -Name Maximum `
-                        -Default $script:DEFAULT_SLIDER_MAXIMUM;
-                    $asFloat = $item | Get-PropertyOrDefault `
-                        -Name AsFloat `
-                        -Default $false;
-
-                    Add-QuickformSlider `
-                        -Layouts $layouts `
-                        -Text $text `
-                        -DecimalPlaces $places `
-                        -Minimum $min `
-                        -Maximum $max `
-                        -AsFloat:$asFloat `
-                        -Default $default `
-                        -Preferences $myPreferences
-                }
-            }
-
-            $controls.Add($item.Name, $value)
-        }
-
-        $endButtons = Add-QuickformOkCancelButtons -Layouts $layouts
-        $okButton = $endButtons.OkButton
-        $cancelButton = $endButtons.CancelButton
-        $out = [PsCustomObject]@{}
+        [void]$form.Focus()
 
         $confirm = switch ($form.ShowDialog()) {
-            "OK" { $true }
-            "Cancel" { $false }
+            'OK' { $true }
+            'Cancel' { $false }
         }
 
-        foreach ($item in $list) {
-            $value = switch ($item.Type) {
-                "Check" {
-                    $tempValue = $controls[$item.Name].Checked;
-
-                    switch ($myPreferences.ConfirmType) {
-                        "TrueOrFalse" {
-                            $tempValue
-                        }
-
-                        "AllowOrDeny" {
-                            switch ($tempValue) {
-                                "True" { "Allow" }
-                                "False" { "Deny" }
-                            }
-                        }
-                    }
-                }
-
-                "Field" {
-                    $controls[$item.Name].Text
-                }
-
-                "Enum" {
-                    $buttons = $controls[$item.Name];
-
-                    if ($buttons) {
-                        $buttons.Keys | where {
-                            $buttons[$_].Checked
-                        } | foreach {
-                            $_
-                        }
-                    }
-                }
-
-                "Numeric" {
-                    $controls[$item.Name].Value
-                }
-            }
-
-            $out | Add-Member `
-                -MemberType NoteProperty `
-                -Name $item.Name `
-                -Value $value
-        }
+        $out = $list | Start-QuickformEvaluate
 
         if ($AsHashtable) {
             $table = @{}
@@ -318,7 +367,7 @@ function Add-ControlToMultilayout {
     return $Layouts
 }
 
-function New-QuickformMainForm {
+function New-QuickformMain {
     Param(
         [PsCustomObject]
         $Preferences = $script:DEFAULT_PREFERENCES
@@ -584,12 +633,12 @@ function Add-QuickformOkCancelButtons {
         [System.Windows.Forms.FlowDirection]::LeftToRight
 
     $okButton = New-Object System.Windows.Forms.Button
-    $okButton.Text = "OK"
+    $okButton.Text = 'OK'
     $okButton.DialogResult = `
         [System.Windows.Forms.DialogResult]::OK
 
     $cancelButton = New-Object System.Windows.Forms.Button
-    $cancelButton.Text = "Cancel"
+    $cancelButton.Text = 'Cancel'
     $cancelButton.DialogResult = `
         [System.Windows.Forms.DialogResult]::Cancel
 
@@ -614,7 +663,6 @@ function Get-FieldValidators {
     [CmdletBinding(DefaultParameterSetName = 'ByInputObject')]
     Param(
         [Parameter(ParameterSetName = 'ByParameterInfo')]
-        [System.Management.Automation.ParameterMetadata]
         $ParameterInfo,
 
         [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
@@ -625,26 +673,6 @@ function Get-FieldValidators {
         [String]
         $CommandName
     )
-
-    Begin {
-        function Get-PropertyOrDefault {
-            Param(
-                [Parameter(ValueFromPipeline = $true)]
-                $InputObject,
-
-                [String]
-                $Name,
-
-                $Default = $null
-            )
-
-            if ($item.PsObject.Properties.Name -contains $Name) {
-                return $item.$Name
-            }
-
-            return $Default
-        }
-    }
 
     Process {
         switch ($PsCmdlet.ParameterSetName) {
@@ -720,7 +748,6 @@ function Get-FieldValidators {
 
 function Test-IsCommonParameter {
     Param(
-        [System.Management.Automation.ParameterMetadata]
         $ParameterInfo
     )
 
@@ -741,16 +768,10 @@ function Test-IsCommonParameter {
     )
 
     return $names -contains $ParameterInfo.Name
-
-    # $nonCommon = @($ParameterInfo.Attributes `
-    #     | where TypeId -like System.Management.Automation.Internal.CommonParameters*)
-
-    # return $null -ne $nonCommon -and $nonCommon.Count -gt 0
 }
 
 function ConvertTo-QuickformParameter {
     Param(
-        [System.Management.Automation.ParameterMetadata]
         $ParameterInfo
     )
 
@@ -855,27 +876,71 @@ function ConvertTo-QuickformParameter {
 
 function ConvertTo-QuickformCommand {
     Param(
-        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [Parameter(ParameterSetName = 'ByCommandName')]
+        [String]
+        $CommandName,
+
+        [Parameter(ParameterSetName = 'ByCommandName')]
+        [String]
+        $ParameterSetName,
+
+        [Parameter(ParameterSetName = 'ByCommandInfo')]
         [System.Management.Automation.CommandInfo]
         $CommandInfo,
+
+        [Parameter(ParameterSetName = 'ByParameterSet')]
+        $ParameterSet,
 
         [Switch]
         $IncludeCommonParameters
     )
 
-    return [PsCustomObject]@{
-        Preferences = [PsCustomObject]@{
-            Title = $CommandInfo.Name;
-        };
+    switch ($PsCmdlet.ParameterSetName) {
+        'ByCommandName' {
+            $command = Get-Command $CommandName
 
-        Controls = $CommandInfo.Parameters.Keys | % {
-            $CommandInfo.Parameters[$_]
-        } | where {
-            $IncludeCommonParameters `
-                -or -not (Test-IsCommonParameter -ParameterInfo $_)
-        } | foreach {
-            ConvertTo-QuickformParameter -ParameterInfo $_
-        };
+            $parameterSets = if ($ParameterSetName) {
+                $command.ParameterSets | where {
+                    $_.Name -like $ParameterSetName
+                }
+            } else {
+                $command.ParameterSets
+            }
+        }
+
+        'ByCommandInfo' {
+            return [PsCustomObject]@{
+                Preferences = [PsCustomObject]@{
+                    Title = $CommandInfo.Name;
+                };
+
+                Controls = $CommandInfo.Parameters.Keys | foreach {
+                    $CommandInfo.Parameters[$_]
+                } | where {
+                    $IncludeCommonParameters `
+                        -or -not (Test-IsCommonParameter -ParameterInfo $_)
+                } | foreach {
+                    ConvertTo-QuickformParameter -ParameterInfo $_
+                };
+            }
+        }
+
+        'ByParameterSet' {
+            return [PsCustomObject]@{
+                Preferences = [PsCustomObject]@{
+                    Title = $ParameterSet.Name;
+                };
+
+                Controls = $ParameterSet.Parameters | where {
+                    $IncludeCommonParameters `
+                        -or -not (Test-IsCommonParameter -ParameterInfo $_)
+                } | foreach {
+                    ConvertTo-QuickformParameter -ParameterInfo $_
+                };
+            }
+        }
     }
 }
+
+
 
