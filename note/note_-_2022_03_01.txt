@@ -1,0 +1,31 @@
+obj: {
+    form
+    layouts
+        mainlayout
+        sublayouts
+    parametersets
+    currentparametersetkey
+}
+
+cmdinfo <- get-commandinfo
+parametersets <- cmdinfo.ParameterSets
+defaultparameterset <- cmdinfo.DefaultParameterSet
+
+obj.ParameterSets <- foreach parameterset in parametersets
+    (parameterset.Name, convertto-parameterinfo parameterset)
+
+obj.CurrentParameterSetKey <- if defaultparameterset
+    defaultparameterset.Name
+else
+    get first obj.ParameterSets.Key
+
+control <- new Control
+
+control.SomeEvent += {
+    obj.CurrentParameterSetKey <- Get-NextKey
+    obj.Form.Controls.Remove(obj.Layouts.MainLayout)
+    obj.Layouts <- get-layout obj.CurrentParameters[obj.CurrentParameterSetKey]
+}
+
+evaluate form
+

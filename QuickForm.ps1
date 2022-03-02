@@ -259,7 +259,7 @@ function New-QuickformObject {
             -Layouts $layouts `
             -Preferences $myPreferences
 
-        [void]$form.Focus()
+        $form.add_Shown({ [void] $this.Focus() })
 
         $confirm = switch ($form.ShowDialog()) {
             'OK' { $true }
@@ -285,11 +285,8 @@ function New-QuickformObject {
     }
 }
 
-function Add-QuickformLayout {
+function New-QuickformLayout {
     Param(
-        [System.Windows.Forms.Control]
-        $Parent,
-
         [PsCustomObject]
         $Preferences = $script:DEFAULT_PREFERENCES
     )
@@ -301,15 +298,11 @@ function Add-QuickformLayout {
     $layout.Width = $Preferences.Width - (2 * $Preferences.Margin)
     $layout.AutoSize = $true
     $layout.WrapContents = $false
-    $Parent.Controls.Add($layout)
     return $layout
 }
 
-function Add-QuickformMultilayout {
+function New-QuickformMultilayout {
     Param(
-        [System.Windows.Forms.Control]
-        $Parent,
-
         [PsCustomObject]
         $Preferences = $script:DEFAULT_PREFERENCES
     )
@@ -320,11 +313,10 @@ function Add-QuickformMultilayout {
     $multilayout.FlowDirection = `
         [System.Windows.Forms.FlowDirection]::LeftToRight
 
-    $layout = Add-QuickformLayout `
-        -Parent $multilayout `
+    $layout = New-QuickformLayout `
         -Preferences $Preferences
 
-    $form.Controls.Add($multilayout)
+    $multilayout.Controls.Add($layout)
 
     return [PsCustomObject]@{
         Multilayout = $multilayout;
@@ -352,10 +344,10 @@ function Add-ControlToMultilayout {
     }
 
     if ($totalHeight -gt $Preferences.Height) {
-        $layout = Add-QuickformLayout `
-            -Parent $Layouts.Multilayout `
+        $layout = New-QuickformLayout `
             -Preferences $Preferences
 
+        $Layouts.Multilayout.Controls.Add($layout)
         $Layouts.Sublayouts += @($layout)
         $final = $Layouts.Sublayouts[-1]
     }
@@ -386,9 +378,10 @@ function New-QuickformMain {
     $form.FormBorderStyle = `
         [System.Windows.Forms.FormBorderStyle]::FixedSingle
 
-    $layouts = Add-QuickformMultilayout `
-        -Parent $form `
+    $layouts = New-QuickformMultilayout `
         -Preferences $Preferences
+
+    $form.Controls.Add($layouts.Multilayout)
 
     return [PsCustomObject]@{
         MainForm = $form;
@@ -427,6 +420,12 @@ function Add-QuickformCheckBox {
     return $checkBox
 }
 
+<#
+    .NOTE
+        Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
+        operative control, to a target container. 'Add-' rather than 'New-' helps
+        encapsulate inoperative controls.
+#>
 function Add-QuickformFieldBox {
     Param(
         [PsCustomObject]
@@ -488,6 +487,12 @@ function Add-QuickformFieldBox {
     return $textBox
 }
 
+<#
+    .NOTE
+        Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
+        operative control, to a target container. 'Add-' rather than 'New-' helps
+        encapsulate inoperative controls.
+#>
 function Add-QuickformSlider {
     Param(
         [PsCustomObject]
@@ -554,6 +559,12 @@ function Add-QuickformSlider {
     return $slider
 }
 
+<#
+    .NOTE
+        Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
+        operative control, to a target container. 'Add-' rather than 'New-' helps
+        encapsulate inoperative controls.
+#>
 function Add-QuickformRadioBox {
     Param(
         [PsCustomObject]
@@ -617,6 +628,12 @@ function Add-QuickformRadioBox {
     return $buttons
 }
 
+<#
+    .NOTE
+        Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
+        operative control, to a target container. 'Add-' rather than 'New-' helps
+        encapsulate inoperative controls.
+#>
 function Add-QuickformOkCancelButtons {
     Param(
         [PsCustomObject]
