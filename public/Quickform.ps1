@@ -612,8 +612,8 @@ function Get-Quickform {
     $script:form.add_KeyDown({
         $refresh = $false
 
-        if (-not [System.Windows.Forms.Control]::ModifierKeys `
-            -contains [System.Windows.Forms.Keys]::Alt)
+        if (-not ([System.Windows.Forms.Control]::ModifierKeys `
+            -contains [System.Windows.Forms.Keys]::Alt))
         {
             return
         }

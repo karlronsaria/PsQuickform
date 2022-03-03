@@ -1,0 +1,37 @@
+Preferences
+    Title
+    FontFamily
+    Point
+    Width
+    Height
+    Margin
+    ConfirmType
+        TrueOrFalse
+        AllowOrDeny
+    EnterToConfirm
+        True
+        False
+    EscapeToCancel
+        True
+        False
+
+Controls
+    Check
+    Field
+        MinLength
+        MaxLength
+    Enum
+        Symbols
+        Mandatory
+    Numeric
+        (AsFloat)
+        DecimalPlaces
+        Minimum
+        Maximum
+
+ControlProperties
+    Name
+    Text
+    Default
+    (Mandatory)
+

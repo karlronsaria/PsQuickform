@@ -15,6 +15,10 @@ $script:DEFAULT_SLIDER_MINIMUM = -99999
 $script:DEFAULT_SLIDER_MAXIMUM = 99999
 $script:DEFAULT_SLIDER_DECIMALPLACES = 2
 
+# Link: https://stackoverflow.com/questions/4601827/how-do-i-center-a-window-onscreen-in-c
+# Link: https://stackoverflow.com/users/1527490/sarsur-a
+# Link: https://stackoverflow.com/users/1306012/bruno-bieri
+# Retrieved: 2022_03_02
 function Set-ControlsCenterScreen {
     Param(
         [System.Windows.Forms.Control]
