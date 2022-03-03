@@ -333,6 +333,9 @@ function Add-ControlsRadioBox {
         [PsCustomObject[]]
         $Symbols,
 
+        [Switch]
+        $Mandatory,
+
         [PsCustomObject]
         $Preferences = $script:DEFAULT_PREFERENCES
     )
@@ -353,6 +356,10 @@ function Add-ControlsRadioBox {
     $flowPanel.Top = 2 * $Preferences.Margin
     $groupBox.Controls.Add($flowPanel)
 
+    if (-not $Mandatory) {
+        $Symbols += @([PsCustomObject]@{ Name = 'None'; })
+    }
+
     $buttons = @{}
 
     foreach ($symbol in $Symbols) {
@@ -368,7 +375,10 @@ function Add-ControlsRadioBox {
         $flowPanel.Controls.Add($button)
     }
 
-    if ($null -ne $Default) {
+    if (-not $Mandatory) {
+        $buttons['None'].Checked = $true
+    }
+    elseif ($null -ne $Default) {
         $buttons[$Default].Checked = $true
     }
     elseif ($Symbols.Count -gt 0) {

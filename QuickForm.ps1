@@ -93,10 +93,15 @@ function Set-QuickformLayout {
                 }
 
                 'Enum' {
+                    $mandatory = $item | Get-PropertyOrDefault `
+                        -Name Mandatory `
+                        -Default $false;
+
                     Add-ControlsRadioBox `
                         -Layouts $Layouts `
                         -Text $text `
                         -Symbols $item.Symbols `
+                        -Mandatory:$mandatory `
                         -Default $default `
                         -Preferences $Preferences
                 }
@@ -184,10 +189,19 @@ function Start-QuickformEvaluate {
                 'Enum' {
                     $buttons = $controls[$item.Name];
 
-                    if ($buttons) {
+                    $temp = if ($buttons) {
                         $buttons.Keys | where {
                             $buttons[$_].Checked
                         }
+                    } else {
+                        $null
+                    };
+
+                    if ($temp -eq 'None') {
+                        $null
+                    }
+                    else {
+                        $temp
                     }
                 }
 
