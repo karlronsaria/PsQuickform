@@ -140,6 +140,34 @@ function Add-ControlToMultilayout {
     return $Layouts
 }
 
+<#
+    .LINK
+    Link: https://stackoverflow.com/questions/12801563/powershell-setforegroundwindow
+    Link: https://stackoverflow.com/users/520612/cb
+    Retrieved: 2022_03_02
+#>
+function Add-ControlsFocusOnShownEvent {
+    Param(
+        [System.Windows.Forms.Form]
+        $Form
+    )
+
+    Add-Type @"
+    using System;
+    using System.Runtime.InteropServices;
+    public class SFW {
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+    }
+"@
+
+    $Form.add_Shown({
+        $handle = $this.WindowTarget.Handle
+        [void] [SFW]::SetForegroundWindow($handle)
+    })
+}
+
 function New-ControlsMain {
     Param(
         [PsCustomObject]
@@ -163,9 +191,9 @@ function New-ControlsMain {
         [System.Windows.Forms.FormBorderStyle]::FixedSingle
     $form.StartPosition = `
         [System.Windows.Forms.FormStartPosition]::CenterScreen
-    $form.add_Shown({
-        [void] $this.Focus()
-    })
+
+    Add-ControlsFocusOnShownEvent `
+        -Form $form
 
     return $form
 }
@@ -258,6 +286,8 @@ function Add-ControlsFieldBox {
                     Set-ControlsWritableText `
                         -Control $this `
                         -Text ($this.Text + (Open-ControlsFileDialog))
+
+                    $_.Handled = $true
                 }
             }
 
@@ -271,6 +301,8 @@ function Add-ControlsFieldBox {
                     Set-ControlsWritableText `
                         -Control $this `
                         -Text ($this.Text + $text)
+
+                    $_.Handled = $true
                 }
             }
         }
@@ -532,12 +564,12 @@ function Add-ControlsOkCancelButtons {
 
     $Layouts = Add-ControlToMultilayout `
         -Layouts $Layouts `
-        -Control $obj.FlowPanel `
+        -Control $endButtons.FlowPanel `
         -Preferences $Preferences
 
     return [PsCustomObject]@{
-        OkButton = $obj.OkButton;
-        CancelButton = $obj.CancelButton;
+        OkButton = $endButtons.OkButton;
+        CancelButton = $endButtons.CancelButton;
     }
 }
 
