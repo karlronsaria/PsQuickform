@@ -257,7 +257,7 @@ function Add-ControlsFieldBox {
                 {
                     Set-ControlsWritableText `
                         -Control $this `
-                        -Text (Open-ControlsFileDialog)
+                        -Text ($this.Text + (Open-ControlsFileDialog))
                 }
             }
 
@@ -270,7 +270,7 @@ function Add-ControlsFieldBox {
 
                     Set-ControlsWritableText `
                         -Control $this `
-                        -Text $text
+                        -Text ($this.Text + $text)
                 }
             }
         }
