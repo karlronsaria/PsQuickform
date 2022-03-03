@@ -605,6 +605,22 @@ function Get-Quickform {
         -Control $controls `
         -Preferences $myPreferences
 
+    if ($myPreferences.EnterToConfirm) {
+        $script:form.add_KeyDown({
+            if ($_.KeyCode -eq 'Enter') {
+                $script:layouts.Controls['EndButtons__'].OkButton.PerformClick()
+            }
+        })
+    }
+
+    if ($myPreferences.EscapeToCancel) {
+        $script:form.add_KeyDown({
+            if ($_.KeyCode -eq 'Escape') {
+                $script:layouts.Controls['EndButtons__'].CancelButton.PerformClick()
+            }
+        })
+    }
+
     # Issue: Event handler fails to update variable from outer scope
     # Link: https://stackoverflow.com/questions/55403528/why-wont-variable-update
     # Retreived: 2022_03_02
@@ -612,27 +628,29 @@ function Get-Quickform {
     $script:form.add_KeyDown({
         $refresh = $false
 
-        if (-not ([System.Windows.Forms.Control]::ModifierKeys `
-            -contains [System.Windows.Forms.Keys]::Alt))
-        {
-            return
-        }
-
         switch ($_.KeyCode) {
             'Right' {
-                $what.CurrentParameterSetIndex = Get-NextIndex `
-                    -Index $what.CurrentParameterSetIndex `
-                    -Count $what.ParameterSets.Count
+                if ([System.Windows.Forms.Control]::ModifierKeys `
+                    -contains [System.Windows.Forms.Keys]::Alt)
+                {
+                    $what.CurrentParameterSetIndex = Get-NextIndex `
+                        -Index $what.CurrentParameterSetIndex `
+                        -Count $what.ParameterSets.Count
 
-                $refresh = $true
+                    $refresh = $true
+                }
             }
 
             'Left' {
-                $what.CurrentParameterSetIndex = Get-PreviousIndex `
-                    -Index $what.CurrentParameterSetIndex `
-                    -Count $what.ParameterSets.Count
+                if ([System.Windows.Forms.Control]::ModifierKeys `
+                    -contains [System.Windows.Forms.Keys]::Alt)
+                {
+                    $what.CurrentParameterSetIndex = Get-PreviousIndex `
+                        -Index $what.CurrentParameterSetIndex `
+                        -Count $what.ParameterSets.Count
 
-                $refresh = $true
+                    $refresh = $true
+                }
             }
         }
 

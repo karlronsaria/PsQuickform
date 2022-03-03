@@ -9,6 +9,8 @@ $script:DEFAULT_PREFERENCES = [PsCustomObject]@{
     Height = 800;
     Margin = 10;
     ConfirmType = 'TrueOrFalse';
+    EnterToConfirm = $true;
+    EscapeToCancel = $true;
 }
 
 $script:DEFAULT_SLIDER_MINIMUM = -99999
@@ -223,6 +225,14 @@ function Add-ControlsFieldBox {
         [System.Windows.Forms.AnchorStyles]::Left + `
         [System.Windows.Forms.AnchorStyles]::Right
 
+    $textBox.add_KeyDown({
+        switch ($_.KeyCode) {
+            'O' {
+                $this.Text = Open-ControlsFileDialog
+            }
+        }
+    })
+
     if ($null -ne $MinLength) {
         $textBox.MinLength = $MinLength
     }
@@ -295,6 +305,28 @@ function Add-ControlsSlider {
         [System.Windows.Forms.AnchorStyles]::Right
     $slider.Minimum = $Minimum
     $slider.Maximum = $Maximum
+
+    if ($null -ne $Minimum -and $null -ne $Maximum) {
+        $slider.add_KeyDown({
+            switch ($_.KeyCode) {
+                'Up' {
+                    if ([System.Windows.Forms.Control]::ModifierKeys `
+                        -contains [System.Windows.Forms.Keys]::Control)
+                    {
+                        $this.Value = $this.Maximum
+                    }
+                }
+
+                'Down' {
+                    if ([System.Windows.Forms.Control]::ModifierKeys `
+                        -contains [System.Windows.Forms.Keys]::Control)
+                    {
+                        $this.Value = $this.Minimum
+                    }
+                }
+            }
+        })
+    }
 
     if ($null -ne $DecimalPlaces) {
         $slider.DecimalPlaces = $DecimalPlaces
@@ -445,6 +477,56 @@ function Add-ControlsOkCancelButtons {
     return [PsCustomObject]@{
         OkButton = $okButton;
         CancelButton = $cancelButton;
+    }
+}
+
+function Open-ControlsFileDialog {
+    Param(
+        [String]
+        $Title = 'Browse Files',
+
+        [String]
+        $Filter = 'All Files (*.*)|*.*',
+
+        [String]
+        $InitialDirectory,
+
+        [Switch]
+        $Directory,
+
+        [Switch]
+        $Multiselect
+    )
+
+    $openFile = New-Object System.Windows.Forms.OpenFileDialog
+    $openFile.Title = $Title
+    $openFile.Filter = $Filter
+    $openFile.FilterIndex = 1
+    $openFile.Multiselect = $Multiselect
+
+    if ($Directory) {
+        $openFile.ValidateNames = $false
+        $openFile.CheckFileExists = $false
+        $openFile.CheckPathExists = $false
+        $openFile.FileName = 'Folder Selection.'
+    }
+
+    $openFile.InitialDirectory = if ($InitialDirectory) {
+        $InitialDirectory
+    } else {
+        (Get-Location).Path
+    }
+
+    if ($openFile.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
+        if ($Directory) {
+            return [System.IO.Path]::GetDirectoryName($openFile.FileName)
+        }
+
+        if ($Multiselect) {
+            return $openFile.FileNames
+        }
+
+        return $openFile.FileName
     }
 }
 
