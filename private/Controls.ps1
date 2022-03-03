@@ -164,7 +164,7 @@ function New-ControlsMain {
     $form.StartPosition = `
         [System.Windows.Forms.FormStartPosition]::CenterScreen
     $form.add_Shown({
-        [void] $this.Focus();
+        [void] $this.Focus()
     })
 
     return $form
@@ -252,18 +252,26 @@ function Add-ControlsFieldBox {
     $textBox.add_KeyDown({
         switch ($_.KeyCode) {
             'O' {
-                Set-ControlsWritableText `
-                    -Control $this `
-                    -Text (Open-ControlsFileDialog)
+                if ([System.Windows.Forms.Control]::ModifierKeys `
+                    -contains [System.Windows.Forms.Keys]::Control)
+                {
+                    Set-ControlsWritableText `
+                        -Control $this `
+                        -Text (Open-ControlsFileDialog)
+                }
             }
 
             'D' {
-                $text = Open-ControlsMonthCalendar `
-                    -Preferences $script:monthCalendarPrefs
+                if ([System.Windows.Forms.Control]::ModifierKeys `
+                    -contains [System.Windows.Forms.Keys]::Control)
+                {
+                    $text = Open-ControlsMonthCalendar `
+                        -Preferences $script:monthCalendarPrefs
 
-                Set-ControlsWritableText `
-                    -Control $this `
-                    -Text $text
+                    Set-ControlsWritableText `
+                        -Control $this `
+                        -Text $text
+                }
             }
         }
     })
