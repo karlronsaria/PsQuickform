@@ -206,7 +206,11 @@ function Start-QuickformEvaluate {
                 }
 
                 'Numeric' {
-                    $controls[$item.Name].Value
+                    if ($controls[$item.Name].Text) {
+                        $controls[$item.Name].Value
+                    } else {
+                        $null
+                    }
                 }
             }
 
@@ -528,7 +532,10 @@ function Start-Quickform {
         -RemoveEmptyString
 
     if ($quickform.Confirm) {
-        Invoke-Expression "$CommandName `@params"
+        # # OLD (2022_03_02_211308)
+        # Invoke-Expression "$CommandName `@params"
+
+        & $CommandName @params
     }
 }
 

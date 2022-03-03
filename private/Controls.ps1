@@ -302,6 +302,9 @@ function Add-ControlsSlider {
     if ($null -ne $Default) {
         $slider.Value = $Default
     }
+    else {
+        $slider.Text = ''
+    }
 
     $flowPanel.Controls.Add($label)
     $flowPanel.Controls.Add($slider)
