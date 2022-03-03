@@ -479,70 +479,10 @@ function ConvertTo-QuickformCommand {
     }
 }
 
-function Start-Quickform {
-    [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
-    Param(
-        [Parameter(ParameterSetName = 'ByCommandName')]
-        [String]
-        $CommandName,
-
-        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
-        [System.Management.Automation.CommandInfo]
-        $CommandInfo,
-
-        [String]
-        $ParameterSetName,
-
-        [Switch]
-        $IncludeCommonParameters,
-
-        [Switch]
-        $AsHashtable
-    )
-
-    $quickform = [PsCustomObject]@{
-        Confirm = $false;
-        FormResult = @{};
-    }
-
-    switch ($PsCmdlet.ParameterSetName) {
-        'ByCommandName' {
-            $quickform = Get-Quickform `
-                -CommandName $CommandName `
-                -ParameterSetName:$ParameterSetName `
-                -IncludeCommonParameters:$IncludeCommonParameters `
-                -AsHashtable
-
-            $CommandInfo = Get-Command `
-                -Name $CommandName
-        }
-
-        'ByCommandInfo' {
-            $quickform = Get-Quickform `
-                -CommandInfo $CommandInfo `
-                -ParameterSetName:$ParameterSetName `
-                -IncludeCommonParameters:$IncludeCommonParameters `
-                -AsHashtable
-
-            $CommandName = $CommandInfo.Name
-        }
-    }
-
-    $params = $quickform.FormResult | Get-TrimTable `
-        -RemoveEmptyString
-
-    if ($quickform.Confirm) {
-        # # OLD (2022_03_02_211308)
-        # Invoke-Expression "$CommandName `@params"
-
-        & $CommandName @params
-    }
-}
-
 function Get-Quickform {
     [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
     Param(
-        [Parameter(ParameterSetName = 'ByCommandName')]
+        [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
         [String]
         $CommandName,
 
@@ -741,6 +681,66 @@ function Get-Quickform {
     return [PsCustomObject]@{
         Confirm = $confirm;
         FormResult = $out;
+    }
+}
+
+function Start-Quickform {
+    [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
+    Param(
+        [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
+        [String]
+        $CommandName,
+
+        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [System.Management.Automation.CommandInfo]
+        $CommandInfo,
+
+        [String]
+        $ParameterSetName,
+
+        [Switch]
+        $IncludeCommonParameters,
+
+        [Switch]
+        $AsHashtable
+    )
+
+    $quickform = [PsCustomObject]@{
+        Confirm = $false;
+        FormResult = @{};
+    }
+
+    switch ($PsCmdlet.ParameterSetName) {
+        'ByCommandName' {
+            $quickform = Get-Quickform `
+                -CommandName $CommandName `
+                -ParameterSetName:$ParameterSetName `
+                -IncludeCommonParameters:$IncludeCommonParameters `
+                -AsHashtable
+
+            $CommandInfo = Get-Command `
+                -Name $CommandName
+        }
+
+        'ByCommandInfo' {
+            $quickform = Get-Quickform `
+                -CommandInfo $CommandInfo `
+                -ParameterSetName:$ParameterSetName `
+                -IncludeCommonParameters:$IncludeCommonParameters `
+                -AsHashtable
+
+            $CommandName = $CommandInfo.Name
+        }
+    }
+
+    $params = $quickform.FormResult | Get-TrimTable `
+        -RemoveEmptyString
+
+    if ($quickform.Confirm) {
+        # # OLD (2022_03_02_211308)
+        # Invoke-Expression "$CommandName `@params"
+
+        & $CommandName @params
     }
 }
 
