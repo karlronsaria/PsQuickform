@@ -14,6 +14,7 @@ Preferences
     EscapeToCancel
         True
         False
+    DateFormat
 
 Controls
     Check

@@ -11,11 +11,31 @@ $script:DEFAULT_PREFERENCES = [PsCustomObject]@{
     ConfirmType = 'TrueOrFalse';
     EnterToConfirm = $true;
     EscapeToCancel = $true;
+    DateFormat = "yyyy_MM_dd";
 }
 
 $script:DEFAULT_SLIDER_MINIMUM = -99999
 $script:DEFAULT_SLIDER_MAXIMUM = 99999
 $script:DEFAULT_SLIDER_DECIMALPLACES = 2
+
+<#
+    .LINK
+        Link: https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox
+        Link: https://stackoverflow.com/users/1042848/vishal-suthar
+        Retreived: 2022_03_02
+#>
+function Set-ControlsWritableText {
+    Param(
+        [System.Windows.Forms.Control]
+        $Control,
+
+        [String]
+        $Text
+    )
+
+    $Control.Text = $Text
+    $Control.Select($Control.Text.Length, 0)
+}
 
 # Link: https://stackoverflow.com/questions/4601827/how-do-i-center-a-window-onscreen-in-c
 # Link: https://stackoverflow.com/users/1527490/sarsur-a
@@ -225,10 +245,25 @@ function Add-ControlsFieldBox {
         [System.Windows.Forms.AnchorStyles]::Left + `
         [System.Windows.Forms.AnchorStyles]::Right
 
+    $script:monthCalendarPrefs = $Preferences.PsObject.Copy()
+    $script:monthCalendarPrefs.Title = 'Get Date'
+    $script:monthCalendarPrefs.Width = 350
+
     $textBox.add_KeyDown({
         switch ($_.KeyCode) {
             'O' {
-                $this.Text = Open-ControlsFileDialog
+                Set-ControlsWritableText `
+                    -Control $this `
+                    -Text (Open-ControlsFileDialog)
+            }
+
+            'D' {
+                $text = Open-ControlsMonthCalendar `
+                    -Preferences $script:monthCalendarPrefs
+
+                Set-ControlsWritableText `
+                    -Control $this `
+                    -Text $text
             }
         }
     })
@@ -242,7 +277,9 @@ function Add-ControlsFieldBox {
     }
 
     if ($null -ne $Default) {
-        $textBox.Text = $Default
+        Set-ControlsWritableText `
+            -Control $textBox `
+            -Text $Default
     }
 
     $flowPanel.Controls.Add($label)
@@ -432,17 +469,8 @@ function Add-ControlsRadioBox {
     return $buttons
 }
 
-<#
-    .NOTE
-        Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
-        operative control, to a target container. 'Add-' rather than 'New-' helps
-        encapsulate inoperative controls.
-#>
-function Add-ControlsOkCancelButtons {
+function New-ControlsOkCancelButtons {
     Param(
-        [PsCustomObject]
-        $Layouts,
-
         [PsCustomObject]
         $Preferences = $script:DEFAULT_PREFERENCES
     )
@@ -469,14 +497,39 @@ function Add-ControlsOkCancelButtons {
     $endButtons.Anchor = `
         [System.Windows.Forms.AnchorStyles]::None
 
+    return [PsCustomObject]@{
+        FlowPanel = $endButtons;
+        OkButton = $okButton;
+        CancelButton = $cancelButton;
+    }
+}
+
+<#
+    .NOTE
+        Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
+        operative control, to a target container. 'Add-' rather than 'New-' helps
+        encapsulate inoperative controls.
+#>
+function Add-ControlsOkCancelButtons {
+    Param(
+        [PsCustomObject]
+        $Layouts,
+
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES
+    )
+
+    $endButtons = New-ControlsOkCancelButtons `
+        -Preferences $Preferences
+
     $Layouts = Add-ControlToMultilayout `
         -Layouts $Layouts `
-        -Control $endButtons `
+        -Control $obj.FlowPanel `
         -Preferences $Preferences
 
     return [PsCustomObject]@{
-        OkButton = $okButton;
-        CancelButton = $cancelButton;
+        OkButton = $obj.OkButton;
+        CancelButton = $obj.CancelButton;
     }
 }
 
@@ -529,4 +582,89 @@ function Open-ControlsFileDialog {
         return $openFile.FileName
     }
 }
+
+function Open-ControlsMonthCalendar {
+    Param(
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES
+    )
+
+    $form = New-ControlsMain `
+        -Preferences $Preferences
+
+    $layout = New-ControlsLayout `
+        -Preferences $Preferences
+
+    $form.KeyPreview = $true
+    $layout.Dock = [System.Windows.Forms.DockStyle]::Fill
+
+    $calendar = New-Object System.Windows.Forms.MonthCalendar
+    $calendar.Dock = [System.Windows.Forms.DockStyle]::Fill
+    $calendar.MaxSelectionCount = 1
+    $calendar.Left = ($Preferences.Width - $calendar.Width) / 2
+    $calendar.Anchor = `
+        [System.Windows.Forms.AnchorStyles]::None
+
+    $textBox = New-Object System.Windows.Forms.TextBox
+    $textBox.Left = ($Preferences.Width - $textBox.Width) / 2
+    $textBox.Anchor = `
+        [System.Windows.Forms.AnchorStyles]::Top + `
+        [System.Windows.Forms.AnchorStyles]::Left + `
+        [System.Windows.Forms.AnchorStyles]::Right
+
+    Set-ControlsWritableText `
+        -Control $textBox `
+        -Text $Preferences.DateFormat
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = 'Format:'
+
+    $script:endButtons = New-ControlsOkCancelButtons `
+        -Preferences $Preferenes
+
+    $layout.Controls.Add($calendar)
+    $layout.Controls.Add($label)
+    $layout.Controls.Add($textBox)
+    $layout.Controls.Add($script:endButtons.FlowPanel)
+    $form.Controls.Add($layout)
+
+    $form.add_KeyDown({
+        if ($_.KeyCode -eq 'Enter') {
+            $script:endButtons.OkButton.PerformClick()
+        }
+
+        $_.Handled = $true
+    })
+
+    $form.add_KeyDown({
+        if ($_.KeyCode -eq 'Escape') {
+            $script:endButtons.CancelButton.PerformClick()
+        }
+
+        $_.Handled = $true
+    })
+
+    switch ($form.ShowDialog()) {
+        'Cancel' {
+            return
+        }
+    }
+
+    $date = if ($null -eq $textBox.Text) {
+        $calendar.SelectionRange.Start.ToString()
+    } else {
+        $calendar.SelectionRange.Start.ToString($textBox.Text)
+    }
+
+    return $date
+}
+
+
+
+
+
+
+
+
+
 
