@@ -349,14 +349,14 @@ function ConvertTo-QuickformParameter {
             'Enum' {
                 $obj.Type = 'Enum'
 
-                $values = $validators.Values.Name | ? {
+                $values = $validators.Values.Name | where {
                     $_ -ne 'value__'
                 }
 
                 $obj | Add-Member `
                     -MemberType NoteProperty `
                     -Name Symbols `
-                    -Value ($values | % {
+                    -Value ($values | foreach {
                         [PsCustomObject]@{
                             Name = $_;
                         }
@@ -370,7 +370,7 @@ function ConvertTo-QuickformParameter {
                 $obj | Add-Member `
                     -MemberType NoteProperty `
                     -Name Symbols `
-                    -Value ($values | % {
+                    -Value ($values | foreach {
                         [PsCustomObject]@{
                             Name = $_;
                         }
@@ -461,10 +461,76 @@ function ConvertTo-QuickformCommand {
     }
 }
 
-function Get-Quickform {
+function Run-Quickform {
+    [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
     Param(
+        [Parameter(ParameterSetName = 'ByCommandName')]
         [String]
         $CommandName,
+
+        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [System.Management.Automation.CommandInfo]
+        $CommandInfo,
+
+        [String]
+        $ParameterSetName,
+
+        [Switch]
+        $IncludeCommonParameters,
+
+        [Switch]
+        $AsHashtable
+    )
+
+    $quickform = [PsCustomObject]@{
+        Confirm = $false;
+        FormResult = @{};
+    }
+
+    switch ($PsCmdlet.ParameterSetName) {
+        'ByCommandName' {
+            $quickform = Get-Quickform `
+                -CommandName $CommandName `
+                -ParameterSetName:$ParameterSetName `
+                -IncludeCommonParameters:$IncludeCommonParameters `
+                -AsHashtable
+
+            $CommandInfo = Get-Command `
+                -Name $CommandName
+        }
+
+        'ByCommandInfo' {
+            $quickform = Get-Quickform `
+                -CommandInfo $CommandInfo `
+                -ParameterSetName:$ParameterSetName `
+                -IncludeCommonParameters:$IncludeCommonParameters `
+                -AsHashtable
+
+            $CommandName = $CommandInfo.Name
+        }
+    }
+
+    $params = $quickform.FormResult | Get-TrimTable `
+        -RemoveEmptyString
+
+    if ($quickform.Confirm) {
+        Invoke-Expression "$CommandName `@params"
+    }
+}
+
+function Get-Quickform {
+    [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
+    Param(
+        [Parameter(ParameterSetName = 'ByCommandName')]
+        [String]
+        $CommandName,
+
+        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [System.Management.Automation.CommandInfo]
+        $CommandInfo,
+
+        [String]
+        $ParameterSetName,
 
         [Switch]
         $IncludeCommonParameters,
@@ -497,14 +563,23 @@ function Get-Quickform {
         return $Index
     }
 
-    $cmdInfo = Get-Command -Name $CommandName
+    if ($PsCmdlet.ParameterSetName -eq 'ByCommandName') {
+        $CommandInfo = Get-Command -Name $CommandName
+    }
 
-    if (-not $cmdInfo) {
+    if (-not $CommandInfo) {
         return
     }
 
-    $paramSets = $cmdInfo.ParameterSets
-    $defaultParamSet = $cmdInfo | Get-PropertyOrDefault `
+    $paramSets = if ($ParameterSetName) {
+        $CommandInfo.ParameterSets | where {
+            $_.Name -like $ParameterSetName
+        }
+    } else {
+        $CommandInfo.ParameterSets
+    }
+
+    $defaultParamSet = $CommandInfo | Get-PropertyOrDefault `
         -Name DefaultParameterSet `
         -Default $paramSets[0]
 
@@ -576,6 +651,12 @@ function Get-Quickform {
     $script:form.add_KeyDown({
         $refresh = $false
 
+        if (-not [System.Windows.Forms.Control]::ModifierKeys `
+            -contains [System.Windows.Forms.Keys]::Alt)
+        {
+            return
+        }
+
         switch ($_.KeyCode) {
             'Right' {
                 $what.CurrentParameterSetIndex = Get-NextIndex `
@@ -641,15 +722,4 @@ function Get-Quickform {
         FormResult = $out;
     }
 }
-
-
-
-
-
-
-
-
-
-
-
 
