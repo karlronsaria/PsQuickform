@@ -1,5 +1,5 @@
-. $PsScriptRoot\Controls.ps1
-. $PsScriptRoot\CommandInfo.ps1
+# Requires source Controls.ps1
+# Requires source CommandInfo.ps1
 
 function New-QuickformPreferences {
     Param(
@@ -475,7 +475,7 @@ function ConvertTo-QuickformCommand {
     }
 }
 
-function Run-Quickform {
+function Start-Quickform {
     [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
     Param(
         [Parameter(ParameterSetName = 'ByCommandName')]
