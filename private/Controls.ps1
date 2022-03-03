@@ -278,7 +278,9 @@ function Add-ControlsFieldBox {
     $script:monthCalendarPrefs.Width = 350
 
     $textBox.add_KeyDown({
-        switch ($_.KeyCode) {
+        $eventArgs = $_
+
+        switch ($eventArgs.KeyCode) {
             'O' {
                 if ([System.Windows.Forms.Control]::ModifierKeys `
                     -contains [System.Windows.Forms.Keys]::Control)
@@ -287,7 +289,8 @@ function Add-ControlsFieldBox {
                         -Control $this `
                         -Text ($this.Text + (Open-ControlsFileDialog))
 
-                    $_.Handled = $true
+                    $eventArgs.Handled = $true
+                    $eventArgs.SuppressKeyPress = $true
                 }
             }
 
@@ -302,7 +305,8 @@ function Add-ControlsFieldBox {
                         -Control $this `
                         -Text ($this.Text + $text)
 
-                    $_.Handled = $true
+                    $eventArgs.Handled = $true
+                    $eventArgs.SuppressKeyPress = $true
                 }
             }
         }
@@ -674,6 +678,7 @@ function Open-ControlsMonthCalendar {
         }
 
         $_.Handled = $true
+        $_.SuppressKeyPress = $true
     })
 
     $form.add_KeyDown({
@@ -682,6 +687,7 @@ function Open-ControlsMonthCalendar {
         }
 
         $_.Handled = $true
+        $_.SuppressKeyPress = $true
     })
 
     switch ($form.ShowDialog()) {
