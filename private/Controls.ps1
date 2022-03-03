@@ -277,14 +277,16 @@ function Add-ControlsFieldBox {
     $script:monthCalendarPrefs.Title = 'Get Date'
     $script:monthCalendarPrefs.Width = 350
 
+    $textBox.add_KeyPress({
+        $_.Handled = $true
+    })
+
     $textBox.add_KeyDown({
         $eventArgs = $_
 
         switch ($eventArgs.KeyCode) {
             'O' {
-                if ([System.Windows.Forms.Control]::ModifierKeys `
-                    -contains [System.Windows.Forms.Keys]::Control)
-                {
+                if ($eventArgs.Control) {
                     Set-ControlsWritableText `
                         -Control $this `
                         -Text ($this.Text + (Open-ControlsFileDialog))
@@ -295,9 +297,7 @@ function Add-ControlsFieldBox {
             }
 
             'D' {
-                if ([System.Windows.Forms.Control]::ModifierKeys `
-                    -contains [System.Windows.Forms.Keys]::Control)
-                {
+                if ($eventArgs.Control) {
                     $text = Open-ControlsMonthCalendar `
                         -Preferences $script:monthCalendarPrefs
 

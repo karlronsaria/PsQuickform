@@ -627,12 +627,11 @@ function Get-Quickform {
 
     $script:form.add_KeyDown({
         $refresh = $false
+        $eventArgs = $_
 
-        switch ($_.KeyCode) {
+        switch ($eventArgs.KeyCode) {
             'Right' {
-                if ([System.Windows.Forms.Control]::ModifierKeys `
-                    -contains [System.Windows.Forms.Keys]::Alt)
-                {
+                if ($eventArgs.Control) {
                     $what.CurrentParameterSetIndex = Get-NextIndex `
                         -Index $what.CurrentParameterSetIndex `
                         -Count $what.ParameterSets.Count
@@ -642,9 +641,7 @@ function Get-Quickform {
             }
 
             'Left' {
-                if ([System.Windows.Forms.Control]::ModifierKeys `
-                    -contains [System.Windows.Forms.Keys]::Alt)
-                {
+                if ($eventArgs.Control) {
                     $what.CurrentParameterSetIndex = Get-PreviousIndex `
                         -Index $what.CurrentParameterSetIndex `
                         -Count $what.ParameterSets.Count
