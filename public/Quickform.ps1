@@ -89,15 +89,20 @@ function New-QformObject {
 
     End {
         $layouts = [PsCustomObject]@{
-            MultiLayout = $null;
+            Multilayout = $null;
             Sublayouts = @();
             Controls = @{};
+            StatusLine = $null;
         }
 
         $layouts = Set-QformMainLayout `
-            -Layouts $layouts `
             -MainForm $form `
             -Controls $list `
+            -Preferences $myPreferences
+
+        Add-ControlsFormKeyBindings `
+            -Control $form `
+            -Layouts $layouts `
             -Preferences $myPreferences
 
         $confirm = switch ($form.ShowDialog()) {
@@ -224,7 +229,6 @@ function Set-QformLayout {
             -Preferences $Preferences
 
         $controlTable.Add('EndButtons__', $endButtons)
-        $Layouts.Controls = $controlTable
         return $controlTable
     }
 }
@@ -311,9 +315,6 @@ function Start-QformEvaluate {
 
 function Set-QformMainLayout {
     Param(
-        [PsCustomObject]
-        $Layouts,
-
         [System.Windows.Forms.Form]
         $MainForm,
 
@@ -326,20 +327,34 @@ function Set-QformMainLayout {
 
     $MainForm.Controls.Clear()
 
-    $Layouts = New-ControlsMultilayout `
+    $layouts = New-ControlsMultilayout `
         -Preferences $Preferences
 
-    $Layouts.Controls = $Controls | Set-QformLayout `
-        -Layouts $Layouts `
+    $layouts.Controls = $Controls | Set-QformLayout `
+        -Layouts $layouts `
         -Preferences $Preferences
 
     $MainForm.Text = $Preferences.Title
 
     # Resolving a possible race condition
-    while ($null -eq $Layouts.Multilayout) { }
+    while ($null -eq $layouts.Multilayout) { }
 
-    $MainForm.Controls.Add($Layouts.Multilayout)
-    return $Layouts
+    $statusLine = New-ControlsStatusLine `
+        -Preferences $Preferences
+
+    $fillLayout = New-ControlsLayout `
+        -Preferences $Preferences
+
+    $fillLayout.Controls.Add($layouts.Multilayout)
+    $fillLayout.Controls.Add($statusLine)
+    $MainForm.Controls.Add($fillLayout)
+
+    return [PsCustomObject]@{
+        Multilayout = $layouts.Multilayout;
+        Sublayouts = $layouts.Sublayouts;
+        Controls = $layouts.Controls;
+        StatusLine = $statusLine;
+    }
 }
 
 function Get-QformControlType {
@@ -657,32 +672,21 @@ function Get-QformCommand {
     $script:controls = $paramset.Controls
 
     $script:layouts = [PsCustomObject]@{
-        MultiLayout = $null;
+        Multilayout = $null;
         Sublayouts = @();
         Controls = @{};
+        StatusLine = $null;
     }
 
     $script:layouts = Set-QformMainLayout `
-        -Layouts $layouts `
         -MainForm $form `
         -Controls $controls `
         -Preferences $myPreferences
 
-    if ($myPreferences.EnterToConfirm) {
-        $script:form.add_KeyDown({
-            if ($_.KeyCode -eq 'Enter') {
-                $script:layouts.Controls['EndButtons__'].OkButton.PerformClick()
-            }
-        })
-    }
-
-    if ($myPreferences.EscapeToCancel) {
-        $script:form.add_KeyDown({
-            if ($_.KeyCode -eq 'Escape') {
-                $script:layouts.Controls['EndButtons__'].CancelButton.PerformClick()
-            }
-        })
-    }
+    Add-ControlsFormKeyBindings `
+        -Control $form `
+        -Layouts $script:layouts `
+        -Preferences $myPreferences
 
     # Issue: Event handler fails to update variable from outer scope
     # Link: https://stackoverflow.com/questions/55403528/why-wont-variable-update
@@ -723,13 +727,12 @@ function Get-QformCommand {
             $script:controls = $paramset.Controls
 
             $script:layouts = Set-QformMainLayout `
-                -Layouts $script:layouts `
                 -MainForm $script:form `
                 -Controls $script:controls `
                 -Preferences $script:myPreferences
 
             Set-ControlsCenterScreen `
-                -Controls $script:form
+                -Control $script:form
 
             $this.Focus()
         }
@@ -740,7 +743,7 @@ function Get-QformCommand {
         'Cancel' { $false }
     }
 
-    $script:controls = `
+    $script:controls =
         $what.ParameterSets[$what.CurrentParameterSetIndex].Controls
 
     $out = $script:controls | Start-QformEvaluate `

@@ -1,20 +1,29 @@
 
-. $PsScriptRoot\..\private\Other.ps1
+. $PsScriptRoot\Other.ps1
 
-$script:DEFAULT_PREFERENCES_PATH = `
+$script:DEFAULT_PREFERENCES_PATH =
     "$PsScriptRoot\..\res\default_preference.json"
 
-$script:DEFAULT_PREFERENCES = `
+$script:STATUS_LINES_PATH =
+    "$PsScriptRoot\..\res\status_line.json"
+
+$script:HELP_PATH =
+    "$PsScriptRoot\..\res\help.txt"
+
+$script:DEFAULT_PREFERENCES =
     Get-Content $script:DEFAULT_PREFERENCES_PATH | ConvertFrom-Json
 
-$script:DEFAULT_NUMERIC_MINIMUM = `
+$script:DEFAULT_NUMERIC_MINIMUM =
     $script:DEFAULT_PREFERENCES.NumericMinimum
 
-$script:DEFAULT_NUMERIC_MAXIMUM = `
+$script:DEFAULT_NUMERIC_MAXIMUM =
     $script:DEFAULT_PREFERENCES.NumericMaximum
 
-$script:DEFAULT_NUMERIC_DECIMALPLACES = `
+$script:DEFAULT_NUMERIC_DECIMALPLACES =
     $script:DEFAULT_PREFERENCES.NumericDecimalPlaces
+
+$script:STATUS =
+    Get-Content $script:STATUS_LINES_PATH | ConvertFrom-Json
 
 <#
     .LINK
@@ -51,19 +60,33 @@ function Set-ControlsCenterScreen {
     $screen = [System.Windows.Forms.Screen]::FromControl($Control)
     $workingArea = $screen.WorkingArea
 
-    # $Control.Location.X = `
-    $Control.Left = `
+    $Control.Left =
         [Math]::Max( `
             $workingArea.X, `
             $workingArea.X + ($workingArea.Width - $Control.Width) / 2
         )
 
-    # $Control.Location.Y = `
-    $Control.Top = `
+    $Control.Top =
         [Math]::Max( `
             $workingArea.Y, `
             $workingArea.Y + ($workingArea.Height - $Control.Height) / 2
         )
+}
+
+function New-ControlsStatusLine {
+    Param(
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES,
+
+        [String]
+        $Text = $script:STATUS.Idle
+    )
+
+    $statusLine = New-Object System.Windows.Forms.Label
+    $statusLine.Left = $Preferences.Margin
+    $statusLine.Width = $Preferences.Width - (2 * $Preferences.Margin)
+    $statusLine.Text = $Text
+    return $statusLine
 }
 
 function New-ControlsLayout {
@@ -73,7 +96,7 @@ function New-ControlsLayout {
     )
 
     $layout = New-Object System.Windows.Forms.FlowLayoutPanel
-    $layout.FlowDirection = `
+    $layout.FlowDirection =
         [System.Windows.Forms.FlowDirection]::TopDown
     $layout.Left = $Preferences.Margin
     $layout.Width = $Preferences.Width - (2 * $Preferences.Margin)
@@ -91,7 +114,7 @@ function New-ControlsMultilayout {
     $multilayout = New-Object System.Windows.Forms.FlowLayoutPanel
     $multilayout.Left = $Preferences.Margin
     $multilayout.AutoSize = $true
-    $multilayout.FlowDirection = `
+    $multilayout.FlowDirection =
         [System.Windows.Forms.FlowDirection]::LeftToRight
 
     $layout = New-ControlsLayout `
@@ -104,6 +127,50 @@ function New-ControlsMultilayout {
         Sublayouts = @($layout);
         Controls = @{};
     }
+}
+
+function Add-ControlsFormKeyBindings {
+    Param(
+        [System.Windows.Forms.Control]
+        $Control,
+
+        [PsCustomObject]
+        $Layouts,
+
+        [PsCustomObject]
+        $Preferences
+    )
+
+    $script:layouts = $Layouts
+
+    if ($Preferences.EnterToConfirm) {
+        $Control.add_KeyDown({
+            if ($_.KeyCode -eq 'Enter') {
+                $script:layouts.Controls['EndButtons__'].OkButton.PerformClick()
+            }
+        })
+    }
+
+    if ($Preferences.EscapeToCancel) {
+        $Control.add_KeyDown({
+            if ($_.KeyCode -eq 'Escape') {
+                $script:layouts.Controls['EndButtons__'].CancelButton.PerformClick()
+            }
+        })
+    }
+
+    $Control.add_KeyDown({
+        if ($_.KeyCode -eq [System.Windows.Forms.Keys]::OemQuestion `
+            -and $_.Control)
+        {
+            $message = Get-Content `
+                -Path $script:HELP_PATH
+
+            $message = $message -join "`r`n"
+            $title = 'Help'
+            [System.Windows.Forms.MessageBox]::Show($message, $title)
+        }
+    })
 }
 
 function Add-ControlToMultilayout {
@@ -186,11 +253,11 @@ function New-ControlsMain {
     $form.Font = $font
     $form.AutoSize = $true
     $form.KeyPreview = $true
-    $form.AutoSizeMode = `
+    $form.AutoSizeMode =
         [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
-    $form.FormBorderStyle = `
+    $form.FormBorderStyle =
         [System.Windows.Forms.FormBorderStyle]::FixedSingle
-    $form.StartPosition = `
+    $form.StartPosition =
         [System.Windows.Forms.FormStartPosition]::CenterScreen
 
     Add-ControlsFocusOnShownEvent `
@@ -253,7 +320,7 @@ function Add-ControlsFieldBox {
     )
 
     $flowPanel = New-Object System.Windows.Forms.FlowLayoutPanel
-    $flowPanel.FlowDirection = `
+    $flowPanel.FlowDirection =
         [System.Windows.Forms.FlowDirection]::TopDown
     $flowPanel.Left = $Preferences.Margin
     $flowPanel.Width = $Preferences.Width - (3 * $Preferences.Margin)
@@ -264,13 +331,13 @@ function Add-ControlsFieldBox {
     $label.Text = $Text
     $label.Left = $Preferences.Margin
     $label.Width = $Preferences.Width - (4 * $Preferences.Margin)
-    $label.Anchor = `
+    $label.Anchor =
         [System.Windows.Forms.AnchorStyles]::Right
 
     $textBox = New-Object System.Windows.Forms.TextBox
     $textBox.Left = $Preferences.Margin
     $textBox.Width = $Preferences.Width - (4 * $Preferences.Margin)
-    $textBox.Anchor = `
+    $textBox.Anchor =
         [System.Windows.Forms.AnchorStyles]::Left + `
         [System.Windows.Forms.AnchorStyles]::Right
 
@@ -358,7 +425,7 @@ function Add-ControlsSlider {
     )
 
     $flowPanel = New-Object System.Windows.Forms.FlowLayoutPanel
-    $flowPanel.FlowDirection = `
+    $flowPanel.FlowDirection =
         [System.Windows.Forms.FlowDirection]::TopDown
     $flowPanel.Left = $Preferences.Margin
     $flowPanel.Width = $Preferences.Width - (3 * $Preferences.Margin)
@@ -369,13 +436,13 @@ function Add-ControlsSlider {
     $label.Text = $Text
     $label.Left = $Preferences.Margin
     $label.Width = $Preferences.Width - (4 * $Preferences.Margin)
-    $label.Anchor = `
+    $label.Anchor =
         [System.Windows.Forms.AnchorStyles]::Right
 
     $slider = New-Object System.Windows.Forms.NumericUpDown
     $slider.Left = $Preferences.Margin
     $slider.Width = $Preferences.Width - (4 * $Preferences.Margin)
-    $slider.Anchor = `
+    $slider.Anchor =
         [System.Windows.Forms.AnchorStyles]::Left + `
         [System.Windows.Forms.AnchorStyles]::Right
     $slider.Minimum = $Minimum
@@ -454,7 +521,7 @@ function Add-ControlsRadioBox {
     $groupBox.Text = $Text
 
     $flowPanel = New-Object System.Windows.Forms.FlowLayoutPanel
-    $flowPanel.FlowDirection = `
+    $flowPanel.FlowDirection =
         [System.Windows.Forms.FlowDirection]::TopDown
     $flowPanel.Left = $Preferences.Margin
     $flowPanel.Width = $Preferences.Width - (3 * $Preferences.Margin)
@@ -509,23 +576,23 @@ function New-ControlsOkCancelButtons {
     $endButtons = New-Object System.Windows.Forms.FlowLayoutPanel
     $endButtons.AutoSize = $true
     $endButtons.WrapContents = $false
-    $endButtons.FlowDirection = `
+    $endButtons.FlowDirection =
         [System.Windows.Forms.FlowDirection]::LeftToRight
 
     $okButton = New-Object System.Windows.Forms.Button
     $okButton.Text = 'OK'
-    $okButton.DialogResult = `
+    $okButton.DialogResult =
         [System.Windows.Forms.DialogResult]::OK
 
     $cancelButton = New-Object System.Windows.Forms.Button
     $cancelButton.Text = 'Cancel'
-    $cancelButton.DialogResult = `
+    $cancelButton.DialogResult =
         [System.Windows.Forms.DialogResult]::Cancel
 
     $endButtons.Controls.Add($okButton)
     $endButtons.Controls.Add($cancelButton)
     $endButtons.Left = ($Preferences.Width - $endButtons.Width) / 2
-    $endButtons.Anchor = `
+    $endButtons.Anchor =
         [System.Windows.Forms.AnchorStyles]::None
 
     return [PsCustomObject]@{
@@ -633,12 +700,12 @@ function Open-ControlsMonthCalendar {
     $calendar.Dock = [System.Windows.Forms.DockStyle]::Fill
     $calendar.MaxSelectionCount = 1
     $calendar.Left = ($Preferences.Width - $calendar.Width) / 2
-    $calendar.Anchor = `
+    $calendar.Anchor =
         [System.Windows.Forms.AnchorStyles]::None
 
     $textBox = New-Object System.Windows.Forms.TextBox
     $textBox.Left = ($Preferences.Width - $textBox.Width) / 2
-    $textBox.Anchor = `
+    $textBox.Anchor =
         [System.Windows.Forms.AnchorStyles]::Top + `
         [System.Windows.Forms.AnchorStyles]::Left + `
         [System.Windows.Forms.AnchorStyles]::Right
