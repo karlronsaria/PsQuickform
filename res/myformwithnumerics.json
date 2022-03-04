@@ -34,7 +34,7 @@
         {
             "Name": "TheFloat",
             "Type": "Numeric",
-            "AsFloat": true,
+            "DecimalPlaces": 2,
             "Default": 47.7
         },
         {
