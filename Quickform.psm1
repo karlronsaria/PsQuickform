@@ -5,19 +5,20 @@
 
 Export-ModuleMember -Function @(
 
-    ## Quickform.ps1
+    ## Qform.ps1
     ## -------------
-    'New-QuickformPreferences',
-    'Get-QuickformObject',
-    # 'Set-QuickformLayout',
-    # 'Start-QuickformEvaluate',
-    # 'Set-QuickformMainLayout',
-    'New-QuickformObject',
-    'Get-QuickformControlType',
-    'ConvertTo-QuickformParameter',
-    'ConvertTo-QuickformCommand',
-    'Start-Quickform',
-    'Get-Quickform',
+    'New-QformPreferences',
+    'Get-QformObject',
+    # 'Set-QformLayout',
+    # 'Start-QformEvaluate',
+    # 'Set-QformMainLayout',
+    # 'New-QformObject',
+    'Get-QformControlType',
+    # 'ConvertTo-QformParameter',
+    # 'ConvertTo-QformCommand',
+    'Invoke-QformCommand',
+    'Get-QformCommand',
+    # 'ConvertTo-QformString',
 
     ## Other.ps1
     ## ---------

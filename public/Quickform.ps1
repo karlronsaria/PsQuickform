@@ -1,7 +1,7 @@
 # Requires source Controls.ps1
 # Requires source CommandInfo.ps1
 
-function New-QuickformPreferences {
+function New-QformPreferences {
     Param(
         [PsCustomObject]
         $Preferences
@@ -18,33 +18,119 @@ function New-QuickformPreferences {
     return $myPreferences
 }
 
-function Get-QuickformObject {
-    [CmdletBinding()]
+function Get-QformObject {
+    [CmdletBinding(DefaultParameterSetName = 'BySingleObject')]
     Param(
-        [Parameter(ValueFromPipeline = $true)]
+        [Parameter(
+            ParameterSetName = 'BySingleObject',
+            ValueFromPipeline = $true)]
         [PsCustomObject]
         $InputObject,
+
+        [Parameter(ParameterSetName = 'BySeparateObjects')]
+        [PsCustomObject[]]
+        $Controls,
+
+        [Parameter(ParameterSetName = 'BySeparateObjects')]
+        [PsCustomObject]
+        $Preferences,
 
         [Switch]
         $AsHashtable
     )
 
-    if ($null -eq $InputObject) {
-        return New-QuickformObject
+    switch ($PsCmdlet.ParameterSetName) {
+        'BySingleObject' {
+            $Controls = $InputObject.Controls
+            $Preferences = $InputObject.Preferences
+        }
     }
 
-    return $InputObject.Controls `
-        | New-QuickformObject `
-            -Preferences $InputObject.Preferences `
-            -AsHashtable:$AsHashtable
+    if ($null -eq $InputObject) {
+        return New-QformObject
+    }
+
+    return New-QformObject `
+        -Controls $Controls `
+        -Preferences $Preferences `
+        -AsHashtable:$AsHashtable
 }
 
-function Set-QuickformLayout {
+function New-QformObject {
     [CmdletBinding()]
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [PsCustomObject[]]
-        $Control,
+        $Controls,
+
+        [PsCustomObject]
+        $Preferences,
+
+        [Switch]
+        $AsHashtable
+    )
+
+    Begin {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+
+        $myPreferences = New-QformPreferences `
+            -Preferences $Preferences
+
+        $form = New-ControlsMain `
+            -Preferences $myPreferences
+
+        $list = @()
+    }
+
+    Process {
+        $list += @($Controls)
+    }
+
+    End {
+        $layouts = [PsCustomObject]@{
+            MultiLayout = $null;
+            Sublayouts = @();
+            Controls = @{};
+        }
+
+        $layouts = Set-QformMainLayout `
+            -Layouts $layouts `
+            -MainForm $form `
+            -Controls $list `
+            -Preferences $myPreferences
+
+        $confirm = switch ($form.ShowDialog()) {
+            'OK' { $true }
+            'Cancel' { $false }
+        }
+
+        $out = $list | Start-QformEvaluate `
+            -Layouts $layouts
+
+        if ($AsHashtable) {
+            $table = @{}
+
+            foreach ($property in $out.PsObject.Properties.Name) {
+                $table[$property] = $out.$property
+            }
+
+            $out = $table
+        }
+
+        return [PsCustomObject]@{
+            Confirm = $confirm;
+            FormResult = $out;
+        }
+    }
+}
+
+function Set-QformLayout {
+    [CmdletBinding()]
+    Param(
+        [Parameter(ValueFromPipeline = $true)]
+        [PsCustomObject[]]
+        $Controls,
 
         [PsCustomObject]
         $Layouts,
@@ -54,11 +140,11 @@ function Set-QuickformLayout {
     )
 
     Begin {
-        $controls = @{}
+        $controlTable = @{}
     }
 
     Process {
-        foreach ($item in $Control) {
+        foreach ($item in $Controls) {
             $default = Get-PropertyOrDefault `
                 -InputObject $item `
                 -Name 'Default'
@@ -131,7 +217,7 @@ function Set-QuickformLayout {
                 }
             }
 
-            $controls.Add($item.Name, $value)
+            $controlTable.Add($item.Name, $value)
         }
     }
 
@@ -140,18 +226,18 @@ function Set-QuickformLayout {
             -Layouts $Layouts `
             -Preferences $Preferences
 
-        $controls.Add('EndButtons__', $endButtons)
-        $Layouts.Controls = $controls
-        return $controls
+        $controlTable.Add('EndButtons__', $endButtons)
+        $Layouts.Controls = $controlTable
+        return $controlTable
     }
 }
 
-function Start-QuickformEvaluate {
+function Start-QformEvaluate {
     [CmdletBinding()]
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [PsCustomObject[]]
-        $Control,
+        $Controls,
 
         [PsCustomObject]
         $Layouts
@@ -159,14 +245,14 @@ function Start-QuickformEvaluate {
 
     Begin {
         $out = [PsCustomObject]@{}
-        $controls = $Layouts.Controls
+        $controlTable = $Layouts.Controls
     }
 
     Process {
-        foreach ($item in $Control) {
+        foreach ($item in $Controls) {
             $value = switch ($item.Type) {
                 'Check' {
-                    $tempValue = $controls[$item.Name].Checked;
+                    $tempValue = $controlTable[$item.Name].Checked;
 
                     switch ($myPreferences.ConfirmType) {
                         'TrueOrFalse' {
@@ -183,11 +269,11 @@ function Start-QuickformEvaluate {
                 }
 
                 'Field' {
-                    $controls[$item.Name].Text
+                    $controlTable[$item.Name].Text
                 }
 
                 'Enum' {
-                    $buttons = $controls[$item.Name];
+                    $buttons = $controlTable[$item.Name];
 
                     $temp = if ($buttons) {
                         $buttons.Keys | where {
@@ -206,8 +292,8 @@ function Start-QuickformEvaluate {
                 }
 
                 'Numeric' {
-                    if ($controls[$item.Name].Text) {
-                        $controls[$item.Name].Value
+                    if ($controlTable[$item.Name].Text) {
+                        $controlTable[$item.Name].Value
                     } else {
                         $null
                     }
@@ -226,7 +312,7 @@ function Start-QuickformEvaluate {
     }
 }
 
-function Set-QuickformMainLayout {
+function Set-QformMainLayout {
     Param(
         [PsCustomObject]
         $Layouts,
@@ -235,7 +321,7 @@ function Set-QuickformMainLayout {
         $MainForm,
 
         [PsCustomObject[]]
-        $Control,
+        $Controls,
 
         [PsCustomObject]
         $Preferences
@@ -246,88 +332,20 @@ function Set-QuickformMainLayout {
     $Layouts = New-ControlsMultilayout `
         -Preferences $Preferences
 
-    $Layouts.Controls = $Control | Set-QuickformLayout `
+    $Layouts.Controls = $Controls | Set-QformLayout `
         -Layouts $Layouts `
         -Preferences $Preferences
 
     $MainForm.Text = $Preferences.Title
 
+    # Resolving a possible race condition
     while ($null -eq $Layouts.Multilayout) { }
 
     $MainForm.Controls.Add($Layouts.Multilayout)
     return $Layouts
 }
 
-function New-QuickformObject {
-    [CmdletBinding()]
-    Param(
-        [Parameter(ValueFromPipeline = $true)]
-        [PsCustomObject[]]
-        $Control,
-
-        [PsCustomObject]
-        $Preferences,
-
-        [Switch]
-        $AsHashtable
-    )
-
-    Begin {
-        Add-Type -AssemblyName System.Windows.Forms
-        Add-Type -AssemblyName System.Drawing
-
-        $myPreferences = New-QuickformPreferences `
-            -Preferences $Preferences
-
-        $form = New-ControlsMain `
-            -Preferences $myPreferences
-
-        $list = @()
-    }
-
-    Process {
-        $list += @($Control)
-    }
-
-    End {
-        $layouts = [PsCustomObject]@{
-            MultiLayout = $null;
-            Sublayouts = @();
-            Controls = @{};
-        }
-
-        $layouts = Set-QuickformMainLayout `
-            -Layouts $layouts `
-            -MainForm $form `
-            -Control $list `
-            -Preferences $myPreferences
-
-        $confirm = switch ($form.ShowDialog()) {
-            'OK' { $true }
-            'Cancel' { $false }
-        }
-
-        $out = $list | Start-QuickformEvaluate `
-            -Layouts $layouts
-
-        if ($AsHashtable) {
-            $table = @{}
-
-            foreach ($property in $out.PsObject.Properties.Name) {
-                $table[$property] = $out.$property
-            }
-
-            $out = $table
-        }
-
-        return [PsCustomObject]@{
-            Confirm = $confirm;
-            FormResult = $out;
-        }
-    }
-}
-
-function Get-QuickformControlType {
+function Get-QformControlType {
     Param(
         [String]
         $TypeName
@@ -346,7 +364,7 @@ function Get-QuickformControlType {
     return $controlType
 }
 
-function ConvertTo-QuickformParameter {
+function ConvertTo-QformParameter {
     Param(
         $ParameterInfo
     )
@@ -436,14 +454,14 @@ function ConvertTo-QuickformParameter {
     }
 
     if ($obj.Type -eq '') {
-        $obj.Type = Get-QuickformControlType `
+        $obj.Type = Get-QformControlType `
             -TypeName $type.Name
     }
 
     return $obj
 }
 
-function ConvertTo-QuickformCommand {
+function ConvertTo-QformCommand {
     Param(
         [Parameter(ParameterSetName = 'ByCommandInfo')]
         [System.Management.Automation.CommandInfo]
@@ -464,7 +482,7 @@ function ConvertTo-QuickformCommand {
                 $IncludeCommonParameters `
                     -or -not (Test-IsCommonParameter -ParameterInfo $_)
             } | foreach {
-                ConvertTo-QuickformParameter -ParameterInfo $_
+                ConvertTo-QformParameter -ParameterInfo $_
             }
         }
 
@@ -473,13 +491,55 @@ function ConvertTo-QuickformCommand {
                 $IncludeCommonParameters `
                     -or -not (Test-IsCommonParameter -ParameterInfo $_)
             } | foreach {
-                ConvertTo-QuickformParameter -ParameterInfo $_
+                ConvertTo-QformParameter -ParameterInfo $_
             }
         }
     }
 }
 
-function Get-Quickform {
+function ConvertTo-QformString {
+    Param(
+        [PsCustomObject]
+        $FormResult
+    )
+
+    $outStr = ""
+
+    foreach ($property in $FormResult.PsObject.Properties) {
+        $name = $property.Name
+        $value = $property.Value
+
+        if ($null -eq $value) {
+            continue
+        }
+
+        $outStr += switch -Regex ($value.GetType().Name) {
+            'String' {
+                if (-not [String]::IsNullOrEmpty($value)) {
+                    " -$name `"$value`""
+                }
+            }
+
+            'Bool.*' {
+                if ($value) {
+                    " -$name"
+                }
+            }
+
+            'Int.*|Decimal|Float|Double' {
+                " -$name $value"
+            }
+
+            '.*\[\]' {
+                " -$name $(`"$value`" -join ', ')"
+            }
+        }
+    }
+
+    return $outStr
+}
+
+function Get-QformCommand {
     [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
     Param(
         [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
@@ -524,8 +584,14 @@ function Get-Quickform {
         return $Index
     }
 
-    if ($PsCmdlet.ParameterSetName -eq 'ByCommandName') {
-        $CommandInfo = Get-Command -Name $CommandName
+    switch ($PsCmdlet.ParameterSetName) {
+        'ByCommandName' {
+            $CommandInfo = Get-Command -Name $CommandName
+        }
+
+        'ByCommandInfo' {
+            $CommandName = $CommandInfo.Name
+        }
     }
 
     if (-not $CommandInfo) {
@@ -567,7 +633,7 @@ function Get-Quickform {
                     $IncludeCommonParameters `
                         -or -not (Test-IsCommonParameter -ParameterInfo $_)
                 } | foreach {
-                    ConvertTo-QuickformParameter -ParameterInfo $_
+                    ConvertTo-QformParameter -ParameterInfo $_
                 };
             }
 
@@ -582,10 +648,10 @@ function Get-Quickform {
     $script:paramSet = $what.ParameterSets[$what.CurrentParameterSetIndex]
 
     if ($null -eq $script:paramSet) {
-        return New-QuickformObject
+        return New-QformObject
     }
 
-    $script:myPreferences = New-QuickformPreferences `
+    $script:myPreferences = New-QformPreferences `
         -Preferences $paramSet.Preferences
 
     $script:form = New-ControlsMain `
@@ -599,10 +665,10 @@ function Get-Quickform {
         Controls = @{};
     }
 
-    $script:layouts = Set-QuickformMainLayout `
+    $script:layouts = Set-QformMainLayout `
         -Layouts $layouts `
         -MainForm $form `
-        -Control $controls `
+        -Controls $controls `
         -Preferences $myPreferences
 
     if ($myPreferences.EnterToConfirm) {
@@ -631,7 +697,7 @@ function Get-Quickform {
 
         switch ($eventArgs.KeyCode) {
             'Right' {
-                if ($eventArgs.Control) {
+                if ($eventArgs.Alt) {
                     $what.CurrentParameterSetIndex = Get-NextIndex `
                         -Index $what.CurrentParameterSetIndex `
                         -Count $what.ParameterSets.Count
@@ -641,7 +707,7 @@ function Get-Quickform {
             }
 
             'Left' {
-                if ($eventArgs.Control) {
+                if ($eventArgs.Alt) {
                     $what.CurrentParameterSetIndex = Get-PreviousIndex `
                         -Index $what.CurrentParameterSetIndex `
                         -Count $what.ParameterSets.Count
@@ -654,19 +720,19 @@ function Get-Quickform {
         if ($refresh) {
             $script:paramSet = $what.ParameterSets[$what.CurrentParameterSetIndex]
 
-            $script:myPreferences = New-QuickformPreferences `
+            $script:myPreferences = New-QformPreferences `
                 -Preferences $paramSet.Preferences
 
             $script:controls = $paramset.Controls
 
-            $script:layouts = Set-QuickformMainLayout `
+            $script:layouts = Set-QformMainLayout `
                 -Layouts $script:layouts `
                 -MainForm $script:form `
-                -Control $script:controls `
+                -Controls $script:controls `
                 -Preferences $script:myPreferences
 
             Set-ControlsCenterScreen `
-                -Control $script:form
+                -Controls $script:form
 
             $this.Focus()
         }
@@ -680,7 +746,7 @@ function Get-Quickform {
     $script:controls = `
         $what.ParameterSets[$what.CurrentParameterSetIndex].Controls
 
-    $out = $script:controls | Start-QuickformEvaluate `
+    $out = $script:controls | Start-QformEvaluate `
         -Layouts $script:layouts
 
     if ($AsHashtable) {
@@ -696,10 +762,11 @@ function Get-Quickform {
     return [PsCustomObject]@{
         Confirm = $confirm;
         FormResult = $out;
+        CommandString = "$CommandName $(ConvertTo-QformString -FormResult $out)";
     }
 }
 
-function Start-Quickform {
+function Invoke-QformCommand {
     [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
     Param(
         [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
@@ -714,10 +781,7 @@ function Start-Quickform {
         $ParameterSetName,
 
         [Switch]
-        $IncludeCommonParameters,
-
-        [Switch]
-        $AsHashtable
+        $IncludeCommonParameters
     )
 
     $quickform = [PsCustomObject]@{
@@ -727,7 +791,7 @@ function Start-Quickform {
 
     switch ($PsCmdlet.ParameterSetName) {
         'ByCommandName' {
-            $quickform = Get-Quickform `
+            $quickform = Get-QformCommand `
                 -CommandName $CommandName `
                 -ParameterSetName:$ParameterSetName `
                 -IncludeCommonParameters:$IncludeCommonParameters `
@@ -738,7 +802,7 @@ function Start-Quickform {
         }
 
         'ByCommandInfo' {
-            $quickform = Get-Quickform `
+            $quickform = Get-QformCommand `
                 -CommandInfo $CommandInfo `
                 -ParameterSetName:$ParameterSetName `
                 -IncludeCommonParameters:$IncludeCommonParameters `

@@ -1,6 +1,16 @@
 
 . $PsScriptRoot\..\private\Other.ps1
 
+<#
+$script:DEFAULT_PREFERENCES_PATH = `
+    "$PsScriptRoot\..\res\default_preference.json"
+
+$script:DEFAULT_PREFERENCES = `
+    Get-Content $script:DEFAULT_PREFERENCES_PATH | ConvertFrom-Json
+#>
+
+$script:DEFAULT_PREFERENCES_PATH = "$PsScriptRoot\..\res\default_preference.json"
+
 $script:DEFAULT_PREFERENCES = [PsCustomObject]@{
     Title = 'Preferences';
     FontFamily = 'Microsoft Sans Serif';
@@ -37,10 +47,13 @@ function Set-ControlsWritableText {
     $Control.Select($Control.Text.Length, 0)
 }
 
-# Link: https://stackoverflow.com/questions/4601827/how-do-i-center-a-window-onscreen-in-c
-# Link: https://stackoverflow.com/users/1527490/sarsur-a
-# Link: https://stackoverflow.com/users/1306012/bruno-bieri
-# Retrieved: 2022_03_02
+<#
+    .LINK
+    Link: https://stackoverflow.com/questions/4601827/how-do-i-center-a-window-onscreen-in-c
+    Link: https://stackoverflow.com/users/1527490/sarsur-a
+    Link: https://stackoverflow.com/users/1306012/bruno-bieri
+    Retrieved: 2022_03_02
+#>
 function Set-ControlsCenterScreen {
     Param(
         [System.Windows.Forms.Control]
