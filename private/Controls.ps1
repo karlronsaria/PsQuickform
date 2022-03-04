@@ -7,9 +7,14 @@ $script:DEFAULT_PREFERENCES_PATH = `
 $script:DEFAULT_PREFERENCES = `
     Get-Content $script:DEFAULT_PREFERENCES_PATH | ConvertFrom-Json
 
-$script:DEFAULT_SLIDER_MINIMUM = -99999
-$script:DEFAULT_SLIDER_MAXIMUM = 99999
-$script:DEFAULT_SLIDER_DECIMALPLACES = 2
+$script:DEFAULT_NUMERIC_MINIMUM = `
+    $script:DEFAULT_PREFERENCES.NumericMinimum
+
+$script:DEFAULT_NUMERIC_MAXIMUM = `
+    $script:DEFAULT_PREFERENCES.NumericMaximum
+
+$script:DEFAULT_NUMERIC_DECIMALPLACES = `
+    $script:DEFAULT_PREFERENCES.NumericDecimalPlaces
 
 <#
     .LINK
@@ -344,12 +349,9 @@ function Add-ControlsSlider {
         $Text,
 
         $Default,
-        $Minimum = $script:DEFAULT_SLIDER_MINIMUM,
-        $Maximum = $script:DEFAULT_SLIDER_MAXIMUM,
-        $DecimalPlaces,
-
-        [Switch]
-        $AsFloat,
+        $Minimum = $script:DEFAULT_NUMERIC_MINIMUM,
+        $Maximum = $script:DEFAULT_NUMERIC_MAXIMUM,
+        $DecimalPlaces = $script:DEFAULT_NUMERIC_DECIMALPLACES,
 
         [PsCustomObject]
         $Preferences = $script:DEFAULT_PREFERENCES
@@ -399,13 +401,6 @@ function Add-ControlsSlider {
                 }
             }
         })
-    }
-
-    if ($null -ne $DecimalPlaces) {
-        $slider.DecimalPlaces = $DecimalPlaces
-    }
-    elseif ($AsFloat) {
-        $slider.DecimalPlaces = $script:DEFAULT_SLIDER_DECIMALPLACES
     }
 
     if ($null -ne $Default) {

@@ -194,16 +194,14 @@ function Set-QformLayout {
 
                 'Numeric' {
                     $places = $item | Get-PropertyOrDefault `
-                        -Name DecimalPlaces;
+                        -Name DecimalPlaces `
+                        -Default $Preferences.NumericDecimalPlaces;
                     $min = $item | Get-PropertyOrDefault `
                         -Name Minimum `
-                        -Default $script:DEFAULT_SLIDER_MINIMUM;
+                        -Default $Preferences.NumericMinimum;
                     $max = $item | Get-PropertyOrDefault `
                         -Name Maximum `
-                        -Default $script:DEFAULT_SLIDER_MAXIMUM;
-                    $asFloat = $item | Get-PropertyOrDefault `
-                        -Name AsFloat `
-                        -Default $false;
+                        -Default $Preferences.NumericMaximum;
 
                     Add-ControlsSlider `
                         -Layouts $Layouts `
@@ -211,7 +209,6 @@ function Set-QformLayout {
                         -DecimalPlaces $places `
                         -Minimum $min `
                         -Maximum $max `
-                        -AsFloat:$asFloat `
                         -Default $default `
                         -Preferences $Preferences
                 }

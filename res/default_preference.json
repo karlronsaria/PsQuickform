@@ -8,6 +8,10 @@
     "ConfirmType": "TrueOrFalse",
     "EnterToConfirm": true,
     "EscapeToCancel": true,
-    "DateFormat": "yyyy_MM_dd"
+    "DateFormat": "yyyy_MM_dd",
+
+    "NumericMinimum": -9999,
+    "NumericMaximum": 9999,
+    "NumericDecimalPlaces": 0
 }
 
