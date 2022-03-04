@@ -27,6 +27,10 @@ function Get-TrimTable {
         $RemoveEmptyString
     )
 
+    if ($null -eq $InputObject) {
+        return
+    }
+
     $table = @{}
 
     $InputObject.Keys | where {

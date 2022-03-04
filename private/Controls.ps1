@@ -1,5 +1,5 @@
 
-. $PsScriptRoot\Other.ps1
+. $PsScriptRoot\..\private\Other.ps1
 
 $script:DEFAULT_PREFERENCES = [PsCustomObject]@{
     Title = 'Preferences';
@@ -20,9 +20,9 @@ $script:DEFAULT_SLIDER_DECIMALPLACES = 2
 
 <#
     .LINK
-        Link: https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox
-        Link: https://stackoverflow.com/users/1042848/vishal-suthar
-        Retreived: 2022_03_02
+    Link: https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox
+    Link: https://stackoverflow.com/users/1042848/vishal-suthar
+    Retreived: 2022_03_02
 #>
 function Set-ControlsWritableText {
     Param(
@@ -231,9 +231,9 @@ function Add-ControlsCheckBox {
 
 <#
     .NOTE
-        Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
-        operative control, to a target container. 'Add-' rather than 'New-' helps
-        encapsulate inoperative controls.
+    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the operative
+    control, to a target container. 'Add-' rather than 'New-' helps encapsulate
+    inoperative controls.
 #>
 function Add-ControlsFieldBox {
     Param(
@@ -335,9 +335,9 @@ function Add-ControlsFieldBox {
 
 <#
     .NOTE
-        Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
-        operative control, to a target container. 'Add-' rather than 'New-' helps
-        encapsulate inoperative controls.
+    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the operative
+    control, to a target container. 'Add-' rather than 'New-' helps encapsulate
+    inoperative controls.
 #>
 function Add-ControlsSlider {
     Param(
@@ -432,9 +432,9 @@ function Add-ControlsSlider {
 
 <#
     .NOTE
-        Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
-        operative control, to a target container. 'Add-' rather than 'New-' helps
-        encapsulate inoperative controls.
+    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the operative
+    control, to a target container. 'Add-' rather than 'New-' helps encapsulate
+    inoperative controls.
 #>
 function Add-ControlsRadioBox {
     Param(
@@ -546,9 +546,9 @@ function New-ControlsOkCancelButtons {
 
 <#
     .NOTE
-        Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
-        operative control, to a target container. 'Add-' rather than 'New-' helps
-        encapsulate inoperative controls.
+    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the operative
+    control, to a target container. 'Add-' rather than 'New-' helps encapsulate
+    inoperative controls.
 #>
 function Add-ControlsOkCancelButtons {
     Param(
