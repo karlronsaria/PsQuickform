@@ -1,28 +1,11 @@
 
 . $PsScriptRoot\..\private\Other.ps1
 
-<#
 $script:DEFAULT_PREFERENCES_PATH = `
     "$PsScriptRoot\..\res\default_preference.json"
 
 $script:DEFAULT_PREFERENCES = `
     Get-Content $script:DEFAULT_PREFERENCES_PATH | ConvertFrom-Json
-#>
-
-$script:DEFAULT_PREFERENCES_PATH = "$PsScriptRoot\..\res\default_preference.json"
-
-$script:DEFAULT_PREFERENCES = [PsCustomObject]@{
-    Title = 'Preferences';
-    FontFamily = 'Microsoft Sans Serif';
-    Point = 10;
-    Width = 500;
-    Height = 800;
-    Margin = 10;
-    ConfirmType = 'TrueOrFalse';
-    EnterToConfirm = $true;
-    EscapeToCancel = $true;
-    DateFormat = "yyyy_MM_dd";
-}
 
 $script:DEFAULT_SLIDER_MINIMUM = -99999
 $script:DEFAULT_SLIDER_MAXIMUM = 99999
