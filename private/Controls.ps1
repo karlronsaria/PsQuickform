@@ -447,25 +447,32 @@ function Add-ControlsSlider {
         [System.Windows.Forms.AnchorStyles]::Right
     $slider.Minimum = $Minimum
     $slider.Maximum = $Maximum
+    $script:layouts = $Layouts
 
     if ($null -ne $Minimum -and $null -ne $Maximum) {
         $slider.add_KeyDown({
-            switch ($_.KeyCode) {
-                'Up' {
-                    if ([System.Windows.Forms.Control]::ModifierKeys `
-                        -contains [System.Windows.Forms.Keys]::Control)
-                    {
+            if ($_.Control) {
+                switch ($_.KeyCode) {
+                    'Up' {
                         $this.Value = $this.Maximum
                     }
-                }
 
-                'Down' {
-                    if ([System.Windows.Forms.Control]::ModifierKeys `
-                        -contains [System.Windows.Forms.Keys]::Control)
-                    {
+                    'Down' {
                         $this.Value = $this.Minimum
                     }
                 }
+            }
+        })
+
+        $slider.add_TextChanged({
+            if ($this.Text -eq $this.Minimum) {
+                $script:layouts.StatusLine.Text = 'Minimum value reached'
+            }
+            elseif ($this.Text -eq $this.Maximum) {
+                $script:layouts.StatusLine.Text = 'Maximum value reached'
+            }
+            else {
+                $script:layouts.StatusLine.Text = $script:STATUS.Idle
             }
         })
     }

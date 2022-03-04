@@ -330,6 +330,16 @@ function Set-QformMainLayout {
     $layouts = New-ControlsMultilayout `
         -Preferences $Preferences
 
+    $statusLine = New-ControlsStatusLine `
+        -Preferences $Preferences
+
+    $layouts = [PsCustomObject]@{
+        Multilayout = $layouts.Multilayout;
+        Sublayouts = $layouts.Sublayouts;
+        Controls = $layouts.Controls;
+        StatusLine = $statusLine;
+    }
+
     $layouts.Controls = $Controls | Set-QformLayout `
         -Layouts $layouts `
         -Preferences $Preferences
@@ -339,22 +349,13 @@ function Set-QformMainLayout {
     # Resolving a possible race condition
     while ($null -eq $layouts.Multilayout) { }
 
-    $statusLine = New-ControlsStatusLine `
-        -Preferences $Preferences
-
     $fillLayout = New-ControlsLayout `
         -Preferences $Preferences
 
     $fillLayout.Controls.Add($layouts.Multilayout)
     $fillLayout.Controls.Add($statusLine)
     $MainForm.Controls.Add($fillLayout)
-
-    return [PsCustomObject]@{
-        Multilayout = $layouts.Multilayout;
-        Sublayouts = $layouts.Sublayouts;
-        Controls = $layouts.Controls;
-        StatusLine = $statusLine;
-    }
+    return $layouts
 }
 
 function Get-QformControlType {
