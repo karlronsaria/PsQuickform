@@ -36,7 +36,7 @@ function Get-QformObject {
         $Preferences,
 
         [Switch]
-        $AsHashtable
+        $FormResultAsHashtable
     )
 
     switch ($PsCmdlet.ParameterSetName) {
@@ -53,7 +53,7 @@ function Get-QformObject {
     return New-QformObject `
         -Controls $Controls `
         -Preferences $Preferences `
-        -AsHashtable:$AsHashtable
+        -FormResultAsHashtable:$FormResultAsHashtable
 }
 
 function New-QformObject {
@@ -67,7 +67,7 @@ function New-QformObject {
         $Preferences,
 
         [Switch]
-        $AsHashtable
+        $FormResultAsHashtable
     )
 
     Begin {
@@ -113,7 +113,7 @@ function New-QformObject {
         $out = $list | Start-QformEvaluate `
             -Layouts $layouts
 
-        if ($AsHashtable) {
+        if ($FormResultAsHashtable) {
             $out = $out | ConvertTo-Hashtable
         }
 
@@ -564,7 +564,7 @@ function Get-QformCommand {
         $IncludeCommonParameters,
 
         [Switch]
-        $AsHashtable
+        $FormResultAsHashtable
     )
 
     function Get-NextIndex {
@@ -747,7 +747,7 @@ function Get-QformCommand {
     $parameterString = ConvertTo-QformString `
         -FormResult $formResult
 
-    if ($AsHashtable) {
+    if ($FormResultAsHashtable) {
         $table = @{}
 
         foreach ($property in $formResult.PsObject.Properties.Name) {
@@ -785,12 +785,12 @@ function Invoke-QformCommand {
         $Tee,
 
         [Switch]
-        $AsHashtable
+        $FormResultAsHashtable
     )
 
-    if ($AsHashtable -and -not $Tee) {
+    if ($FormResultAsHashtable -and -not $Tee) {
         Write-Warning ((Get-ThisFunctionName) `
-            + ": AsHashtable has no effect unless Tee is specified.")
+            + ": FormResultAsHashtable has no effect unless Tee is specified.")
     }
 
     $quickform = [PsCustomObject]@{
@@ -834,7 +834,7 @@ function Invoke-QformCommand {
     }
 
     if ($Tee) {
-        if ($AsHashtable) {
+        if ($FormResultAsHashtable) {
             $quickform.FormResult = $table
         }
 
