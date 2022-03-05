@@ -1,4 +1,3 @@
-
 . $PsScriptRoot\Other.ps1
 
 $script:DEFAULT_PREFERENCES_PATH =

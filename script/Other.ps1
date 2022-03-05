@@ -75,3 +75,38 @@ function Get-TrimObject {
     return $obj
 }
 
+function ConvertTo-Hashtable {
+    Param(
+        [Parameter(ValueFromPipeline = $true)]
+        [PsCustomObject]
+        $InputObject
+    )
+
+    $table = @{}
+
+    foreach ($property in $InputObject.PsObject.Properties.Name) {
+        $table[$property] = $InputObject.$property
+    }
+
+    return $table
+}
+
+<#
+    .SYNOPSIS
+    By default, returns the name of the function that called it. Increasing
+    StackIndex returns the name of the next function up in the call stack.
+
+    .LINK
+    Link: https://stackoverflow.com/questions/3689543/is-there-a-way-to-retrieve-a-powershell-function-name-from-within-a-function
+    Link: https://stackoverflow.com/users/7407752/jakobii
+    Retrieved: 2022_03_05
+#>
+function Get-ThisFunctionName {
+    Param(
+        [Int]
+        $StackIndex = 1
+    )
+
+    return [String]$(Get-PsCallStack)[$StackIndex].FunctionName
+}
+

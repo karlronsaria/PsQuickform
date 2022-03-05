@@ -1,5 +1,5 @@
-# Requires source Controls.ps1
-# Requires source CommandInfo.ps1
+. $PsScriptRoot\Controls.ps1
+. $PsScriptRoot\CommandInfo.ps1
 
 function New-QformPreferences {
     Param(
@@ -114,13 +114,7 @@ function New-QformObject {
             -Layouts $layouts
 
         if ($AsHashtable) {
-            $table = @{}
-
-            foreach ($property in $out.PsObject.Properties.Name) {
-                $table[$property] = $out.$property
-            }
-
-            $out = $table
+            $out = $out | ConvertTo-Hashtable
         }
 
         return [PsCustomObject]@{
@@ -788,8 +782,16 @@ function Invoke-QformCommand {
         $IncludeCommonParameters,
 
         [Switch]
-        $Tee
+        $Tee,
+
+        [Switch]
+        $AsHashtable
     )
+
+    if ($AsHashtable -and -not $Tee) {
+        Write-Warning ((Get-ThisFunctionName) `
+            + ": AsHashtable has no effect unless Tee is specified.")
+    }
 
     $quickform = [PsCustomObject]@{
         Confirm = $false;
@@ -801,8 +803,7 @@ function Invoke-QformCommand {
             $quickform = Get-QformCommand `
                 -CommandName $CommandName `
                 -ParameterSetName:$ParameterSetName `
-                -IncludeCommonParameters:$IncludeCommonParameters `
-                -AsHashtable
+                -IncludeCommonParameters:$IncludeCommonParameters
 
             $CommandInfo = Get-Command `
                 -Name $CommandName
@@ -812,14 +813,15 @@ function Invoke-QformCommand {
             $quickform = Get-QformCommand `
                 -CommandInfo $CommandInfo `
                 -ParameterSetName:$ParameterSetName `
-                -IncludeCommonParameters:$IncludeCommonParameters `
-                -AsHashtable
+                -IncludeCommonParameters:$IncludeCommonParameters
 
             $CommandName = $CommandInfo.Name
         }
     }
 
-    $params = $quickform.FormResult | Get-TrimTable `
+    $table = $quickform.FormResult | ConvertTo-Hashtable
+
+    $params = $table | Get-TrimTable `
         -RemoveEmptyString
 
     $value = $null
@@ -832,6 +834,10 @@ function Invoke-QformCommand {
     }
 
     if ($Tee) {
+        if ($AsHashtable) {
+            $quickform.FormResult = $table
+        }
+
         $quickform | Add-Member `
             -MemberType NoteProperty `
             -Name Value `
