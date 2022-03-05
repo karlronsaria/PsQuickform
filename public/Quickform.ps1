@@ -747,23 +747,26 @@ function Get-QformCommand {
     $script:controls =
         $what.ParameterSets[$what.CurrentParameterSetIndex].Controls
 
-    $out = $script:controls | Start-QformEvaluate `
+    $formResult = $script:controls | Start-QformEvaluate `
         -Layouts $script:layouts
+
+    $parameterString = ConvertTo-QformString `
+        -FormResult $formResult
 
     if ($AsHashtable) {
         $table = @{}
 
-        foreach ($property in $out.PsObject.Properties.Name) {
-            $table[$property] = $out.$property
+        foreach ($property in $formResult.PsObject.Properties.Name) {
+            $table[$property] = $formResult.$property
         }
 
-        $out = $table
+        $formResult = $table
     }
 
     return [PsCustomObject]@{
         Confirm = $confirm;
-        FormResult = $out;
-        CommandString = "$CommandName $(ConvertTo-QformString -FormResult $out)";
+        FormResult = $formResult;
+        CommandString = "$CommandName$parameterString";
     }
 }
 
@@ -782,7 +785,10 @@ function Invoke-QformCommand {
         $ParameterSetName,
 
         [Switch]
-        $IncludeCommonParameters
+        $IncludeCommonParameters,
+
+        [Switch]
+        $Tee
     )
 
     $quickform = [PsCustomObject]@{
@@ -816,11 +822,24 @@ function Invoke-QformCommand {
     $params = $quickform.FormResult | Get-TrimTable `
         -RemoveEmptyString
 
+    $value = $null
+
     if ($quickform.Confirm) {
         # # OLD (2022_03_02_211308)
         # Invoke-Expression "$CommandName `@params"
 
-        & $CommandName @params
+        $value = & $CommandName @params
     }
+
+    if ($Tee) {
+        $quickform | Add-Member `
+            -MemberType NoteProperty `
+            -Name Value `
+            -Value $value
+
+        return $quickform
+    }
+
+    return $value
 }
 
