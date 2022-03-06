@@ -18,7 +18,11 @@ function New-QformPreferences {
     return $myPreferences
 }
 
-function Get-QformObject {
+<#
+    .SYNOPSIS
+    Shows a menu
+#>
+function Show-QformMenu {
     [CmdletBinding(DefaultParameterSetName = 'BySingleObject')]
     Param(
         [Parameter(
@@ -29,45 +33,116 @@ function Get-QformObject {
 
         [Parameter(ParameterSetName = 'BySeparateObjects')]
         [PsCustomObject[]]
-        $Controls,
+        $MenuSpecs,
 
         [Parameter(ParameterSetName = 'BySeparateObjects')]
         [PsCustomObject]
         $Preferences,
 
+        [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
+        [String]
+        $CommandName,
+
+        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [System.Management.Automation.CommandInfo]
+        $CommandInfo,
+
         [Switch]
-        $FormResultAsHashtable
+        $AnswersAsHashtable
     )
 
-    switch ($PsCmdlet.ParameterSetName) {
-        'BySingleObject' {
-            $Controls = $InputObject.Controls
-            $Preferences = $InputObject.Preferences
+    DynamicParam {
+        if ($PsCmdlet.ParameterSetName -like 'ByCommand*') {
+            $paramDictionary = `
+                New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+
+            $attributeCollection = `
+                New-Object System.Collections.ObjectModel.Collection[System.Attribute]
+            $attribute = `
+                New-Object System.Management.Automation.ParameterAttribute
+            $attribute.DontShow = $false
+            $attributeCollection.Add($attribute)
+            $param = `
+                New-Object System.Management.Automation.RuntimeDefinedParameter( `
+                    'ParameterSetName', `
+                    [String], `
+                    $attributeCollection `
+                )
+            $paramDictionary.Add('ParameterSetName', $param)
+
+            $attributeCollection = `
+                New-Object System.Collections.ObjectModel.Collection[System.Attribute]
+            $attribute = `
+                New-Object System.Management.Automation.ParameterAttribute
+            $attribute.DontShow = $false
+            $attributeCollection.Add($attribute)
+            $param = `
+                New-Object System.Management.Automation.RuntimeDefinedParameter( `
+                    'IncludeCommonParameters', `
+                    [Switch], `
+                    $attributeCollection `
+                )
+            $paramDictionary.Add('IncludeCommonParameters', $param)
+
+            return $paramDictionary
         }
     }
 
-    if ($null -eq $InputObject) {
-        return New-QformObject
-    }
+    Process {
+        switch ($PsCmdlet.ParameterSetName) {
+            'BySingleObject' {
+                if ($null -eq $InputObject) {
+                    return New-QformMenu
+                }
 
-    return New-QformObject `
-        -Controls $Controls `
-        -Preferences $Preferences `
-        -FormResultAsHashtable:$FormResultAsHashtable
+                return New-QformMenu `
+                    -MenuSpecs $InputObject.MenuSpecs `
+                    -Preferences $InputObject.Preferences `
+                    -AnswersAsHashtable:$AnswersAsHashtable
+            }
+
+            'BySeparateObjects' {
+                return New-QformMenu `
+                    -MenuSpecs $MenuSpecs `
+                    -Preferences $Preferences `
+                    -AnswersAsHashtable:$AnswersAsHashtable
+            }
+
+            'ByCommandName' {
+                return Show-QformMenuForCommand `
+                    -CommandName $CommandName `
+                    -IncludeCommonParameters:$PsBoundParameters.IncludeCommonParameters `
+                    -ParameterSetName:$PsBoundParameters.ParameterSetName `
+                    -AnswersAsHashtable:$AnswersAsHashtable
+            }
+
+            'ByCommandInfo' {
+                return Show-QformMenuForCommand `
+                    -CommandInfo $CommandInfo `
+                    -IncludeCommonParameters:$PsBoundParameters.IncludeCommonParameters `
+                    -ParameterSetName:$PsBoundParameters.ParameterSetName `
+                    -AnswersAsHashtable:$AnswersAsHashtable
+            }
+        }
+    }
 }
 
-function New-QformObject {
+<#
+    .SYNOPSIS
+    Creates a new menu
+#>
+function New-QformMenu {
     [CmdletBinding()]
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [PsCustomObject[]]
-        $Controls,
+        $MenuSpecs,
 
         [PsCustomObject]
         $Preferences,
 
         [Switch]
-        $FormResultAsHashtable
+        $AnswersAsHashtable
     )
 
     Begin {
@@ -84,7 +159,7 @@ function New-QformObject {
     }
 
     Process {
-        $list += @($Controls)
+        $list += @($MenuSpecs)
     }
 
     End {
@@ -97,7 +172,7 @@ function New-QformObject {
 
         $layouts = Set-QformMainLayout `
             -MainForm $form `
-            -Controls $list `
+            -MenuSpecs $list `
             -Preferences $myPreferences
 
         Add-ControlsFormKeyBindings `
@@ -113,13 +188,13 @@ function New-QformObject {
         $out = $list | Start-QformEvaluate `
             -Layouts $layouts
 
-        if ($FormResultAsHashtable) {
+        if ($AnswersAsHashtable) {
             $out = $out | ConvertTo-Hashtable
         }
 
         return [PsCustomObject]@{
             Confirm = $confirm;
-            FormResult = $out;
+            MenuAnswers = $out;
         }
     }
 }
@@ -129,7 +204,7 @@ function Set-QformLayout {
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [PsCustomObject[]]
-        $Controls,
+        $MenuSpecs,
 
         [PsCustomObject]
         $Layouts,
@@ -143,7 +218,7 @@ function Set-QformLayout {
     }
 
     Process {
-        foreach ($item in $Controls) {
+        foreach ($item in $MenuSpecs) {
             $default = Get-PropertyOrDefault `
                 -InputObject $item `
                 -Name 'Default'
@@ -232,7 +307,7 @@ function Start-QformEvaluate {
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [PsCustomObject[]]
-        $Controls,
+        $MenuSpecs,
 
         [PsCustomObject]
         $Layouts
@@ -244,7 +319,7 @@ function Start-QformEvaluate {
     }
 
     Process {
-        foreach ($item in $Controls) {
+        foreach ($item in $MenuSpecs) {
             $value = switch ($item.Type) {
                 'Check' {
                     $tempValue = $controlTable[$item.Name].Checked;
@@ -313,7 +388,7 @@ function Set-QformMainLayout {
         $MainForm,
 
         [PsCustomObject[]]
-        $Controls,
+        $MenuSpecs,
 
         [PsCustomObject]
         $Preferences
@@ -334,7 +409,7 @@ function Set-QformMainLayout {
         StatusLine = $statusLine;
     }
 
-    $layouts.Controls = $Controls | Set-QformLayout `
+    $layouts.Controls = $MenuSpecs | Set-QformLayout `
         -Layouts $layouts `
         -Preferences $Preferences
 
@@ -352,6 +427,10 @@ function Set-QformMainLayout {
     return $layouts
 }
 
+<#
+    .SYNOPSIS
+    Identifies the menu control type used to process a PowerShell type
+#>
 function Get-QformControlType {
     Param(
         [String]
@@ -468,9 +547,20 @@ function ConvertTo-QformParameter {
     return $obj
 }
 
-function ConvertTo-QformCommand {
+<#
+    .SYNOPSIS
+    Gets quickform menu specs for a PowerShell function or cmdlet
+
+    .TODO
+    Export with module
+#>
+function ConvertTo-QformMenuSpecs {
     Param(
-        [Parameter(ParameterSetName = 'ByCommandInfo')]
+        [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
+        [String]
+        $CommandName,
+
+        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
         [System.Management.Automation.CommandInfo]
         $CommandInfo,
 
@@ -481,38 +571,96 @@ function ConvertTo-QformCommand {
         $IncludeCommonParameters
     )
 
-    switch ($PsCmdlet.ParameterSetName) {
-        'ByCommandInfo' {
-            return $CommandInfo.Parameters.Keys | foreach {
-                $CommandInfo.Parameters[$_]
-            } | where {
-                $IncludeCommonParameters `
-                    -or -not (Test-IsCommonParameter -ParameterInfo $_)
-            } | foreach {
-                ConvertTo-QformParameter -ParameterInfo $_
-            }
-        }
+    DynamicParam {
+        if ($PsCmdlet.ParameterSetName -like 'ByCommand*') {
+            $paramDictionary = `
+                New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+            $attributeCollection = `
+                New-Object System.Collections.ObjectModel.Collection[System.Attribute]
+            $attribute = `
+                New-Object System.Management.Automation.ParameterAttribute
+            $attribute.DontShow = $false
 
-        'ByParameterSet' {
-            return $ParameterSet.Parameters | where {
-                $IncludeCommonParameters `
-                    -or -not (Test-IsCommonParameter -ParameterInfo $_)
-            } | foreach {
-                ConvertTo-QformParameter -ParameterInfo $_
+            $attributeCollection.Add($attribute)
+
+            $param = `
+                New-Object System.Management.Automation.RuntimeDefinedParameter( `
+                    'ParameterSetName', `
+                    [String], `
+                    $attributeCollection `
+                )
+
+            $paramDictionary.Add('ParameterSetName', $param)
+            return $paramDictionary
+        }
+    }
+
+    Process {
+        switch ($PsCmdlet.ParameterSetName) {
+            'ByCommandName' {
+                $CommandInfo = Get-Command -Name $CommandName
+
+                if ($PsBoundParameters.ParameterSetName) {
+                    $ParameterSet = $CommandInfo.ParameterSets | where {
+                        $_.Name -like $PsBoundParameters.ParameterSetName
+                    }
+
+                    return ConvertTo-QformMenuSpecs `
+                        -ParameterSet $ParameterSet `
+                        -IncludeCommonParameters:$IncludeCommonParameters
+                }
+
+                return ConvertTo-QformMenuSpecs `
+                    -CommandInfo $CommandInfo `
+                    -IncludeCommonParameters:$IncludeCommonParameters
+            }
+
+            'ByCommandInfo' {
+                if ($PsBoundParameters.ParameterSetName) {
+                    $ParameterSet = $CommandInfo.ParameterSets | where {
+                        $_.Name -like $PsBoundParameters.ParameterSetName
+                    }
+
+                    return ConvertTo-QformMenuSpecs `
+                        -ParameterSet $ParameterSet `
+                        -IncludeCommonParameters:$IncludeCommonParameters
+                }
+
+                return $CommandInfo.Parameters.Keys | foreach {
+                    $CommandInfo.Parameters[$_]
+                } | where {
+                    $IncludeCommonParameters `
+                        -or -not (Test-IsCommonParameter -ParameterInfo $_)
+                } | foreach {
+                    ConvertTo-QformParameter -ParameterInfo $_
+                }
+            }
+
+            'ByParameterSet' {
+                return $ParameterSet.Parameters | where {
+                    $IncludeCommonParameters `
+                        -or -not (Test-IsCommonParameter -ParameterInfo $_)
+                } | foreach {
+                    ConvertTo-QformParameter -ParameterInfo $_
+                }
             }
         }
     }
 }
 
+<#
+    .SYNOPSIS
+    Converts a menu answer into the parameter set of a command string
+#>
 function ConvertTo-QformString {
     Param(
         [PsCustomObject]
-        $FormResult
+        $MenuAnswers
     )
 
     $outStr = ""
 
-    foreach ($property in $FormResult.PsObject.Properties) {
+    foreach ($property in $MenuAnswers.PsObject.Properties) {
         $name = $property.Name
         $value = $property.Value
 
@@ -546,7 +694,12 @@ function ConvertTo-QformString {
     return $outStr
 }
 
-function Get-QformCommand {
+<#
+    .SYNOPSIS
+    Shows a menu with controls matching the parameters of a given function or
+    cmdlet
+#>
+function Show-QformMenuForCommand {
     [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
     Param(
         [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
@@ -564,7 +717,7 @@ function Get-QformCommand {
         $IncludeCommonParameters,
 
         [Switch]
-        $FormResultAsHashtable
+        $AnswersAsHashtable
     )
 
     function Get-NextIndex {
@@ -613,16 +766,27 @@ function Get-QformCommand {
         $CommandInfo.ParameterSets
     }
 
+    if (-not $paramSets) {
+        throw "No parameter sets could be found $(
+            if ($ParameterSetName) { "matching '$ParameterSetName' " }
+        )for command name '$CommandName'"
+    }
+
     $defaultParamSet = $CommandInfo | Get-PropertyOrDefault `
         -Name DefaultParameterSet `
         -Default $paramSets[0]
 
     $currentIndex = 0
+    $count = $paramSets.Count
 
-    while ($currentIndex -lt $paramSets.Count `
+    while ($currentIndex -lt $count `
         -and $paramSets[$currentIndex].Name -ne $defaultParamSet)
     {
         $currentIndex = $currentIndex + 1
+    }
+
+    if ($currentIndex -ge $count) {
+        $currentIndex = 0
     }
 
     $index = 1
@@ -634,9 +798,9 @@ function Get-QformCommand {
                 Index = $index;
                 Preferences = [PsCustomObject]@{
                     Title = "Command: $CommandName $([Char] 0x2014) " `
-                          + "ParameterSet $index`: $($_.Name)";
+                          + "ParameterSet $index` of $count`: $($_.Name)";
                 };
-                Controls = $_.Parameters | where {
+                MenuSpecs = $_.Parameters | where {
                     $IncludeCommonParameters `
                         -or -not (Test-IsCommonParameter -ParameterInfo $_)
                 } | foreach {
@@ -655,7 +819,7 @@ function Get-QformCommand {
     $script:paramSet = $what.ParameterSets[$what.CurrentParameterSetIndex]
 
     if ($null -eq $script:paramSet) {
-        return New-QformObject
+        return New-QformMenu
     }
 
     $script:myPreferences = New-QformPreferences `
@@ -664,7 +828,7 @@ function Get-QformCommand {
     $script:form = New-ControlsMain `
         -Preferences $myPreferences
 
-    $script:controls = $paramset.Controls
+    $script:menuSpecs = $paramset.MenuSpecs
 
     $script:layouts = [PsCustomObject]@{
         Multilayout = $null;
@@ -675,7 +839,7 @@ function Get-QformCommand {
 
     $script:layouts = Set-QformMainLayout `
         -MainForm $form `
-        -Controls $controls `
+        -MenuSpecs $script:menuSpecs `
         -Preferences $myPreferences
 
     Add-ControlsFormKeyBindings `
@@ -719,11 +883,11 @@ function Get-QformCommand {
             $script:myPreferences = New-QformPreferences `
                 -Preferences $paramSet.Preferences
 
-            $script:controls = $paramset.Controls
+            $script:menuSpecs = $paramset.MenuSpecs
 
             $script:layouts = Set-QformMainLayout `
                 -MainForm $script:form `
-                -Controls $script:controls `
+                -MenuSpecs $script:menuSpecs `
                 -Preferences $script:myPreferences
 
             Set-ControlsCenterScreen `
@@ -738,16 +902,19 @@ function Get-QformCommand {
         'Cancel' { $false }
     }
 
-    $script:controls =
-        $what.ParameterSets[$what.CurrentParameterSetIndex].Controls
+    $script:menuSpecs =
+        $what.ParameterSets[$what.CurrentParameterSetIndex].MenuSpecs
 
-    $formResult = $script:controls | Start-QformEvaluate `
-        -Layouts $script:layouts
+    $formResult = $script:menuSpecs `
+        | Start-QformEvaluate `
+            -Layouts $script:layouts `
+        | Get-TrimObject `
+            -RemoveEmptyString
 
     $parameterString = ConvertTo-QformString `
-        -FormResult $formResult
+        -MenuAnswers $formResult
 
-    if ($FormResultAsHashtable) {
+    if ($AnswersAsHashtable) {
         $table = @{}
 
         foreach ($property in $formResult.PsObject.Properties.Name) {
@@ -759,11 +926,16 @@ function Get-QformCommand {
 
     return [PsCustomObject]@{
         Confirm = $confirm;
-        FormResult = $formResult;
+        MenuAnswers = $formResult;
         CommandString = "$CommandName$parameterString";
     }
 }
 
+<#
+    .SYNOPSIS
+    Runs a given PowerShell function or cmdlet by procuring argument values from
+    a menu
+#>
 function Invoke-QformCommand {
     [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
     Param(
@@ -785,22 +957,22 @@ function Invoke-QformCommand {
         $Tee,
 
         [Switch]
-        $FormResultAsHashtable
+        $AnswersAsHashtable
     )
 
-    if ($FormResultAsHashtable -and -not $Tee) {
+    if ($AnswersAsHashtable -and -not $Tee) {
         Write-Warning ((Get-ThisFunctionName) `
-            + ": FormResultAsHashtable has no effect unless Tee is specified.")
+            + ": AnswersAsHashtable has no effect unless Tee is specified.")
     }
 
     $quickform = [PsCustomObject]@{
         Confirm = $false;
-        FormResult = @{};
+        MenuAnswers = @{};
     }
 
     switch ($PsCmdlet.ParameterSetName) {
         'ByCommandName' {
-            $quickform = Get-QformCommand `
+            $quickform = Show-QformMenuForCommand `
                 -CommandName $CommandName `
                 -ParameterSetName:$ParameterSetName `
                 -IncludeCommonParameters:$IncludeCommonParameters
@@ -810,7 +982,7 @@ function Invoke-QformCommand {
         }
 
         'ByCommandInfo' {
-            $quickform = Get-QformCommand `
+            $quickform = Show-QformMenuForCommand `
                 -CommandInfo $CommandInfo `
                 -ParameterSetName:$ParameterSetName `
                 -IncludeCommonParameters:$IncludeCommonParameters
@@ -819,7 +991,7 @@ function Invoke-QformCommand {
         }
     }
 
-    $table = $quickform.FormResult | ConvertTo-Hashtable
+    $table = $quickform.MenuAnswers | ConvertTo-Hashtable
 
     $params = $table | Get-TrimTable `
         -RemoveEmptyString
@@ -834,8 +1006,8 @@ function Invoke-QformCommand {
     }
 
     if ($Tee) {
-        if ($FormResultAsHashtable) {
-            $quickform.FormResult = $table
+        if ($AnswersAsHashtable) {
+            $quickform.MenuAnswers = $table
         }
 
         $quickform | Add-Member `

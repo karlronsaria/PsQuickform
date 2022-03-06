@@ -7,7 +7,7 @@
         "Margin": 10,
         "ConfirmType": "AllowOrDeny"
     },
-    "Controls": [
+    "MenuSpecs": [
         {
             "Name": "GeoLocation",
             "Type": "Check",
