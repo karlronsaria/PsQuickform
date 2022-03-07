@@ -6,17 +6,17 @@
     Builds a set of Quickform menu preferences using a set of supplemental
     default values.
 
-        TODO
-
     .PARAMETER Preferences
     An object containing the specifications for customizing the look and default
     behavior of a Quickform menu.
 
-        TODO
+    .INPUTS
+        PsCustomObject
+            Pipeline accepts Quickform menu preferences.
 
     .OUTPUTS
         PsCustomObject
-            An object containing Quickform menu preferences
+            An object containing Quickform menu preferences.
 #>
 function New-QformPreferences {
     [OutputType([PsCustomObject])]
@@ -41,7 +41,7 @@ function New-QformPreferences {
 
 <#
     .SYNOPSIS
-    Shows a Quickform menu
+    Shows a Quickform menu.
 
     .PARAMETER InputObject
     An object containing the specifications for a Quickform menu.
@@ -67,30 +67,36 @@ function New-QformPreferences {
     An object containing the specifications for customizing the look and default
     behavior of a Quickform menu.
 
-        TODO
-
     .PARAMETER CommandName
     The name of a PowerShell function or cmdlet.
 
-    .PARAMETER CommandInfo
-    An object containing PowerShell function or cmdlet information, typically
+    .PARAMETER ParameterSetName
+    The name of a ParameterSet used by a PowerShell function or cmdlet. Can be
     procured from a call to 'Get-Command'.
     Ex:
 
         $cmdInfo = Get-Command Get-Item
-        Show-QformMenu -CommandInfo $cmdInfo
-        $cmdInfo | Show-QformMenu
+        $parameterSetNames = $cmdInfo.ParameterSets | foreach { $_.Name }
+
+        Show-QformMenu `
+            -CommandName $cmdInfo.Name `
+            -ParameterSetName $parameterSetNames[0]
+
+        Show-QformMenu `
+            -CommandInfo $cmdInfo `
+            -ParameterSetName $cmdInfo.DefaultParameterSet
+
+    .PARAMETER IncludeCommonParameters
+    Indicates that the CommonParameters should be included in the Quickform menu.
+
+    See about_CommonParameters
 
     .PARAMETER AnswersAsHashtable
     Indicates that the menu answers returned should be given in hashtable form.
 
-    .INPUTS
-        System.Management.Automation.CommandInfo
-            Pipeline accepts command info
-
     .OUTPUTS
         PsCustomObject
-            An object containing Quickform menu answers
+            An object containing Quickform menu answers.
             Matches the JSON:
 
                 {
@@ -108,62 +114,35 @@ function Show-QformMenu {
         [PsCustomObject]
         $InputObject,
 
-        [Parameter(ParameterSetName = 'BySeparateObjects')]
+        [Parameter(
+            ParameterSetName = 'BySeparateObjects')]
         [PsCustomObject[]]
         $MenuSpecs,
 
-        [Parameter(ParameterSetName = 'BySeparateObjects')]
+        [Parameter(
+            ParameterSetName = 'BySeparateObjects')]
         [PsCustomObject]
         $Preferences,
 
-        [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
+        [Parameter(
+            ParameterSetName = 'ByCommandName',
+            Position = 0)]
         [String]
         $CommandName,
 
-        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
-        [System.Management.Automation.CommandInfo]
-        $CommandInfo,
+        [Parameter(
+            ParameterSetName = 'ByCommandName')]
+        [String]
+        $ParameterSetName,
+
+        [Parameter(
+            ParameterSetName = 'ByCommandName')]
+        [Switch]
+        $IncludeCommonParameters,
 
         [Switch]
         $AnswersAsHashtable
     )
-
-    DynamicParam {
-        if ($PsCmdlet.ParameterSetName -like 'ByCommand*') {
-            $paramDictionary = `
-                New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
-
-            $attributeCollection = `
-                New-Object System.Collections.ObjectModel.Collection[System.Attribute]
-            $attribute = `
-                New-Object System.Management.Automation.ParameterAttribute
-            $attribute.DontShow = $false
-            $attributeCollection.Add($attribute)
-            $param = `
-                New-Object System.Management.Automation.RuntimeDefinedParameter( `
-                    'ParameterSetName', `
-                    [String], `
-                    $attributeCollection `
-                )
-            $paramDictionary.Add('ParameterSetName', $param)
-
-            $attributeCollection = `
-                New-Object System.Collections.ObjectModel.Collection[System.Attribute]
-            $attribute = `
-                New-Object System.Management.Automation.ParameterAttribute
-            $attribute.DontShow = $false
-            $attributeCollection.Add($attribute)
-            $param = `
-                New-Object System.Management.Automation.RuntimeDefinedParameter( `
-                    'IncludeCommonParameters', `
-                    [Switch], `
-                    $attributeCollection `
-                )
-            $paramDictionary.Add('IncludeCommonParameters', $param)
-
-            return $paramDictionary
-        }
-    }
 
     Process {
         switch ($PsCmdlet.ParameterSetName) {
@@ -188,16 +167,8 @@ function Show-QformMenu {
             'ByCommandName' {
                 return Show-QformMenuForCommand `
                     -CommandName $CommandName `
-                    -IncludeCommonParameters:$PsBoundParameters.IncludeCommonParameters `
-                    -ParameterSetName:$PsBoundParameters.ParameterSetName `
-                    -AnswersAsHashtable:$AnswersAsHashtable
-            }
-
-            'ByCommandInfo' {
-                return Show-QformMenuForCommand `
-                    -CommandInfo $CommandInfo `
-                    -IncludeCommonParameters:$PsBoundParameters.IncludeCommonParameters `
-                    -ParameterSetName:$PsBoundParameters.ParameterSetName `
+                    -IncludeCommonParameters:$IncludeCommonParameters `
+                    -ParameterSetName $ParameterSetName `
                     -AnswersAsHashtable:$AnswersAsHashtable
             }
         }
@@ -223,8 +194,6 @@ function Show-QformMenu {
     An object containing the specifications for customizing the look and default
     behavior of a Quickform menu.
 
-        TODO
-
     .PARAMETER AnswersAsHashtable
     Indicates that the menu answers returned should be given in hashtable form.
 
@@ -234,7 +203,7 @@ function Show-QformMenu {
 
     .OUTPUTS
         PsCustomObject
-            An object containing Quickform menu answers
+            An object containing Quickform menu answers.
             Matches the JSON:
 
                 {
@@ -541,28 +510,51 @@ function Set-QformMainLayout {
 
 <#
     .SYNOPSIS
-    Identifies the menu control type used to process a PowerShell type
+    Identifies the menu control type used to process a PowerShell type.
 
     .PARAMETER TypeName
     The name of a PowerShell type.
+
+    .OUTPUTS
+        System.String
+            The accepted name of a Quickform menu control.
+
+    .OUTPUTS
+        System.Collections.Hashtable
+            When no TypeName is specified, a table containing all pairs of
+            PowerShell type patterns and their respective Quickform menu
+            controls. Pattern '_' means default.
 #>
 function Get-QformControlType {
+    [OutputType([String])]
+    [OutputType([Hashtable])]
     Param(
         [String]
         $TypeName
     )
 
-    $controlType = switch -Wildcard ($TypeName) {
-        'String' { 'Field' }
-        'Int*' { 'Numeric' }
-        'Float' { 'Numeric' }
-        'Double' { 'Numeric' }
-        'Switch*' { 'Check' }
-        'Bool*' { 'Check' }
-        default { 'Field' }
+    $table = [PsCustomObject]@{
+        'String' = 'Field';
+        'Int*' = 'Numeric';
+        'Decimal' = 'Numeric';
+        'Double' = 'Numeric';
+        'Float' = 'Numeric';
+        'Switch*' = 'Check';
+        'Bool*' = 'Check';
+        '_' = 'Field';
     }
 
-    return $controlType
+    if ([String]::IsNullOrWhiteSpace($TypeName)) {
+        return $table
+    }
+
+    foreach ($property in $table.PsObject.Properties) {
+        if ($TypeName -like $property.Name) {
+            return $property.Value
+        }
+    }
+
+    return $table.'_'
 }
 
 function ConvertTo-QformParameter {
@@ -664,7 +656,7 @@ function ConvertTo-QformParameter {
 
 <#
     .SYNOPSIS
-    Gets quickform menu specs for a PowerShell function or cmdlet
+    Gets quickform menu specs for a PowerShell function or cmdlet.
 
     .PARAMETER CommandName
     The name of a PowerShell function or cmdlet.
@@ -677,6 +669,22 @@ function ConvertTo-QformParameter {
         $cmdInfo = Get-Command Get-Item
         ConvertTo-QformMenuSpecs -CommandInfo $cmdInfo
         $cmdInfo | ConvertTo-QformMenuSpecs
+
+    .PARAMETER ParameterSetName
+    The name of a ParameterSet used by a PowerShell function or cmdlet. Can be
+    procured from a call to 'Get-Command'.
+    Ex:
+
+        $cmdInfo = Get-Command Get-Item
+        $parameterSetNames = $cmdInfo.ParameterSets | foreach { $_.Name }
+
+        ConvertTo-QformMenuSpecs `
+            -CommandName $cmdInfo.Name `
+            -ParameterSetName $parameterSetNames[0]
+
+        ConvertTo-QformMenuSpecs `
+            -CommandInfo $cmdInfo `
+            -ParameterSetName $cmdInfo.DefaultParameterSet
 
     .PARAMETER ParameterSet
     An object containing parameter information associated with a single
@@ -695,27 +703,30 @@ function ConvertTo-QformParameter {
 
     .INPUTS
         PsCustomObject
-            Pipeline accepts command info
+            Pipeline accepts command info.
 
     .OUTPUTS
         PsCustomObject
-            An object containing Quickform menu specs
-
-            TODO
+            An object containing Quickform menu specs.
 #>
 function ConvertTo-QformMenuSpecs {
     [OutputType([PsCustomObject])]
     [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
     Param(
-        [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
+        [Parameter(
+            ParameterSetName = 'ByCommandName',
+            Position = 0)]
         [String]
         $CommandName,
 
-        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [Parameter(
+            ParameterSetName = 'ByCommandInfo',
+            ValueFromPipeline = $true)]
         [System.Management.Automation.CommandInfo]
         $CommandInfo,
 
-        [Parameter(ParameterSetName = 'ByParameterSet')]
+        [Parameter(
+            ParameterSetName = 'ByParameterSet')]
         $ParameterSet,
 
         [Switch]
@@ -725,17 +736,21 @@ function ConvertTo-QformMenuSpecs {
     DynamicParam {
         if ($PsCmdlet.ParameterSetName -like 'ByCommand*') {
             $paramDictionary = `
-                New-Object System.Management.Automation.RuntimeDefinedParameterDictionary
+                New-Object `
+                System.Management.Automation.RuntimeDefinedParameterDictionary
             $attributeCollection = `
-                New-Object System.Collections.ObjectModel.Collection[System.Attribute]
+                New-Object `
+                System.Collections.ObjectModel.Collection[System.Attribute]
             $attribute = `
-                New-Object System.Management.Automation.ParameterAttribute
+                New-Object `
+                System.Management.Automation.ParameterAttribute
             $attribute.DontShow = $false
 
             $attributeCollection.Add($attribute)
 
             $param = `
-                New-Object System.Management.Automation.RuntimeDefinedParameter( `
+                New-Object `
+                System.Management.Automation.RuntimeDefinedParameter( `
                     'ParameterSetName', `
                     [String], `
                     $attributeCollection `
@@ -809,7 +824,7 @@ function ConvertTo-QformMenuSpecs {
 
     .OUTPUTS
         System.String
-            The parameter-argument-list portion of a command call string
+            The parameter-argument-list portion of a command call string.
 #>
 function ConvertTo-QformString {
     [OutputType([String])]
@@ -893,11 +908,12 @@ function ConvertTo-QformString {
 
     .INPUTS
         PsCustomObject
-            Pipeline accepts command info
+            Pipeline accepts command info.
 
     .OUTPUTS
         PsCustomObject
-            An object containing Quickform menu answers and a command call string
+            An object containing Quickform menu answers and a command call
+            string.
             Matches the JSON:
 
                 {
@@ -910,11 +926,15 @@ function Show-QformMenuForCommand {
     [OutputType([PsCustomObject])]
     [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
     Param(
-        [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
+        [Parameter(
+            ParameterSetName = 'ByCommandName',
+            Position = 0)]
         [String]
         $CommandName,
 
-        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [Parameter(
+            ParameterSetName = 'ByCommandInfo',
+            ValueFromPipeline = $true)]
         [System.Management.Automation.CommandInfo]
         $CommandInfo,
 
@@ -1055,9 +1075,9 @@ function Show-QformMenuForCommand {
         -Layouts $script:layouts `
         -Preferences $myPreferences
 
-    # Issue: Event handler fails to update variable from outer scope
-    # Link: https://stackoverflow.com/questions/55403528/why-wont-variable-update
-    # Retreived: 2022_03_02
+    # issue: Event handler fails to update variable from outer scope
+    # link: https://stackoverflow.com/questions/55403528/why-wont-variable-update
+    # retreived: 2022_03_02
 
     $script:form.add_KeyDown({
         $refresh = $false
@@ -1086,7 +1106,8 @@ function Show-QformMenuForCommand {
         }
 
         if ($refresh) {
-            $script:paramSet = $what.ParameterSets[$what.CurrentParameterSetIndex]
+            $script:paramSet = `
+                $what.ParameterSets[$what.CurrentParameterSetIndex]
 
             $script:myPreferences = New-QformPreferences `
                 -Preferences $paramSet.Preferences
@@ -1182,16 +1203,16 @@ function Show-QformMenuForCommand {
 
     .INPUTS
         PsCustomObject
-            Pipeline accepts command info
+            Pipeline accepts command info.
 
     .OUTPUTS
         any
-            The return value of whatever command is called by this cmdlet
+            The return value of whatever command is called by this cmdlet.
 
         PsCustomObject
             When Tee is active, an object containing Quickform menu answers, a
             command call string, and the return value of whatever command is
-            called by this cmdlet
+            called by this cmdlet.
             Matches the JSON:
 
                 {
@@ -1210,7 +1231,9 @@ function Invoke-QformCommand {
         [String]
         $CommandName,
 
-        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [Parameter(
+            ParameterSetName = 'ByCommandInfo',
+            ValueFromPipeline = $true)]
         [System.Management.Automation.CommandInfo]
         $CommandInfo,
 

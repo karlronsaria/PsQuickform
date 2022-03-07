@@ -1,13 +1,16 @@
 . $PsScriptRoot\Other.ps1
 
+$script:RESOURCE_PATH = 
+    "$PsScriptRoot\..\res"
+
 $script:DEFAULT_PREFERENCES_PATH =
-    "$PsScriptRoot\..\res\default_preference.json"
+    "$(script:RESOURCE_PATH)\default_preference.json"
 
 $script:STATUS_LINES_PATH =
-    "$PsScriptRoot\..\res\status_line.json"
+    "$(script:RESOURCE_PATH)\statusline.json"
 
 $script:HELP_PATH =
-    "$PsScriptRoot\..\res\help.txt"
+    "$(script:RESOURCE_PATH)\help.txt"
 
 $script:DEFAULT_PREFERENCES =
     Get-Content $script:DEFAULT_PREFERENCES_PATH | ConvertFrom-Json
@@ -464,15 +467,16 @@ function Add-ControlsSlider {
         })
 
         $slider.add_TextChanged({
-            if ($this.Text -eq $this.Minimum) {
-                $script:layouts.StatusLine.Text = 'Minimum value reached'
-            }
-            elseif ($this.Text -eq $this.Maximum) {
-                $script:layouts.StatusLine.Text = 'Maximum value reached'
-            }
-            else {
-                $script:layouts.StatusLine.Text = $script:STATUS.Idle
-            }
+            $script:layouts.StatusLine.Text =
+                if ($this.Text -eq $this.Minimum) {
+                    $script:STATUS.MinReached
+                }
+                elseif ($this.Text -eq $this.Maximum) {
+                    $script:STATUS.MaxReached
+                }
+                else {
+                    $script:STATUS.Idle
+                }
         })
     }
 
