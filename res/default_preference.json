@@ -2,7 +2,7 @@
     "Title": "Quickform Settings",
     "FontFamily": "Microsoft Sans Serif",
     "Point": 10,
-    "Width": 300,
+    "Width": 450,
     "Height": 700,
     "Margin": 10,
     "ConfirmType": "TrueOrFalse",

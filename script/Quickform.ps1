@@ -519,7 +519,6 @@ function Set-QformMainLayout {
         System.String
             The accepted name of a Quickform menu control.
 
-    .OUTPUTS
         System.Collections.Hashtable
             When no TypeName is specified, a table containing all pairs of
             PowerShell type patterns and their respective Quickform menu

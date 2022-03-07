@@ -1,19 +1,38 @@
 . $PsScriptRoot\Other.ps1
 
-$script:RESOURCE_PATH = 
-    "$PsScriptRoot\..\res"
+$script:RESOURCE_PATH =
+    if ((Test-Path "$PsScriptRoot\res")) {
+        "$PsScriptRoot\res"
+    } else {
+        "$PsScriptRoot\..\res"
+    }
 
 $script:DEFAULT_PREFERENCES_PATH =
-    "$(script:RESOURCE_PATH)\default_preference.json"
+    "$($script:RESOURCE_PATH)\default_preference.json"
 
-$script:STATUS_LINES_PATH =
-    "$(script:RESOURCE_PATH)\statusline.json"
-
-$script:HELP_PATH =
-    "$(script:RESOURCE_PATH)\help.txt"
+$script:TEXT_PATH =
+    "$($script:RESOURCE_PATH)\text.json"
 
 $script:DEFAULT_PREFERENCES =
-    Get-Content $script:DEFAULT_PREFERENCES_PATH | ConvertFrom-Json
+    if ((Test-Path $script:DEFAULT_PREFERENCES_PATH)) {
+        Get-Content $script:DEFAULT_PREFERENCES_PATH | ConvertFrom-Json
+    } else {
+        [PsCustomObject]@{
+            Title = "Quickform Settings";
+            FontFamily = "Microsoft Sans Serif";
+            Point = 10;
+            Width = 450;
+            Height = 700;
+            Margin = 10;
+            ConfirmType = "TrueOrFalse";
+            EnterToConfirm = $true;
+            EscapeToCancel = $true;
+            DateFormat = "yyyy_MM_dd";
+            NumericMinimum = -9999;
+            NumericMaximum = 9999;
+            NumericDecimalPlaces = 0;
+        }
+    }
 
 $script:DEFAULT_NUMERIC_MINIMUM =
     $script:DEFAULT_PREFERENCES.NumericMinimum
@@ -25,7 +44,24 @@ $script:DEFAULT_NUMERIC_DECIMALPLACES =
     $script:DEFAULT_PREFERENCES.NumericDecimalPlaces
 
 $script:STATUS =
-    Get-Content $script:STATUS_LINES_PATH | ConvertFrom-Json
+    (Get-Content $script:TEXT_PATH | ConvertFrom-Json).Status
+
+<#
+    .LINK
+    Link: https://stackoverflow.com/questions/34552311/wpf-systemparameters-windowcaptionbuttonheight-returns-smaller-number-than-expe
+    Link: https://stackoverflow.com/users/3137337/emoacht
+    Retrieved: 2022_03_07
+#>
+function Get-WindowsCaptionHeight {
+    Add-Type -AssemblyName PresentationFramework
+
+    $sysInfo = [System.Windows.Forms.SystemInformation]
+    $sysParams = [System.Windows.SystemParameters]
+
+    return $sysInfo::CaptionHeight `
+        + $sysParams::WindowResizeBorderThickness.Bottom `
+        + $sysParams::WindowNonClientFrameThickness.Bottom
+}
 
 <#
     .LINK
@@ -165,8 +201,9 @@ function Add-ControlsFormKeyBindings {
         if ($_.KeyCode -eq [System.Windows.Forms.Keys]::OemQuestion `
             -and $_.Control)
         {
-            $message = Get-Content `
-                -Path $script:HELP_PATH
+            $message = (Get-Content `
+                -Path $script:TEXT_PATH `
+                | ConvertFrom-Json).Help
 
             $message = $message -join "`r`n"
             $title = 'Help'
@@ -188,9 +225,14 @@ function Add-ControlToMultilayout {
     )
 
     $final = $Layouts.Sublayouts[-1]
-    $totalHeight = $final.Height
 
-    $Control | % {
+    $totalHeight =
+        (Get-WindowsCaptionHeight) `
+        + $final.Height `
+        + $Layouts.StatusLine.Height `
+        + $captionHeight
+
+    $Control | foreach {
         $totalHeight += $Control.Height
     }
 
@@ -203,7 +245,7 @@ function Add-ControlToMultilayout {
         $final = $Layouts.Sublayouts[-1]
     }
 
-    $Control | % {
+    $Control | foreach {
         $final.Controls.Add($_)
     }
 
