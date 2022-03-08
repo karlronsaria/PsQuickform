@@ -22,7 +22,7 @@ $script:DEFAULT_PREFERENCES =
             FontFamily = "Microsoft Sans Serif";
             Point = 10;
             Width = 450;
-            Height = 700;
+            Height = 800;
             Margin = 10;
             ConfirmType = "TrueOrFalse";
             EnterToConfirm = $true;
@@ -222,7 +222,9 @@ function Add-ControlsFormKeyBindings {
     if ($Preferences.EnterToConfirm) {
         $Control.add_KeyDown({
             if ($_.KeyCode -eq 'Enter') {
-                $script:layouts.Controls['EndButtons__'].OkButton.PerformClick()
+                $script:layouts.Controls[
+                '__EndButtons__'
+                ].OkButton.PerformClick()
             }
         })
     }
@@ -230,7 +232,9 @@ function Add-ControlsFormKeyBindings {
     if ($Preferences.EscapeToCancel) {
         $Control.add_KeyDown({
             if ($_.KeyCode -eq 'Escape') {
-                $script:layouts.Controls['EndButtons__'].CancelButton.PerformClick()
+                $script:layouts.Controls[
+                '__EndButtons__'
+                ].CancelButton.PerformClick()
             }
         })
     }
@@ -404,10 +408,12 @@ function Get-ControlsAsterizable {
         $asterisk.Dock =
             [System.Windows.Forms.DockStyle]::Bottom
         $asterisk.Height = $asterisk.Height + $Preferences.Margin
+        $asterisk.Margin = 0
+
         Add-Type -AssemblyName System.Drawing
+
         $asterisk.ForeColor =
             [System.Drawing.Color]::DarkRed
-        $asterisk.Margin = 0
 
         $row = New-Object System.Windows.Forms.FlowLayoutPanel
         $row.FlowDirection =
@@ -449,7 +455,6 @@ function Add-ControlsFieldBox {
 
         $MinLength,
         $MaxLength,
-
         $Default,
 
         [PsCustomObject]
@@ -556,7 +561,6 @@ function Add-ControlsSlider {
         $Minimum = $script:DEFAULT_NUMERIC_MINIMUM,
         $Maximum = $script:DEFAULT_NUMERIC_MAXIMUM,
         $DecimalPlaces = $script:DEFAULT_NUMERIC_DECIMALPLACES,
-
         $Default,
 
         [PsCustomObject]

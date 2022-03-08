@@ -17,7 +17,69 @@ function Get-PropertyOrDefault {
     return $Default
 }
 
-function Get-TrimTable {
+<#
+    .SYNOPSIS
+    Given a set of key-value pairs, either as a Hashtable or PsCustomObject,
+    returns a new set with no unset (null or empty) values.
+
+    .PARAMETER InputObject
+    Input key-value pair object, to be sifted of empty values.
+
+    .PARAMETER RemoveEmptyString
+    Indicates that empty strings should be removed along with null values.
+
+    .INPUTS
+        any
+            Accepts any type of input; expects a Hashtable or PsCustomObject.
+
+    .OUTPUTS
+        System.Collections.Hashtable
+            When the input is a Hashtable, a Hashtable matching the input with all
+            key-value pairs removed which have empty values.
+
+        PsCustomObject
+            When the input is a PsCustomObject, a PsCustomObject matching the
+            input with all properties removed which have empty values.
+
+        any
+            Matches the input.
+#>
+function Get-NonEmpty {
+    [OutputType([Hashtable])]
+    [OutputType([PsCustomObject])]
+    [OutputType([Object])]
+    [CmdletBinding()]
+    Param(
+        [Parameter(ValueFromPipeline = $true)]
+        $InputObject,
+
+        [Switch]
+        $RemoveEmptyString
+    )
+
+    Process {
+        $what = switch ($InputObject.GetType().Name) {
+            'Hashtable' {
+                $InputObject | Get-NonEmptyTable `
+                    -RemoveEmptyString:$RemoveEmptyString
+            }
+
+            'PsCustomObject' {
+                $InputObject | Get-NonEmptyObject `
+                    -RemoveEmptyString:$RemoveEmptyString
+            }
+
+            default {
+                $InputObject
+            }
+        }
+
+        return $what
+    }
+}
+
+function Get-NonEmptyTable {
+    [OutputType([Hashtable])]
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [Hashtable]
@@ -46,7 +108,8 @@ function Get-TrimTable {
     return $table
 }
 
-function Get-TrimObject {
+function Get-NonEmptyObject {
+    [OutputType([PsCustomObject])]
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [PsCustomObject]

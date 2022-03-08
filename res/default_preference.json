@@ -3,7 +3,7 @@
     "FontFamily": "Microsoft Sans Serif",
     "Point": 10,
     "Width": 450,
-    "Height": 700,
+    "Height": 800,
     "Margin": 10,
     "ConfirmType": "TrueOrFalse",
     "EnterToConfirm": true,

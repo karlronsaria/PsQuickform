@@ -1,4 +1,0 @@
-    [ Alt + Left | Right ]:	Cycle parameter sets
-    [ Ctl + D ]: 		Get date from month calendar
-    [ Ctl + O ]: 		Browse for file
-    [ Ctl + / ]: 		Help

@@ -428,7 +428,7 @@ function Set-QformLayout {
             })
         }
 
-        $controlTable.Add('EndButtons__', $endButtons)
+        $controlTable.Add('__EndButtons__', $endButtons)
         return $controlTable
     }
 }
@@ -1185,7 +1185,7 @@ function Show-QformMenuForCommand {
     $formResult = $script:menuSpecs `
         | Start-QformEvaluate `
             -Layouts $script:layouts `
-        | Get-TrimObject `
+        | Get-NonEmptyObject `
             -RemoveEmptyString
 
     $parameterString = ConvertTo-QformString `
@@ -1333,7 +1333,7 @@ function Invoke-QformCommand {
 
     $table = $quickform.MenuAnswers | ConvertTo-Hashtable
 
-    $params = $table | Get-TrimTable `
+    $params = $table | Get-NonEmptyTable `
         -RemoveEmptyString
 
     $value = if ($quickform.Confirm) {
