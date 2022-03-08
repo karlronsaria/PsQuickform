@@ -706,7 +706,7 @@ function ConvertTo-QformParameter {
 
 <#
     .SYNOPSIS
-    Gets quickform menu specs for a PowerShell function or cmdlet.
+    Gets Quickform menu specs for a PowerShell function or cmdlet.
 
     .PARAMETER CommandName
     The name of a PowerShell function or cmdlet.
