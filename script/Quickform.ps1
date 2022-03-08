@@ -296,6 +296,7 @@ function Set-QformLayout {
 
     Begin {
         $controlTable = @{}
+        $script:mandates = @()
     }
 
     Process {
@@ -308,6 +309,8 @@ function Set-QformLayout {
                 -InputObject $item `
                 -Name 'Text' `
                 -Default $item.Name
+
+            $mandatory = $false
 
             $value = switch ($item.Type) {
                 'Check' {
@@ -323,10 +326,14 @@ function Set-QformLayout {
                         -Name MinLength;
                     $maxLength = $item | Get-PropertyOrDefault `
                         -Name MaxLength;
+                    $mandatory = $item | Get-PropertyOrDefault `
+                        -Name Mandatory `
+                        -Default $false;
 
                     Add-ControlsFieldBox `
                         -Layouts $Layouts `
                         -Text $text `
+                        -Mandatory:$mandatory `
                         -MinLength $minLength `
                         -MaxLength $maxLength `
                         -Default $default `
@@ -341,8 +348,8 @@ function Set-QformLayout {
                     Add-ControlsRadioBox `
                         -Layouts $Layouts `
                         -Text $text `
-                        -Symbols $item.Symbols `
                         -Mandatory:$mandatory `
+                        -Symbols $item.Symbols `
                         -Default $default `
                         -Preferences $Preferences
                 }
@@ -357,10 +364,14 @@ function Set-QformLayout {
                     $max = $item | Get-PropertyOrDefault `
                         -Name Maximum `
                         -Default $Preferences.NumericMaximum;
+                    $mandatory = $item | Get-PropertyOrDefault `
+                        -Name Mandatory `
+                        -Default $false;
 
                     Add-ControlsSlider `
                         -Layouts $Layouts `
                         -Text $text `
+                        -Mandatory:$mandatory `
                         -DecimalPlaces $places `
                         -Minimum $min `
                         -Maximum $max `
@@ -370,6 +381,10 @@ function Set-QformLayout {
             }
 
             $controlTable.Add($item.Name, $value)
+
+            if ($mandatory) {
+                $script:mandates += @($value)
+            }
         }
     }
 
@@ -377,6 +392,41 @@ function Set-QformLayout {
         $endButtons = Add-ControlsOkCancelButtons `
             -Layouts $Layouts `
             -Preferences $Preferences
+
+        $script:form = $Layouts.MainForm
+        $script:statusline = $Layouts.StatusLine
+
+        if ($script:mandates.Count -gt 0) {
+            $endButtons.OkButton.DialogResult =
+                [System.Windows.Forms.DialogResult]::None
+
+            $action = {
+                $mandatesSet = $true
+
+                foreach ($text in $script:mandates.Text) {
+                    $mandatesSet = $mandatesSet `
+                        -and -not [String]::IsNullOrEmpty($text)
+                }
+
+                if ($mandatesSet) {
+                    $form.DialogResult =
+                        [System.Windows.Forms.DialogResult]::OK
+                    $form.Close()
+                }
+                else {
+                    Set-ControlsStatus `
+                        -StatusLine $script:statusLine `
+                        -LineName 'MandatoryValuesNotSet'
+                }
+            }
+
+            $endButtons.OkButton.add_Click($action)
+            $endButtons.OkButton.add_KeyDown({
+                if ($_.KeyCode -eq 'Enter') {
+                    & $action
+                }
+            })
+        }
 
         $controlTable.Add('EndButtons__', $endButtons)
         return $controlTable
@@ -484,6 +534,7 @@ function Set-QformMainLayout {
         -Preferences $Preferences
 
     $layouts = [PsCustomObject]@{
+        MainForm = $MainForm;
         Multilayout = $layouts.Multilayout;
         Sublayouts = $layouts.Sublayouts;
         Controls = $layouts.Controls;
@@ -1082,19 +1133,17 @@ function Show-QformMenuForCommand {
         $refresh = $false
         $eventArgs = $_
 
-        switch ($eventArgs.KeyCode) {
-            'Right' {
-                if ($eventArgs.Alt) {
+        if ($eventArgs.Alt) {
+            switch ($eventArgs.KeyCode) {
+                'Right' {
                     $what.CurrentParameterSetIndex = Get-NextIndex `
                         -Index $what.CurrentParameterSetIndex `
                         -Count $what.ParameterSets.Count
 
                     $refresh = $true
                 }
-            }
 
-            'Left' {
-                if ($eventArgs.Alt) {
+                'Left' {
                     $what.CurrentParameterSetIndex = Get-PreviousIndex `
                         -Index $what.CurrentParameterSetIndex `
                         -Count $what.ParameterSets.Count
@@ -1226,7 +1275,9 @@ function Invoke-QformCommand {
     [OutputType([PsCustomObject])]
     [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
     Param(
-        [Parameter(ParameterSetName = 'ByCommandName', Position = 0)]
+        [Parameter(
+            ParameterSetName = 'ByCommandName',
+            Position = 0)]
         [String]
         $CommandName,
 
@@ -1285,13 +1336,10 @@ function Invoke-QformCommand {
     $params = $table | Get-TrimTable `
         -RemoveEmptyString
 
-    $value = $null
-
-    if ($quickform.Confirm) {
-        # # OLD (2022_03_02_211308)
-        # Invoke-Expression "$CommandName `@params"
-
-        $value = & $CommandName @params
+    $value = if ($quickform.Confirm) {
+        & $CommandName @params
+    } else {
+        $null
     }
 
     if ($Tee) {

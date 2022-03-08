@@ -46,6 +46,17 @@ $script:DEFAULT_NUMERIC_DECIMALPLACES =
 $script:STATUS =
     (Get-Content $script:TEXT_PATH | ConvertFrom-Json).Status
 
+function Show-ControlRectangle {
+    Param(
+        [System.Windows.Forms.Control]
+        $Control
+    )
+
+    Add-Type -AssemblyName System.Drawing
+    $Control.BackColor =
+        [System.Drawing.Color]::Red
+}
+
 <#
     .LINK
     Link: https://stackoverflow.com/questions/34552311/wpf-systemparameters-windowcaptionbuttonheight-returns-smaller-number-than-expe
@@ -99,16 +110,39 @@ function Set-ControlsCenterScreen {
     $workingArea = $screen.WorkingArea
 
     $Control.Left =
-        [Math]::Max( `
-            $workingArea.X, `
+        [Math]::Max(
+            $workingArea.X,
             $workingArea.X + ($workingArea.Width - $Control.Width) / 2
         )
 
     $Control.Top =
-        [Math]::Max( `
-            $workingArea.Y, `
+        [Math]::Max(
+            $workingArea.Y,
             $workingArea.Y + ($workingArea.Height - $Control.Height) / 2
         )
+}
+
+function Set-ControlsStatus {
+    Param(
+        [System.Windows.Forms.Control]
+        $StatusLine,
+
+        [String]
+        $LineName
+    )
+
+    $status = $script:STATUS | where Name -eq $LineName
+
+    $text = $status | Get-PropertyOrDefault `
+        -Name Text `
+        -Default 'ToolTip missing!'
+
+    $foreColor = $status | Get-PropertyOrDefault `
+        -Name ForeColor `
+        -Default 'Black'
+
+    $StatusLine.Text = $text
+    $StatusLine.ForeColor = $foreColor
 }
 
 function New-ControlsStatusLine {
@@ -117,13 +151,17 @@ function New-ControlsStatusLine {
         $Preferences = $script:DEFAULT_PREFERENCES,
 
         [String]
-        $Text = $script:STATUS.Idle
+        $LineName = 'Idle'
     )
 
     $statusLine = New-Object System.Windows.Forms.Label
     $statusLine.Left = $Preferences.Margin
     $statusLine.Width = $Preferences.Width - (2 * $Preferences.Margin)
-    $statusLine.Text = $Text
+
+    Set-ControlsStatus `
+        -StatusLine $statusLine `
+        -LineName $LineName
+
     return $statusLine
 }
 
@@ -286,10 +324,10 @@ function New-ControlsMain {
         $Preferences = $script:DEFAULT_PREFERENCES
     )
 
-    $font = New-Object System.Drawing.Font( `
-        $Preferences.FontFamily, `
-        $Preferences.Point, `
-        [System.Drawing.FontStyle]::Regular `
+    $font = New-Object System.Drawing.Font(
+        $Preferences.FontFamily,
+        $Preferences.Point,
+        [System.Drawing.FontStyle]::Regular
     )
 
     $form = New-Object System.Windows.Forms.Form
@@ -341,6 +379,57 @@ function Add-ControlsCheckBox {
     return $checkBox
 }
 
+function Get-ControlsAsterizable {
+    Param(
+        [System.Windows.Forms.Control]
+        $Control,
+
+        [Int]
+        $Width,
+
+        [Switch]
+        $Asterize
+    )
+
+    $row = $null
+
+    if ($Asterize) {
+        $asterisk = New-Object System.Windows.Forms.Label
+        $asterisk.Text = '*'
+        $asterisk.Size =
+            [System.Windows.Forms.TextRenderer]::MeasureText(
+                $asterisk.Text,
+                $asterisk.Font
+            )
+        $asterisk.Dock =
+            [System.Windows.Forms.DockStyle]::Bottom
+        $asterisk.Height = $asterisk.Height + $Preferences.Margin
+        Add-Type -AssemblyName System.Drawing
+        $asterisk.ForeColor =
+            [System.Drawing.Color]::DarkRed
+        $asterisk.Margin = 0
+
+        $row = New-Object System.Windows.Forms.FlowLayoutPanel
+        $row.FlowDirection =
+            [System.Windows.Forms.FlowDirection]::LeftToRight
+        $row.WrapContents = $false
+        $row.AutoSize = $true
+        $row.Padding = $row.Margin = 0
+        $row.Width = $Width
+
+        $Control.Width = $row.Width - $asterisk.Width
+
+        $row.Controls.Add($asterisk)
+        $row.Controls.Add($Control)
+    }
+    else {
+        $row = $Control
+        $row.Width = $Width
+    }
+
+    return $row
+}
+
 <#
     .NOTE
     Needs to be an 'Add-' cmdlet. Adds multiple controls other than the operative
@@ -355,8 +444,12 @@ function Add-ControlsFieldBox {
         [String]
         $Text,
 
+        [Switch]
+        $Mandatory,
+
         $MinLength,
         $MaxLength,
+
         $Default,
 
         [PsCustomObject]
@@ -367,23 +460,21 @@ function Add-ControlsFieldBox {
     $flowPanel.FlowDirection =
         [System.Windows.Forms.FlowDirection]::TopDown
     $flowPanel.Left = $Preferences.Margin
-    $flowPanel.Width = $Preferences.Width - (3 * $Preferences.Margin)
     $flowPanel.AutoSize = $true
     $flowPanel.WrapContents = $false
+    $flowPanel.Padding = 0
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Text
     $label.Left = $Preferences.Margin
-    $label.Width = $Preferences.Width - (4 * $Preferences.Margin)
-    $label.Anchor =
-        [System.Windows.Forms.AnchorStyles]::Right
+    $label.AutoSize = $true
 
     $textBox = New-Object System.Windows.Forms.TextBox
-    $textBox.Left = $Preferences.Margin
-    $textBox.Width = $Preferences.Width - (4 * $Preferences.Margin)
-    $textBox.Anchor =
-        [System.Windows.Forms.AnchorStyles]::Left + `
-        [System.Windows.Forms.AnchorStyles]::Right
+
+    $row2 = Get-ControlsAsterizable `
+        -Control $textBox `
+        -Width ($Preferences.Width - (4 * $Preferences.Margin)) `
+        -Asterize:$Mandatory
 
     $script:monthCalendarPrefs = $Preferences.PsObject.Copy()
     $script:monthCalendarPrefs.Title = 'Get Date'
@@ -435,7 +526,7 @@ function Add-ControlsFieldBox {
     }
 
     $flowPanel.Controls.Add($label)
-    $flowPanel.Controls.Add($textBox)
+    $flowPanel.Controls.Add($row2)
 
     $Layouts = Add-ControlToMultilayout `
         -Layouts $Layouts `
@@ -459,10 +550,14 @@ function Add-ControlsSlider {
         [String]
         $Text,
 
-        $Default,
+        [Switch]
+        $Mandatory,
+
         $Minimum = $script:DEFAULT_NUMERIC_MINIMUM,
         $Maximum = $script:DEFAULT_NUMERIC_MAXIMUM,
         $DecimalPlaces = $script:DEFAULT_NUMERIC_DECIMALPLACES,
+
+        $Default,
 
         [PsCustomObject]
         $Preferences = $script:DEFAULT_PREFERENCES
@@ -472,23 +567,23 @@ function Add-ControlsSlider {
     $flowPanel.FlowDirection =
         [System.Windows.Forms.FlowDirection]::TopDown
     $flowPanel.Left = $Preferences.Margin
-    $flowPanel.Width = $Preferences.Width - (3 * $Preferences.Margin)
     $flowPanel.AutoSize = $true
     $flowPanel.WrapContents = $false
+    $flowPanel.Padding = 0
 
     $label = New-Object System.Windows.Forms.Label
     $label.Text = $Text
     $label.Left = $Preferences.Margin
-    $label.Width = $Preferences.Width - (4 * $Preferences.Margin)
-    $label.Anchor =
-        [System.Windows.Forms.AnchorStyles]::Right
+    $label.AutoSize = $true
 
     $slider = New-Object System.Windows.Forms.NumericUpDown
     $slider.Left = $Preferences.Margin
-    $slider.Width = $Preferences.Width - (4 * $Preferences.Margin)
-    $slider.Anchor =
-        [System.Windows.Forms.AnchorStyles]::Left + `
-        [System.Windows.Forms.AnchorStyles]::Right
+
+    $row2 = Get-ControlsAsterizable `
+        -Control $slider `
+        -Width ($Preferences.Width - (4 * $Preferences.Margin)) `
+        -Asterize:$Mandatory
+
     $slider.Minimum = $Minimum
     $slider.Maximum = $Maximum
     $script:layouts = $Layouts
@@ -509,16 +604,20 @@ function Add-ControlsSlider {
         })
 
         $slider.add_TextChanged({
-            $script:layouts.StatusLine.Text =
+            $name = 
                 if ($this.Text -eq $this.Minimum) {
-                    $script:STATUS.MinReached
+                    'MinReached'
                 }
                 elseif ($this.Text -eq $this.Maximum) {
-                    $script:STATUS.MaxReached
+                    'MaxReached'
                 }
                 else {
-                    $script:STATUS.Idle
+                    'Idle'
                 }
+
+            Set-ControlsStatus `
+                -StatusLine $script:layouts.StatusLine `
+                -LineName $name
         })
     }
 
@@ -530,7 +629,7 @@ function Add-ControlsSlider {
     }
 
     $flowPanel.Controls.Add($label)
-    $flowPanel.Controls.Add($slider)
+    $flowPanel.Controls.Add($row2)
 
     $Layouts = Add-ControlToMultilayout `
         -Layouts $Layouts `
@@ -554,13 +653,13 @@ function Add-ControlsRadioBox {
         [String]
         $Text,
 
-        $Default,
+        [Switch]
+        $Mandatory,
 
         [PsCustomObject[]]
         $Symbols,
 
-        [Switch]
-        $Mandatory,
+        $Default,
 
         [PsCustomObject]
         $Preferences = $script:DEFAULT_PREFERENCES
@@ -568,18 +667,16 @@ function Add-ControlsRadioBox {
 
     $groupBox = New-Object System.Windows.Forms.GroupBox
     $groupBox.Left = $Preferences.Margin
-    $groupBox.Width = $Preferences.Width - (2 * $Preferences.Margin)
     $groupBox.AutoSize = $true
     $groupBox.Text = $Text
 
     $flowPanel = New-Object System.Windows.Forms.FlowLayoutPanel
     $flowPanel.FlowDirection =
         [System.Windows.Forms.FlowDirection]::TopDown
-    $flowPanel.Left = $Preferences.Margin
-    $flowPanel.Width = $Preferences.Width - (3 * $Preferences.Margin)
     $flowPanel.AutoSize = $true
     $flowPanel.WrapContents = $false
-    $flowPanel.Top = 2 * $Preferences.Margin
+    $flowPanel.Top = 3 * $Preferences.Margin
+    $flowPanel.Left = $Preferences.Margin
     $groupBox.Controls.Add($flowPanel)
 
     if (-not $Mandatory) {
@@ -591,7 +688,7 @@ function Add-ControlsRadioBox {
     foreach ($symbol in $Symbols) {
         $button = New-Object System.Windows.Forms.RadioButton
         $button.Left = $Preferences.Margin
-        $button.Width = $Preferences.Width - (4 * $Preferences.Margin)
+        $button.Width = $Preferences.Width - (5 * $Preferences.Margin)
 
         $button.Text = $symbol | Get-PropertyOrDefault `
             -Name Text `
