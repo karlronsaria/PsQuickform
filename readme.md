@@ -6,9 +6,7 @@ Any call for `MenuSpecs` in the module refers to a `PsCustomObject` that contain
 
 #### Types
 
-##### Check
-
-A boolean value, represented by a CheckBox. When procuring parameters from a PowerShell cmdlet or function, Switch parameters are handled using Checks.
+- Check: A boolean value, represented by a CheckBox. When procuring parameters from a PowerShell cmdlet or function, Switch parameters are handled using Checks.
 
 JSON Example:
 ```json
@@ -21,9 +19,7 @@ JSON Example:
 
 ![2022_03_10_020921](/res/2022_03_10_020921.png)
 
-##### Field
-
-A string value, represented by a Label and TextBox. When procuring parameters from a PowerShell cmdlet or function, strings and most other types default to being handled using Fields.
+- Field: A string value, represented by a Label and TextBox. When procuring parameters from a PowerShell cmdlet or function, strings and most other types default to being handled using Fields.
 
 JSON Example:
 ```json
@@ -38,9 +34,7 @@ JSON Example:
 
 ![2022_03_10_023018](/res/2022_03_10_023018.png)
 
-##### Enum
-
-One of a set of accepted string values, represented by a RadioBox (a GroupBox containing sequence of mutually exclusive Radio buttons). When procuring parameters from a PowerShell cmdlet or function, enumerated types or string parameters with the `ValidateSet` attribute added are handled using Enums.
+- Enum: One of a set of accepted string values, represented by a RadioBox (a GroupBox containing sequence of mutually exclusive Radio buttons). When procuring parameters from a PowerShell cmdlet or function, enumerated types or string parameters with the `ValidateSet` attribute added are handled using Enums.
 
 JSON Example:
 ```json
