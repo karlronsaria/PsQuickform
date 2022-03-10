@@ -453,7 +453,6 @@ function Add-ControlsFieldBox {
         [Switch]
         $Mandatory,
 
-        $MinLength,
         $MaxLength,
         $Default,
 
@@ -515,10 +514,6 @@ function Add-ControlsFieldBox {
             }
         }
     })
-
-    if ($null -ne $MinLength) {
-        $textBox.MinLength = $MinLength
-    }
 
     if ($null -ne $MaxLength) {
         $textBox.MaxLength = $MaxLength

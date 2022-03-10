@@ -680,8 +680,6 @@ function Set-QformLayout {
                 }
 
                 'Field' {
-                    $minLength = $item | Get-PropertyOrDefault `
-                        -Name MinLength;
                     $maxLength = $item | Get-PropertyOrDefault `
                         -Name MaxLength;
                     $mandatory = $item | Get-PropertyOrDefault `
@@ -692,7 +690,6 @@ function Set-QformLayout {
                         -Layouts $Layouts `
                         -Text $text `
                         -Mandatory:$mandatory `
-                        -MinLength $minLength `
                         -MaxLength $maxLength `
                         -Default $default `
                         -Preferences $Preferences

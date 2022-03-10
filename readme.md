@@ -10,7 +10,7 @@ Any call for `MenuSpecs` in the module refers to a `PsCustomObject` that contain
 
 A boolean value, represented by a CheckBox. When procuring parameters from a PowerShell cmdlet or function, Switch parameters are handled using Checks.
 
-Ex:
+JSON Ex:
 ```json
 {
     "Name": "ShowHiddenItems",
@@ -19,20 +19,19 @@ Ex:
 }
 ```
 
-pic
+![2022_03_10_020921](/res/2022_03_10_020921.png)
 
 ##### Field
 
 A string value, represented by a Label and TextBox. When procuring parameters from a PowerShell cmdlet or function, strings and most other types default to being handled using Fields.
 
-Ex:
+JSON Ex:
 ```json
 {
     "Name": "NewHostname",
     "Type": "Field",
     "Text": "Enter a new hostname",
     "Mandatory": true,
-    "MinLength": 6,
     "MaxLength": 20
 }
 ```
@@ -43,7 +42,7 @@ pic
 
 One of a set of accepted string values, represented by a RadioBox (a GroupBox containing sequence of mutually exclusive Radio buttons). When procuring parameters from a PowerShell cmdlet or function, enumerated types or string parameters with the `ValidateSet` attribute added are handled using Enums.
 
-Ex:
+JSON Ex:
 ```json
 {
     "Name": "MultipleChoice_20",
@@ -73,9 +72,9 @@ Ex:
 
 pic
 
-When `Mandatory` is ommitted or set `false`, a 'None' button is added to the box and set by default.
+When `Mandatory` is omitted or set `false`, a 'None' button is added to the box and set by default.
 
-Ex:
+JSON Ex:
 ```json
 {
     "Name": "ClientSize",
@@ -98,7 +97,7 @@ pic
 
 A numeric value, represented by a Label and a value slider (NumericUpDown). When procuring parameters from a PowerShell cmdlet or function, integral, floating-point, and decimal values are handled using Numerics.
 
-Ex:
+JSON Ex:
 ```json
 {
     "Name": "TotalCount",
@@ -115,10 +114,9 @@ pic
 
 ### MenuAnswers
 
-Ex:
+`MenuSpecs` in the module refers to a `PsCustomObject` that contains a list of key-value pairs returned by a completed Quickform.
 
-JSON Input:
-
+An example form in JSON:
 ```json
 {
     "MenuSpecs": [
@@ -159,10 +157,10 @@ JSON Input:
 }
 ```
 
+The resulting form:
+![2022_03_10_014837](/res/2022_03_10_014837.png)
 
-
-pic
-
+PowerShell Output returned by the form:
 ```powershell
 Hostname ClientSize NumberOfCpus CreateVirtualDisk
 -------- ---------- ------------ -----------------
