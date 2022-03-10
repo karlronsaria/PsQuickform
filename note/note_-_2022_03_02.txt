@@ -1,5 +1,5 @@
 Preferences
-    Title
+    Caption
     FontFamily
     Point
     Width

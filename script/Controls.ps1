@@ -18,7 +18,7 @@ $script:DEFAULT_PREFERENCES =
         Get-Content $script:DEFAULT_PREFERENCES_PATH | ConvertFrom-Json
     } else {
         [PsCustomObject]@{
-            Title = "Quickform Settings";
+            Caption = "Quickform Settings";
             FontFamily = "Microsoft Sans Serif";
             Point = 10;
             Width = 450;
@@ -248,8 +248,8 @@ function Add-ControlsFormKeyBindings {
                 | ConvertFrom-Json).Help
 
             $message = $message -join "`r`n"
-            $title = 'Help'
-            [System.Windows.Forms.MessageBox]::Show($message, $title)
+            $caption = 'Help'
+            [System.Windows.Forms.MessageBox]::Show($message, $caption)
         }
     })
 }
@@ -335,7 +335,7 @@ function New-ControlsMain {
     )
 
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = $Preferences.Title
+    $form.Text = $Preferences.Caption
     $form.Font = $font
     $form.AutoSize = $true
     $form.KeyPreview = $true
@@ -481,7 +481,7 @@ function Add-ControlsFieldBox {
         -Asterize:$Mandatory
 
     $script:monthCalendarPrefs = $Preferences.PsObject.Copy()
-    $script:monthCalendarPrefs.Title = 'Get Date'
+    $script:monthCalendarPrefs.Caption = 'Get Date'
     $script:monthCalendarPrefs.Width = 350
 
     $textBox.add_KeyDown({
@@ -782,7 +782,7 @@ function Add-ControlsOkCancelButtons {
 function Open-ControlsFileDialog {
     Param(
         [String]
-        $Title = 'Browse Files',
+        $Caption = 'Browse Files',
 
         [String]
         $Filter = 'All Files (*.*)|*.*',
@@ -798,7 +798,7 @@ function Open-ControlsFileDialog {
     )
 
     $openFile = New-Object System.Windows.Forms.OpenFileDialog
-    $openFile.Title = $Title
+    $openFile.Caption = $Caption
     $openFile.Filter = $Filter
     $openFile.FilterIndex = 1
     $openFile.Multiselect = $Multiselect

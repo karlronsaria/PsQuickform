@@ -900,7 +900,7 @@ function Set-QformMainLayout {
         -Layouts $layouts `
         -Preferences $Preferences
 
-    $MainForm.Text = $Preferences.Title
+    $MainForm.Text = $Preferences.Caption
 
     # Resolving a possible race condition
     while ($null -eq $layouts.Multilayout) { }
@@ -1222,8 +1222,9 @@ function Show-QformMenuForCommand {
                 Name = $_.Name;
                 Index = $index;
                 Preferences = [PsCustomObject]@{
-                    Title = "Command: $CommandName $([Char] 0x2014) " `
-                          + "ParameterSet $index` of $count`: $($_.Name)";
+                    Caption =
+                        "Command: $CommandName $([Char] 0x2014) " `
+                      + "ParameterSet $index` of $count`: $($_.Name)";
                 };
                 MenuSpecs = $_.Parameters | where {
                     $IncludeCommonParameters `
