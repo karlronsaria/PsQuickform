@@ -10,7 +10,7 @@ Any call for `MenuSpecs` in the module refers to a `PsCustomObject` that contain
 
 A boolean value, represented by a CheckBox. When procuring parameters from a PowerShell cmdlet or function, Switch parameters are handled using Checks.
 
-JSON Ex:
+JSON Example:
 ```json
 {
     "Name": "ShowHiddenItems",
@@ -25,7 +25,7 @@ JSON Ex:
 
 A string value, represented by a Label and TextBox. When procuring parameters from a PowerShell cmdlet or function, strings and most other types default to being handled using Fields.
 
-JSON Ex:
+JSON Example:
 ```json
 {
     "Name": "NewHostname",
@@ -42,7 +42,7 @@ JSON Ex:
 
 One of a set of accepted string values, represented by a RadioBox (a GroupBox containing sequence of mutually exclusive Radio buttons). When procuring parameters from a PowerShell cmdlet or function, enumerated types or string parameters with the `ValidateSet` attribute added are handled using Enums.
 
-JSON Ex:
+JSON Example:
 ```json
 {
     "Name": "MultipleChoice_20",
@@ -75,7 +75,7 @@ JSON Ex:
 
 When `Mandatory` is omitted or set `false`, a 'None' button is added to the box and set by default.
 
-JSON Ex:
+JSON Example:
 ```json
 {
     "Name": "ClientSize",
@@ -98,7 +98,7 @@ JSON Ex:
 
 A numeric value, represented by a Label and a value slider (NumericUpDown). When procuring parameters from a PowerShell cmdlet or function, integral, floating-point, and decimal values are handled using Numerics.
 
-JSON Ex:
+JSON Example:
 ```json
 {
     "Name": "TotalCount",
@@ -117,22 +117,6 @@ JSON Ex:
 - **Type**: The control type, listed above.
 - **Text**: The label text of the control to be added.
 - **Default**: A default value, at which to set the menu control.
-
-#### Preferences
-
-`Preferences` in the module refers to a `PsCustomObject` that contains a list of key-value pairs that are used by any of the form-builder cmdlets to construct a form. When no `Preferences` object is provided, a form will be built using defaults provided by the module script itself or from a JSON file.
-
-To query for the path to the default preferences file, call the `$QFORM_DEFAULTS_PATH` variable.
-
-- **Caption**: The form's window caption, or "title".
-- **FontFamily**: The form's font typeface.
-- **Point**: The form's font point (size).
-- **Width**: The form's starting width.
-- **Height**: The form's maximum height.
-- **Margin**: The form's margin length.
-- **EnterToConfirm**: Specifies that pressing Enter anywhere in the form should be equivalent to clicking 'OK' at the end of the form.
-- **EscapeToCancel**: Specifies that pressing Escape anywhere in the form should be equivalent to closing the form or clicking 'Cancel' at the end of the form.
-- **DateFormat**: The default date-time format to print into a field when a MonthCalendar window is engaged.
 
 ### MenuAnswers
 
@@ -191,6 +175,20 @@ myvm01   Personal              4              True
 ```
 
 ### Preferences
+
+`Preferences` in the module refers to a `PsCustomObject` that contains a list of key-value pairs that are used by any of the form-builder cmdlets to construct a form. When no `Preferences` object is provided, a form will be built using defaults provided by the module script itself or from a JSON file.
+
+To query for the path to the default preferences file, call the `$QFORM_DEFAULTS_PATH` variable.
+
+- **Caption**: The form's window caption, or "title".
+- **FontFamily**: The form's font typeface.
+- **Point**: The form's font point (size).
+- **Width**: The form's starting width.
+- **Height**: The form's maximum height.
+- **Margin**: The form's margin length.
+- **EnterToConfirm**: Specifies that pressing Enter anywhere in the form should be equivalent to clicking 'OK' at the end of the form.
+- **EscapeToCancel**: Specifies that pressing Escape anywhere in the form should be equivalent to closing the form or clicking 'Cancel' at the end of the form.
+- **DateFormat**: The default date-time format to print into a field when a MonthCalendar window is engaged.
 
 ## Cmdlets
 
