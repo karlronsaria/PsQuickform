@@ -177,6 +177,364 @@ function Show-QformMenu {
 
 <#
     .SYNOPSIS
+    Identifies the menu control type used to process a given PowerShell type.
+
+    .PARAMETER TypeName
+    The name of a PowerShell type.
+
+    .OUTPUTS
+        System.String
+            The accepted name of a Quickform menu control.
+
+        System.Collections.Hashtable
+            When no TypeName is specified, a table containing all pairs of
+            PowerShell type patterns and their respective Quickform menu
+            controls. Pattern '_' means default.
+#>
+function Get-QformControlType {
+    [OutputType([String])]
+    [OutputType([Hashtable])]
+    Param(
+        [String]
+        $TypeName
+    )
+
+    $table = [PsCustomObject]@{
+        'String' = 'Field';
+        'Int*' = 'Numeric';
+        'Decimal' = 'Numeric';
+        'Double' = 'Numeric';
+        'Float' = 'Numeric';
+        'Switch*' = 'Check';
+        'Bool*' = 'Check';
+        '_' = 'Field';
+    }
+
+    if ([String]::IsNullOrWhiteSpace($TypeName)) {
+        return $table
+    }
+
+    foreach ($property in $table.PsObject.Properties) {
+        if ($TypeName -like $property.Name) {
+            return $property.Value
+        }
+    }
+
+    return $table.'_'
+}
+
+<#
+    .SYNOPSIS
+    Gets Quickform menu specs for a PowerShell function or cmdlet.
+
+    .PARAMETER CommandName
+    The name of a PowerShell function or cmdlet.
+
+    .PARAMETER CommandInfo
+    An object containing PowerShell function or cmdlet information, typically
+    procured from a call to 'Get-Command'.
+    Ex:
+
+        $cmdInfo = Get-Command Get-Item
+        ConvertTo-QformMenuSpecs -CommandInfo $cmdInfo
+        $cmdInfo | ConvertTo-QformMenuSpecs
+
+    .PARAMETER ParameterSetName
+    The name of a ParameterSet used by a PowerShell function or cmdlet. Can be
+    procured from a call to 'Get-Command'.
+    Ex:
+
+        $cmdInfo = Get-Command Get-Item
+        $parameterSetNames = $cmdInfo.ParameterSets | foreach { $_.Name }
+
+        ConvertTo-QformMenuSpecs `
+            -CommandName $cmdInfo.Name `
+            -ParameterSetName $parameterSetNames[0]
+
+        ConvertTo-QformMenuSpecs `
+            -CommandInfo $cmdInfo `
+            -ParameterSetName $cmdInfo.DefaultParameterSet
+
+    .PARAMETER ParameterSet
+    An object containing parameter information associated with a single
+    ParameterSet used by a PowerShell function or cmdlet. Can be procured from
+    a call to 'Get-Command'.
+    Ex:
+
+        $cmdInfo = Get-Command Get-Item
+        $parameterSet = $cmdInfo.ParameterSets | where Name -eq 'LiteralPath'
+        ConvertTo-QformMenuSpecs -ParameterSet $parameterSet
+
+    .PARAMETER IncludeCommonParameters
+    Indicates that the CommonParameters should be included in the Quickform menu.
+
+    See about_CommonParameters
+
+    .INPUTS
+        PsCustomObject
+            Pipeline accepts command info.
+
+    .OUTPUTS
+        PsCustomObject
+            An object containing Quickform menu specs.
+#>
+function ConvertTo-QformMenuSpecs {
+    [OutputType([PsCustomObject])]
+    [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
+    Param(
+        [Parameter(
+            ParameterSetName = 'ByCommandName',
+            Position = 0)]
+        [String]
+        $CommandName,
+
+        [Parameter(
+            ParameterSetName = 'ByCommandInfo',
+            ValueFromPipeline = $true)]
+        [System.Management.Automation.CommandInfo]
+        $CommandInfo,
+
+        [Parameter(
+            ParameterSetName = 'ByParameterSet')]
+        $ParameterSet,
+
+        [Switch]
+        $IncludeCommonParameters
+    )
+
+    DynamicParam {
+        if ($PsCmdlet.ParameterSetName -like 'ByCommand*') {
+            $paramDictionary = `
+                New-Object `
+                System.Management.Automation.RuntimeDefinedParameterDictionary
+            $attributeCollection = `
+                New-Object `
+                System.Collections.ObjectModel.Collection[System.Attribute]
+            $attribute = `
+                New-Object `
+                System.Management.Automation.ParameterAttribute
+            $attribute.DontShow = $false
+
+            $attributeCollection.Add($attribute)
+
+            $param = `
+                New-Object `
+                System.Management.Automation.RuntimeDefinedParameter( `
+                    'ParameterSetName', `
+                    [String], `
+                    $attributeCollection `
+                )
+
+            $paramDictionary.Add('ParameterSetName', $param)
+            return $paramDictionary
+        }
+    }
+
+    Process {
+        switch ($PsCmdlet.ParameterSetName) {
+            'ByCommandName' {
+                $CommandInfo = Get-Command -Name $CommandName
+
+                if ($PsBoundParameters.ParameterSetName) {
+                    $ParameterSet = $CommandInfo.ParameterSets | where {
+                        $_.Name -like $PsBoundParameters.ParameterSetName
+                    }
+
+                    return ConvertTo-QformMenuSpecs `
+                        -ParameterSet $ParameterSet `
+                        -IncludeCommonParameters:$IncludeCommonParameters
+                }
+
+                return ConvertTo-QformMenuSpecs `
+                    -CommandInfo $CommandInfo `
+                    -IncludeCommonParameters:$IncludeCommonParameters
+            }
+
+            'ByCommandInfo' {
+                if ($PsBoundParameters.ParameterSetName) {
+                    $ParameterSet = $CommandInfo.ParameterSets | where {
+                        $_.Name -like $PsBoundParameters.ParameterSetName
+                    }
+
+                    return ConvertTo-QformMenuSpecs `
+                        -ParameterSet $ParameterSet `
+                        -IncludeCommonParameters:$IncludeCommonParameters
+                }
+
+                return $CommandInfo.Parameters.Keys | foreach {
+                    $CommandInfo.Parameters[$_]
+                } | where {
+                    $IncludeCommonParameters `
+                        -or -not (Test-IsCommonParameter -ParameterInfo $_)
+                } | foreach {
+                    ConvertTo-QformParameter -ParameterInfo $_
+                }
+            }
+
+            'ByParameterSet' {
+                return $ParameterSet.Parameters | where {
+                    $IncludeCommonParameters `
+                        -or -not (Test-IsCommonParameter -ParameterInfo $_)
+                } | foreach {
+                    ConvertTo-QformParameter -ParameterInfo $_
+                }
+            }
+        }
+    }
+}
+
+<#
+    .SYNOPSIS
+    Runs a given PowerShell function or cmdlet by procuring argument values from
+    a Quickform menu.
+
+    .PARAMETER CommandName
+    The name of a PowerShell function or cmdlet.
+
+    .PARAMETER CommandInfo
+    An object containing PowerShell function or cmdlet information, typically
+    procured from a call to 'Get-Command'.
+    Ex:
+
+        $cmdInfo = Get-Command Get-Item
+        Invoke-QformCommand -CommandInfo $cmdInfo
+        $cmdInfo | Invoke-QformCommand
+
+    .PARAMETER ParameterSetName
+    The name of a ParameterSet used by a PowerShell function or cmdlet. Can be
+    procured from a call to 'Get-Command'.
+    Ex:
+
+        $cmdInfo = Get-Command Get-Item
+        $parameterSetNames = $cmdInfo.ParameterSets | foreach { $_.Name }
+
+        Invoke-QformCommand `
+            -CommandInfo $cmdInfo `
+            -ParameterSetName $parameterSetNames[0]
+
+    .PARAMETER IncludeCommonParameters
+    Indicates that the CommonParameters should be included in the Quickform menu.
+
+    See about_CommonParameters
+
+    .PARAMETER Tee
+    Indicates that Quickform menu specs should be returned along with the menu
+    answers.
+
+    .PARAMETER AnswersAsHashtable
+    Indicates that the menu answers returned should be given in hashtable form.
+
+    .INPUTS
+        PsCustomObject
+            Pipeline accepts command info.
+
+    .OUTPUTS
+        any
+            The return value of whatever command is called by this cmdlet.
+
+        PsCustomObject
+            When Tee is active, an object containing Quickform menu answers, a
+            command call string, and the return value of whatever command is
+            called by this cmdlet.
+            Matches the JSON:
+
+                {
+                    Confirm: <Bool>,
+                    MenuAnswers: {},
+                    CommandString: "",
+                    Value: <any>
+                }
+#>
+function Invoke-QformCommand {
+    [OutputType([Object])]
+    [OutputType([PsCustomObject])]
+    [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
+    Param(
+        [Parameter(
+            ParameterSetName = 'ByCommandName',
+            Position = 0)]
+        [String]
+        $CommandName,
+
+        [Parameter(
+            ParameterSetName = 'ByCommandInfo',
+            ValueFromPipeline = $true)]
+        [System.Management.Automation.CommandInfo]
+        $CommandInfo,
+
+        [String]
+        $ParameterSetName,
+
+        [Switch]
+        $IncludeCommonParameters,
+
+        [Switch]
+        $Tee,
+
+        [Switch]
+        $AnswersAsHashtable
+    )
+
+    if ($AnswersAsHashtable -and -not $Tee) {
+        Write-Warning ((Get-ThisFunctionName) `
+            + ": AnswersAsHashtable has no effect unless Tee is specified.")
+    }
+
+    $quickform = [PsCustomObject]@{
+        Confirm = $false;
+        MenuAnswers = @{};
+    }
+
+    switch ($PsCmdlet.ParameterSetName) {
+        'ByCommandName' {
+            $quickform = Show-QformMenuForCommand `
+                -CommandName $CommandName `
+                -ParameterSetName:$ParameterSetName `
+                -IncludeCommonParameters:$IncludeCommonParameters
+
+            $CommandInfo = Get-Command `
+                -Name $CommandName
+        }
+
+        'ByCommandInfo' {
+            $quickform = Show-QformMenuForCommand `
+                -CommandInfo $CommandInfo `
+                -ParameterSetName:$ParameterSetName `
+                -IncludeCommonParameters:$IncludeCommonParameters
+
+            $CommandName = $CommandInfo.Name
+        }
+    }
+
+    $table = $quickform.MenuAnswers | ConvertTo-Hashtable
+
+    $params = $table | Get-NonEmptyTable `
+        -RemoveEmptyString
+
+    $value = if ($quickform.Confirm) {
+        & $CommandName @params
+    } else {
+        $null
+    }
+
+    if ($Tee) {
+        if ($AnswersAsHashtable) {
+            $quickform.MenuAnswers = $table
+        }
+
+        $quickform | Add-Member `
+            -MemberType NoteProperty `
+            -Name Value `
+            -Value $value
+
+        return $quickform
+    }
+
+    return $value
+}
+
+<#
+    .SYNOPSIS
     Creates a Quickform new menu.
 
     .PARAMETER MenuSpecs
@@ -559,54 +917,6 @@ function Set-QformMainLayout {
     return $layouts
 }
 
-<#
-    .SYNOPSIS
-    Identifies the menu control type used to process a PowerShell type.
-
-    .PARAMETER TypeName
-    The name of a PowerShell type.
-
-    .OUTPUTS
-        System.String
-            The accepted name of a Quickform menu control.
-
-        System.Collections.Hashtable
-            When no TypeName is specified, a table containing all pairs of
-            PowerShell type patterns and their respective Quickform menu
-            controls. Pattern '_' means default.
-#>
-function Get-QformControlType {
-    [OutputType([String])]
-    [OutputType([Hashtable])]
-    Param(
-        [String]
-        $TypeName
-    )
-
-    $table = [PsCustomObject]@{
-        'String' = 'Field';
-        'Int*' = 'Numeric';
-        'Decimal' = 'Numeric';
-        'Double' = 'Numeric';
-        'Float' = 'Numeric';
-        'Switch*' = 'Check';
-        'Bool*' = 'Check';
-        '_' = 'Field';
-    }
-
-    if ([String]::IsNullOrWhiteSpace($TypeName)) {
-        return $table
-    }
-
-    foreach ($property in $table.PsObject.Properties) {
-        if ($TypeName -like $property.Name) {
-            return $property.Value
-        }
-    }
-
-    return $table.'_'
-}
-
 function ConvertTo-QformParameter {
     Param(
         $ParameterInfo
@@ -702,166 +1012,6 @@ function ConvertTo-QformParameter {
     }
 
     return $obj
-}
-
-<#
-    .SYNOPSIS
-    Gets Quickform menu specs for a PowerShell function or cmdlet.
-
-    .PARAMETER CommandName
-    The name of a PowerShell function or cmdlet.
-
-    .PARAMETER CommandInfo
-    An object containing PowerShell function or cmdlet information, typically
-    procured from a call to 'Get-Command'.
-    Ex:
-
-        $cmdInfo = Get-Command Get-Item
-        ConvertTo-QformMenuSpecs -CommandInfo $cmdInfo
-        $cmdInfo | ConvertTo-QformMenuSpecs
-
-    .PARAMETER ParameterSetName
-    The name of a ParameterSet used by a PowerShell function or cmdlet. Can be
-    procured from a call to 'Get-Command'.
-    Ex:
-
-        $cmdInfo = Get-Command Get-Item
-        $parameterSetNames = $cmdInfo.ParameterSets | foreach { $_.Name }
-
-        ConvertTo-QformMenuSpecs `
-            -CommandName $cmdInfo.Name `
-            -ParameterSetName $parameterSetNames[0]
-
-        ConvertTo-QformMenuSpecs `
-            -CommandInfo $cmdInfo `
-            -ParameterSetName $cmdInfo.DefaultParameterSet
-
-    .PARAMETER ParameterSet
-    An object containing parameter information associated with a single
-    ParameterSet used by a PowerShell function or cmdlet. Can be procured from
-    a call to 'Get-Command'.
-    Ex:
-
-        $cmdInfo = Get-Command Get-Item
-        $parameterSet = $cmdInfo.ParameterSets | where Name -eq 'LiteralPath'
-        ConvertTo-QformMenuSpecs -ParameterSet $parameterSet
-
-    .PARAMETER IncludeCommonParameters
-    Indicates that the CommonParameters should be included in the Quickform menu.
-
-    See about_CommonParameters
-
-    .INPUTS
-        PsCustomObject
-            Pipeline accepts command info.
-
-    .OUTPUTS
-        PsCustomObject
-            An object containing Quickform menu specs.
-#>
-function ConvertTo-QformMenuSpecs {
-    [OutputType([PsCustomObject])]
-    [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
-    Param(
-        [Parameter(
-            ParameterSetName = 'ByCommandName',
-            Position = 0)]
-        [String]
-        $CommandName,
-
-        [Parameter(
-            ParameterSetName = 'ByCommandInfo',
-            ValueFromPipeline = $true)]
-        [System.Management.Automation.CommandInfo]
-        $CommandInfo,
-
-        [Parameter(
-            ParameterSetName = 'ByParameterSet')]
-        $ParameterSet,
-
-        [Switch]
-        $IncludeCommonParameters
-    )
-
-    DynamicParam {
-        if ($PsCmdlet.ParameterSetName -like 'ByCommand*') {
-            $paramDictionary = `
-                New-Object `
-                System.Management.Automation.RuntimeDefinedParameterDictionary
-            $attributeCollection = `
-                New-Object `
-                System.Collections.ObjectModel.Collection[System.Attribute]
-            $attribute = `
-                New-Object `
-                System.Management.Automation.ParameterAttribute
-            $attribute.DontShow = $false
-
-            $attributeCollection.Add($attribute)
-
-            $param = `
-                New-Object `
-                System.Management.Automation.RuntimeDefinedParameter( `
-                    'ParameterSetName', `
-                    [String], `
-                    $attributeCollection `
-                )
-
-            $paramDictionary.Add('ParameterSetName', $param)
-            return $paramDictionary
-        }
-    }
-
-    Process {
-        switch ($PsCmdlet.ParameterSetName) {
-            'ByCommandName' {
-                $CommandInfo = Get-Command -Name $CommandName
-
-                if ($PsBoundParameters.ParameterSetName) {
-                    $ParameterSet = $CommandInfo.ParameterSets | where {
-                        $_.Name -like $PsBoundParameters.ParameterSetName
-                    }
-
-                    return ConvertTo-QformMenuSpecs `
-                        -ParameterSet $ParameterSet `
-                        -IncludeCommonParameters:$IncludeCommonParameters
-                }
-
-                return ConvertTo-QformMenuSpecs `
-                    -CommandInfo $CommandInfo `
-                    -IncludeCommonParameters:$IncludeCommonParameters
-            }
-
-            'ByCommandInfo' {
-                if ($PsBoundParameters.ParameterSetName) {
-                    $ParameterSet = $CommandInfo.ParameterSets | where {
-                        $_.Name -like $PsBoundParameters.ParameterSetName
-                    }
-
-                    return ConvertTo-QformMenuSpecs `
-                        -ParameterSet $ParameterSet `
-                        -IncludeCommonParameters:$IncludeCommonParameters
-                }
-
-                return $CommandInfo.Parameters.Keys | foreach {
-                    $CommandInfo.Parameters[$_]
-                } | where {
-                    $IncludeCommonParameters `
-                        -or -not (Test-IsCommonParameter -ParameterInfo $_)
-                } | foreach {
-                    ConvertTo-QformParameter -ParameterInfo $_
-                }
-            }
-
-            'ByParameterSet' {
-                return $ParameterSet.Parameters | where {
-                    $IncludeCommonParameters `
-                        -or -not (Test-IsCommonParameter -ParameterInfo $_)
-                } | foreach {
-                    ConvertTo-QformParameter -ParameterInfo $_
-                }
-            }
-        }
-    }
 }
 
 <#
@@ -1206,155 +1356,5 @@ function Show-QformMenuForCommand {
         MenuAnswers = $formResult;
         CommandString = "$CommandName$parameterString";
     }
-}
-
-<#
-    .SYNOPSIS
-    Runs a given PowerShell function or cmdlet by procuring argument values from
-    a Quickform menu.
-
-    .PARAMETER CommandName
-    The name of a PowerShell function or cmdlet.
-
-    .PARAMETER CommandInfo
-    An object containing PowerShell function or cmdlet information, typically
-    procured from a call to 'Get-Command'.
-    Ex:
-
-        $cmdInfo = Get-Command Get-Item
-        Invoke-QformCommand -CommandInfo $cmdInfo
-        $cmdInfo | Invoke-QformCommand
-
-    .PARAMETER ParameterSetName
-    The name of a ParameterSet used by a PowerShell function or cmdlet. Can be
-    procured from a call to 'Get-Command'.
-    Ex:
-
-        $cmdInfo = Get-Command Get-Item
-        $parameterSetNames = $cmdInfo.ParameterSets | foreach { $_.Name }
-
-        Invoke-QformCommand `
-            -CommandInfo $cmdInfo `
-            -ParameterSetName $parameterSetNames[0]
-
-    .PARAMETER IncludeCommonParameters
-    Indicates that the CommonParameters should be included in the Quickform menu.
-
-    See about_CommonParameters
-
-    .PARAMETER Tee
-    Indicates that Quickform menu specs should be returned along with the menu
-    answers.
-
-    .PARAMETER AnswersAsHashtable
-    Indicates that the menu answers returned should be given in hashtable form.
-
-    .INPUTS
-        PsCustomObject
-            Pipeline accepts command info.
-
-    .OUTPUTS
-        any
-            The return value of whatever command is called by this cmdlet.
-
-        PsCustomObject
-            When Tee is active, an object containing Quickform menu answers, a
-            command call string, and the return value of whatever command is
-            called by this cmdlet.
-            Matches the JSON:
-
-                {
-                    Confirm: <Bool>,
-                    MenuAnswers: {},
-                    CommandString: "",
-                    Value: <any>
-                }
-#>
-function Invoke-QformCommand {
-    [OutputType([Object])]
-    [OutputType([PsCustomObject])]
-    [CmdletBinding(DefaultParameterSetName = 'ByCommandName')]
-    Param(
-        [Parameter(
-            ParameterSetName = 'ByCommandName',
-            Position = 0)]
-        [String]
-        $CommandName,
-
-        [Parameter(
-            ParameterSetName = 'ByCommandInfo',
-            ValueFromPipeline = $true)]
-        [System.Management.Automation.CommandInfo]
-        $CommandInfo,
-
-        [String]
-        $ParameterSetName,
-
-        [Switch]
-        $IncludeCommonParameters,
-
-        [Switch]
-        $Tee,
-
-        [Switch]
-        $AnswersAsHashtable
-    )
-
-    if ($AnswersAsHashtable -and -not $Tee) {
-        Write-Warning ((Get-ThisFunctionName) `
-            + ": AnswersAsHashtable has no effect unless Tee is specified.")
-    }
-
-    $quickform = [PsCustomObject]@{
-        Confirm = $false;
-        MenuAnswers = @{};
-    }
-
-    switch ($PsCmdlet.ParameterSetName) {
-        'ByCommandName' {
-            $quickform = Show-QformMenuForCommand `
-                -CommandName $CommandName `
-                -ParameterSetName:$ParameterSetName `
-                -IncludeCommonParameters:$IncludeCommonParameters
-
-            $CommandInfo = Get-Command `
-                -Name $CommandName
-        }
-
-        'ByCommandInfo' {
-            $quickform = Show-QformMenuForCommand `
-                -CommandInfo $CommandInfo `
-                -ParameterSetName:$ParameterSetName `
-                -IncludeCommonParameters:$IncludeCommonParameters
-
-            $CommandName = $CommandInfo.Name
-        }
-    }
-
-    $table = $quickform.MenuAnswers | ConvertTo-Hashtable
-
-    $params = $table | Get-NonEmptyTable `
-        -RemoveEmptyString
-
-    $value = if ($quickform.Confirm) {
-        & $CommandName @params
-    } else {
-        $null
-    }
-
-    if ($Tee) {
-        if ($AnswersAsHashtable) {
-            $quickform.MenuAnswers = $table
-        }
-
-        $quickform | Add-Member `
-            -MemberType NoteProperty `
-            -Name Value `
-            -Value $value
-
-        return $quickform
-    }
-
-    return $value
 }
 
