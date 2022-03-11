@@ -485,22 +485,22 @@ function Add-ControlsFieldBox {
     $script:monthCalendarPrefs.Width = 350
 
     $textBox.add_KeyDown({
-        $eventArgs = $_
+        $myEventArgs = $_
 
-        switch ($eventArgs.KeyCode) {
+        switch ($myEventArgs.KeyCode) {
             'O' {
-                if ($eventArgs.Control) {
+                if ($myEventArgs.Control) {
                     Set-ControlsWritableText `
                         -Control $this `
                         -Text ($this.Text + (Open-ControlsFileDialog))
 
-                    $eventArgs.Handled = $true
-                    $eventArgs.SuppressKeyPress = $true
+                    $myEventArgs.Handled = $true
+                    $myEventArgs.SuppressKeyPress = $true
                 }
             }
 
             'D' {
-                if ($eventArgs.Control) {
+                if ($myEventArgs.Control) {
                     $text = Open-ControlsMonthCalendar `
                         -Preferences $script:monthCalendarPrefs
 
@@ -508,8 +508,8 @@ function Add-ControlsFieldBox {
                         -Control $this `
                         -Text ($this.Text + $text)
 
-                    $eventArgs.Handled = $true
-                    $eventArgs.SuppressKeyPress = $true
+                    $myEventArgs.Handled = $true
+                    $myEventArgs.SuppressKeyPress = $true
                 }
             }
         }
@@ -603,7 +603,7 @@ function Add-ControlsSlider {
         })
 
         $slider.add_TextChanged({
-            $name = 
+            $name =
                 if ($this.Text -eq $this.Minimum) {
                     'MinReached'
                 }

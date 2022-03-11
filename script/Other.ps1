@@ -10,11 +10,13 @@ function Get-PropertyOrDefault {
         $Default = $null
     )
 
-    if ($InputObject.PsObject.Properties.Name -contains $Name) {
-        return $InputObject.$Name
-    }
+    Process {
+        if ($InputObject.PsObject.Properties.Name -contains $Name) {
+            return $InputObject.$Name
+        }
 
-    return $Default
+        return $Default
+    }
 }
 
 <#
@@ -89,23 +91,25 @@ function Get-NonEmptyTable {
         $RemoveEmptyString
     )
 
-    if ($null -eq $InputObject) {
-        return
+    Process {
+        if ($null -eq $InputObject) {
+            return
+        }
+
+        $table = @{}
+
+        $InputObject.Keys | where {
+            $name = $_;
+            $value = $InputObject[$_];
+
+            (-not $RemoveEmptyString -or '' -ne $value) `
+                -and $null -ne $value
+        } | foreach {
+            $table.Add($name, $value)
+        }
+
+        return $table
     }
-
-    $table = @{}
-
-    $InputObject.Keys | where {
-        $name = $_;
-        $value = $InputObject[$_];
-
-        (-not $RemoveEmptyString -or '' -ne $value) `
-            -and $null -ne $value
-    } | foreach {
-        $table.Add($name, $value)
-    }
-
-    return $table
 }
 
 function Get-NonEmptyObject {
@@ -119,23 +123,25 @@ function Get-NonEmptyObject {
         $RemoveEmptyString
     )
 
-    $obj = [PsCustomObject]@{}
+    Process {
+        $obj = [PsCustomObject]@{}
 
-    $InputObject.PsObject.Properties | where {
-        $type = $_.MemberType;
-        $name = $_.Name;
-        $value = $_.Value;
+        $InputObject.PsObject.Properties | where {
+            $type = $_.MemberType;
+            $name = $_.Name;
+            $value = $_.Value;
 
-        (-not $RemoveEmptyString -or '' -ne $value) `
-            -and $null -ne $value
-    } | foreach {
-        $obj | Add-Member `
-            -MemberType $type `
-            -Name $name `
-            -Value $value
+            (-not $RemoveEmptyString -or '' -ne $value) `
+                -and $null -ne $value
+        } | foreach {
+            $obj | Add-Member `
+                -MemberType $type `
+                -Name $name `
+                -Value $value
+        }
+
+        return $obj
     }
-
-    return $obj
 }
 
 function ConvertTo-Hashtable {
@@ -145,13 +151,15 @@ function ConvertTo-Hashtable {
         $InputObject
     )
 
-    $table = @{}
+    Process {
+        $table = @{}
 
-    foreach ($property in $InputObject.PsObject.Properties.Name) {
-        $table[$property] = $InputObject.$property
+        foreach ($property in $InputObject.PsObject.Properties.Name) {
+            $table[$property] = $InputObject.$property
+        }
+
+        return $table
     }
-
-    return $table
 }
 
 <#

@@ -65,7 +65,7 @@ function Get-FieldValidators {
             }
 
             'ByCommandInfo' {
-                $parameters = $CommandInfo.Parameters.Keys | % {
+                $parameters = $CommandInfo.Parameters.Keys | foreach {
                     $CommandInfo.Parameters[$_]
                 }
 
