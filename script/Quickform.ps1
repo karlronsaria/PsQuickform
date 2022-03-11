@@ -183,6 +183,10 @@ function Get-QformPreference {
 
     See about_CommonParameters
 
+    .PARAMETER IgnoreLists
+    Indicates that array types should be handled using single-value controls,
+    such as Fields, rather than using a ListBox.
+
     .PARAMETER AnswersAsHashtable
     Indicates that the menu answers returned should be given in hashtable form.
 
@@ -273,6 +277,11 @@ function Show-QformMenu {
         [Switch]
         $IncludeCommonParameters,
 
+        [Parameter(
+            ParameterSetName = 'ByCommandName')]
+        [Switch]
+        $IgnoreLists,
+
         [Switch]
         $AnswersAsHashtable
     )
@@ -300,9 +309,10 @@ function Show-QformMenu {
             'ByCommandName' {
                 return Show-QformMenuForCommand `
                     -CommandName $CommandName `
-                    -IncludeCommonParameters:$IncludeCommonParameters `
                     -ParameterSetName $ParameterSetName `
-                    -AnswersAsHashtable:$AnswersAsHashtable
+                    -IncludeCommonParameters:$IncludeCommonParameters `
+                    -IgnoreLists:$IgnoreLists
+                    -AnswersAsHashtable:$AnswersAsHashtable `
             }
         }
     }
@@ -329,12 +339,17 @@ function Get-QformControlType {
     [OutputType([Hashtable])]
     Param(
         [String]
-        $TypeName
+        $TypeName,
+
+        [Switch]
+        $IgnoreLists
     )
 
     $defaultName = '_'
+    $listPattern = '*[]'
 
     $table = [PsCustomObject]@{
+        $listPattern = 'List';
         'String' = 'Field';
         'Int*' = 'Numeric';
         'Decimal' = 'Numeric';
@@ -351,6 +366,10 @@ function Get-QformControlType {
 
     foreach ($property in $table.PsObject.Properties) {
         if ($TypeName -like $property.Name) {
+            if ($IgnoreLists -and $TypeName -eq $listPattern) {
+                continue
+            }
+
             return $property.Value
         }
     }
@@ -1090,7 +1109,10 @@ function Set-QformMainLayout {
 
 function ConvertTo-QformParameter {
     Param(
-        $ParameterInfo
+        $ParameterInfo,
+
+        [Switch]
+        $IgnoreLists
     )
 
     $type = $ParameterInfo.ParameterType
@@ -1179,7 +1201,8 @@ function ConvertTo-QformParameter {
 
     if ($obj.Type -eq '') {
         $obj.Type = Get-QformControlType `
-            -TypeName $type.Name
+            -TypeName $type.Name `
+            -IgnoreLists:$IgnoreLists
     }
 
     return $obj
@@ -1274,6 +1297,10 @@ function ConvertTo-QformString {
 
     See about_CommonParameters
 
+    .PARAMETER IgnoreLists
+    Indicates that array types should be handled using single-value controls,
+    such as Fields, rather than using a ListBox.
+
     .PARAMETER AnswersAsHashtable
     Indicates that the menu answers returned should be given in hashtable form.
 
@@ -1314,6 +1341,9 @@ function Show-QformMenuForCommand {
 
         [Switch]
         $IncludeCommonParameters,
+
+        [Switch]
+        $IgnoreLists,
 
         [Switch]
         $AnswersAsHashtable
@@ -1407,7 +1437,9 @@ function Show-QformMenuForCommand {
                         $IncludeCommonParameters `
                             -or -not (Test-IsCommonParameter -ParameterInfo $_)
                     } | ForEach-Object {
-                        ConvertTo-QformParameter -ParameterInfo $_
+                        ConvertTo-QformParameter `
+                            -ParameterInfo $_ `
+                            -IgnoreLists:$IgnoreLists
                     };
                 }
 
