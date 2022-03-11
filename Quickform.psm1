@@ -6,7 +6,7 @@ Export-ModuleMember -Function @(
 
     ## Quickform.ps1
     ## -------------
-    'New-QformPreferences',
+    'Get-QformPreference',
     'Show-QformMenu',
     'Get-QformControlType',
     'ConvertTo-QformMenuSpecs',
@@ -14,7 +14,11 @@ Export-ModuleMember -Function @(
 
     ## Other.ps1
     ## ---------
-    'Get-NonEmpty'
+    'Get-NonEmpty',
+
+    ## I absolutely believe I should NOT need to expose these functions.
+    ## -----------------------------------------------------------------
+    'Get-QformResource'
 )
 
 Export-ModuleMember -Variable @(
