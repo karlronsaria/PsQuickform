@@ -1,22 +1,26 @@
-## Cmdlets
+# Description
 
-### Show-QformMenu
+Create Windows forms on the fly using terse document object specifications.
+
+# Cmdlets
+
+## Show-QformMenu
 
 ![Show-QformMenu](/res/2022_03_10_185307_Show-QformMenu.gif)
 
-### Invoke-QformCommand
+## Invoke-QformCommand
 
 ![Invoke-QformCommand](/res/2022_03_10_185307_Invoke-QformCommand.gif)
 
-## Objects
+# Objects
 
-### MenuSpecs
+## MenuSpecs
 
 Any call for `MenuSpecs` in the module refers to a `PsCustomObject` that contains a list of specifications for the controls in a Quickform menu.
 
-#### Types
+### Types
 
-##### Check
+#### Check
 
 A boolean value, represented by a CheckBox. When procuring parameters from a PowerShell cmdlet or function, Switch parameters are handled using Checks.
 
@@ -31,7 +35,7 @@ JSON Example:
 
 ![2022_03_10_020921](/res/2022_03_10_020921.png)
 
-##### Field
+#### Field
 
 A string value, represented by a Label and TextBox. When procuring parameters from a PowerShell cmdlet or function, strings and most other types default to being handled using Fields.
 
@@ -48,7 +52,7 @@ JSON Example:
 
 ![2022_03_10_023018](/res/2022_03_10_023018.png)
 
-##### Enum
+#### Enum
 
 One of a set of accepted string values, represented by a RadioBox (a GroupBox containing sequence of mutually exclusive Radio buttons). When procuring parameters from a PowerShell cmdlet or function, enumerated types or string parameters with the `ValidateSet` attribute added are handled using Enums.
 
@@ -104,7 +108,7 @@ JSON Example:
 
 ![2022_03_10_023739](/res/2022_03_10_023739.png)
 
-##### Numeric
+#### Numeric
 
 A numeric value, represented by a Label and a value slider (NumericUpDown). When procuring parameters from a PowerShell cmdlet or function, integral, floating-point, and decimal values are handled using Numerics.
 
@@ -121,14 +125,14 @@ JSON Example:
 
 ![2022_03_10_023904](/res/2022_03_10_023904.png)
 
-#### Common Properties
+### Common Properties
 
 - **Name**: The name of the control to be added. Also the name of the resulting menu answer.
 - **Type**: The control type, listed above.
 - **Text**: The label text of the control to be added.
 - **Default**: A default value, at which to set the menu control.
 
-### MenuAnswers
+## MenuAnswers
 
 `MenuAnswers` in the module refers to a `PsCustomObject` that contains a list of key-value pairs returned by a completed Quickform.
 
@@ -184,7 +188,7 @@ Hostname ClientSize NumberOfCpus CreateVirtualDisk
 myvm01   Personal              4              True
 ```
 
-### Preferences
+## Preferences
 
 `Preferences` in the module refers to a `PsCustomObject` that contains a list of key-value pairs that are used by any of the form-builder cmdlets to construct a form. When no `Preferences` object is provided, a form will be built using defaults provided by the module script itself or from a JSON file.
 
