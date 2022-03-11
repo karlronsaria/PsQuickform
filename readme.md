@@ -1,3 +1,13 @@
+## Cmdlets
+
+### Show-QformMenu
+
+![Show-QformMenu](/res/2022_03_10_185307_Show-QformMenu.gif)
+
+### Invoke-QformCommand
+
+![Invoke-QformCommand](/res/2022_03_10_185307_Invoke-QformCommand.gif)
+
 ## Objects
 
 ### MenuSpecs
@@ -118,22 +128,6 @@ JSON Ex:
 - **Text**: The label text of the control to be added.
 - **Default**: A default value, at which to set the menu control.
 
-#### Preferences
-
-`Preferences` in the module refers to a `PsCustomObject` that contains a list of key-value pairs that are used by any of the form-builder cmdlets to construct a form. When no `Preferences` object is provided, a form will be built using defaults provided by the module script itself or from a JSON file.
-
-To query for the path to the default preferences file, call the `$QFORM_DEFAULTS_PATH` variable.
-
-- **Caption**: The form's window caption, or "title".
-- **FontFamily**: The form's font typeface.
-- **Point**: The form's font point (size).
-- **Width**: The form's starting width.
-- **Height**: The form's maximum height.
-- **Margin**: The form's margin length.
-- **EnterToConfirm**: Specifies that pressing Enter anywhere in the form should be equivalent to clicking 'OK' at the end of the form.
-- **EscapeToCancel**: Specifies that pressing Escape anywhere in the form should be equivalent to closing the form or clicking 'Cancel' at the end of the form.
-- **DateFormat**: The default date-time format to print into a field when a MonthCalendar window is engaged.
-
 ### MenuAnswers
 
 `MenuSpecs` in the module refers to a `PsCustomObject` that contains a list of key-value pairs returned by a completed Quickform.
@@ -192,22 +186,18 @@ myvm01   Personal              4              True
 
 ### Preferences
 
-## Cmdlets
+`Preferences` in the module refers to a `PsCustomObject` that contains a list of key-value pairs that are used by any of the form-builder cmdlets to construct a form. When no `Preferences` object is provided, a form will be built using defaults provided by the module script itself or from a JSON file.
 
+To query for the path to the default preferences file, call the `$QFORM_DEFAULTS_PATH` variable.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- **Caption**: The form's window caption, or "title".
+- **FontFamily**: The form's font typeface.
+- **Point**: The form's font point (size).
+- **Width**: The form's starting width.
+- **Height**: The form's maximum height.
+- **Margin**: The form's margin length.
+- **EnterToConfirm**: Specifies that pressing Enter anywhere in the form should be equivalent to clicking 'OK' at the end of the form.
+- **EscapeToCancel**: Specifies that pressing Escape anywhere in the form should be equivalent to closing the form or clicking 'Cancel' at the end of the form.
+- **DateFormat**: The default date-time format to print into a field when a MonthCalendar window is engaged.
 
 

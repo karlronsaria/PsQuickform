@@ -1,82 +1,41 @@
 {
     "Preferences": {
-        "Caption": "System Prep Preferences",
-        "FontFamily": "Microsoft Sans Serif",
-        "Point": 10,
-        "Width": 500,
-        "Margin": 10,
-        "ConfirmType": "AllowOrDeny"
+        "Caption": "My Form"
     },
     "MenuSpecs": [
         {
-            "Name": "GeoLocation",
-            "Type": "Check",
-            "Text": "Allow device geolocation services"
-        },
-        {
-            "Name": "AutoTimeSync",
-            "Type": "Check",
-            "Text": "Allow automatic time synchronization"
-        },
-        {
-            "Name": "AutoSetTimeZone",
-            "Type": "Check",
-            "Text": "Allow automatic time zone update"
-        },
-        {
-            "Name": "RemoteDesktop",
-            "Type": "Check",
-            "Text": "Allow Remote Desktop connections to this device"
-        },
-        {
-            "Name": "UserAccountControl",
-            "Type": "Check",
-            "Text": "Enable User Account Control"
-        },
-        {
-            "Name": "NetworkDiscovery",
-            "Type": "Check",
-            "Text": "Enable Network Discovery"
-        },
-        {
-            "Name": "FileSharing",
-            "Type": "Check",
-            "Text": "Enable File Sharing"
-        },
-        {
-            "Name": "ExplorerAnimations",
-            "Type": "Check",
-            "Text": "Allow animations in Windows Explorer"
-        },
-        {
-            "Name": "WindowsFeed",
-            "Type": "Check",
-            "Text": "Enable Windows Feed"
-        },
-        {
-            "Name": "UpdatePsHelp",
-            "Type": "Check",
-            "Text": "Update PowerShell Help docs"
-        },
-        {
-            "Name": "NewHostname",
+            "Name": "Hostname",
             "Type": "Field",
-            "Text": "New hostname"
+            "Text": "New hostname:"
         },
         {
-            "Name": "AppxDebloatingPreference",
+            "Name": "ClientSize",
             "Type": "Enum",
-            "Text": "Appx package debloat preference",
+            "Text": "Preferred client size",
             "Symbols": [
                 {
-                    "Name": "Personal",
-                    "Text": "Personal"
+                    "Name": "Personal"
                 },
                 {
-                    "Name": "Thin",
-                    "Text": "Thin"
+                    "Name": "Thin"
                 }
-            ]
+            ],
+            "Mandatory": true
+        },
+        {
+            "Name": "NumberOfCpus",
+            "Type": "Numeric",
+            "Text": "Number of CPUs:",
+            "Minimum": 1,
+            "Maximum": 9,
+            "Default": 4
+        },
+        {
+            "Name": "CreateVirtualDisk",
+            "Type": "Check",
+            "Text": "Create virtual disk",
+            "Default": true
         }
     ]
 }
+
