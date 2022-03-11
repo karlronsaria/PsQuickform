@@ -436,6 +436,319 @@ function Get-ControlsAsterizable {
     return $row
 }
 
+function Get-ControlsTextDialog {
+    Param(
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES,
+
+        [String]
+        $Text
+    )
+
+    $textBox = New-Object System.Windows.Forms.TextBox
+    $textBox.Width =
+        $script:prefs.Width - (4 * $script:prefs.Margin)
+
+    Set-ControlsWritableText `
+        -Control $textBox `
+        -Text $Text
+
+    $form = New-ControlsMain `
+        -Preferences $script:prefs
+
+    $form.Text = 'Edit ListBox Item'
+    $form.KeyPreview = $true
+    $form.Controls.Add($textBox)
+
+    $form.add_KeyDown({
+        if ($_.KeyCode -eq 'Enter') {
+            $this.DialogResult = [System.Windows.Forms.DialogResult]::OK
+            $this.Close()
+        }
+    })
+
+    $form.add_KeyDown({
+        if ($_.KeyCode -eq 'Escape') {
+            $this.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+            $this.Close()
+        }
+    })
+
+    switch ($form.ShowDialog()) {
+        'Cancel' {
+            return
+        }
+    }
+
+    return $textBox.Text
+}
+
+function Add-ControlsListBox {
+    Param(
+        [PsCustomObject]
+        $Layouts,
+
+        [String]
+        $Text,
+
+        [Switch]
+        $Mandatory,
+
+        $MaxLength,
+        $MaxCount,
+        $Default,
+
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES
+    )
+
+    $outerPanel = New-Object System.Windows.Forms.FlowLayoutPanel
+    $outerPanel.FlowDirection =
+        [System.Windows.Forms.FlowDirection]::TopDown
+    $outerPanel.Left = $Preferences.Margin
+    $outerPanel.AutoSize = $true
+    $outerPanel.WrapContents = $false
+    $outerPanel.Padding = 0
+
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = $Text
+    $label.Left = $Preferences.Margin
+    $label.AutoSize = $true
+
+    $row1 = Get-ControlsAsterizable `
+        -Control $label `
+        -Width ($Preferences.Width - (4 * $Preferences.Margin)) `
+        -Asterize:$Mandatory
+
+    $mainPanel = New-Object System.Windows.Forms.FlowLayoutPanel
+    $mainPanel.FlowDirection =
+        [System.Windows.Forms.FlowDirection]::RightToLeft
+    $mainPanel.Left = $Preferences.Margin
+    $mainPanel.Width = $Preferences.Width # - (2 * $Preferences.Margin)
+    $mainPanel.AutoSize = $true
+    $mainPanel.AutoSizeMode =
+        [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+    $mainPanel.WrapContents = $false
+    $mainPanel.Margin = $mainPanel.Padding = 0
+
+    $buttonPanel = New-Object System.Windows.Forms.FlowLayoutPanel
+    $buttonPanel.FlowDirection =
+        [System.Windows.Forms.FlowDirection]::TopDown
+    $buttonPanel.Width = 90
+    $buttonPanel.WrapContents = $false
+    $buttonPanel.Margin = $buttonPanel.Padding = 0
+    $buttonPanel.AutoSize = $true
+    $buttonPanel.AutoSizeMode =
+        [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
+
+    $buttonNames = @(
+        'New', 'Edit', 'Delete', 'Move Up', 'Move Down'
+    )
+
+    $buttonTable = @{}
+    $actionTable = @{}
+
+    foreach ($name in $buttonNames) {
+        $button = New-Object System.Windows.Forms.Button
+        $button.Text = $name
+        $button.Width = $buttonPanel.Width
+
+        $buttonPanel.Controls.Add($button)
+        $buttonTable.Add($name, $button)
+    }
+
+    $script:listBox = New-Object System.Windows.Forms.ListBox
+    $script:listBox.Width = $mainPanel.Width - $buttonPanel.Width
+    $script:listBox.Height = 200
+
+    $script:prefs = $Preferences
+    $script:maxCount = $MaxCount
+
+    $actionTable['New'] = {
+        $index = $script:listBox.SelectedIndex
+
+        if ($null -ne $script:MaxCount `
+            -and $script:listBox.Items.Count -eq $script:MaxCount)
+        {
+            Set-ControlsStatus `
+                -StatusLine $script:layouts.StatusLine `
+                -LineName 'MaxCountReached'
+
+            return
+        }
+
+        if ($index -ge 0) {
+            $script:listBox.Items.Insert($index, '')
+        }
+        else {
+            $script:listBox.Items.Add('')
+            $index = $script:listBox.Items.Count - 1
+        }
+
+        $script:listBox.Items[$index] =
+            Get-ControlsTextDialog `
+                -Preferences $script:prefs `
+                -Text $script:listBox.Items[$index]
+    }
+
+    $actionTable['Edit'] = {
+        $index = $script:listBox.SelectedIndex
+
+        if ($index -lt 0) {
+            return
+        }
+
+        $script:listBox.Items[$index] =
+            Get-ControlsTextDialog `
+                -Preferences $script:prefs `
+                -Text $script:listBox.Items[$index]
+    }
+
+    $actionTable['Delete'] = {
+        $index = $script:listBox.SelectedIndex
+
+        if ($index -lt 0) {
+            return
+        }
+
+        $script:listBox.Items.RemoveAt($index)
+
+        if ($script:listBox.Items.Count -eq 0) {
+            return
+        }
+
+        if ($index -eq 0) {
+            $script:listBox.SetSelected(0, $true)
+        }
+        else {
+            $script:listBox.SetSelected($index - 1, $true)
+        }
+    }
+
+    $actionTable['Move Up'] = {
+        $index = $script:listBox.SelectedIndex
+
+        $immovable = $script:listBox.Items.Count -le 1 `
+            -or $index -le 0
+
+        if ($immovable) {
+            return
+        }
+
+        $items = $script:listBox.Items
+        $temp = $items[$index - 1]
+        $items[$index - 1] = $items[$index]
+        $items[$index] = $temp
+
+        $script:listBox.SetSelected($index, $false)
+        $script:listBox.SetSelected($index - 1, $true)
+    }
+
+    $actionTable['Move Down'] = {
+        $index = $script:listBox.SelectedIndex
+
+        $immovable = $script:listBox.Items.Count -le 1 `
+            -or $index -lt 0 `
+            -or $index -eq $script:listBox.Items.Count - 1
+
+        if ($immovable) {
+            return
+        }
+
+        $items = $script:listBox.Items
+        $temp = $items[$index + 1]
+        $items[$index + 1] = $items[$index]
+        $items[$index] = $temp
+
+        $script:listBox.SetSelected($index, $false)
+        $script:listBox.SetSelected($index + 1, $true)
+    }
+
+    foreach ($name in $buttonNames) {
+        $button = $buttonTable[$name]
+        $script:action = $actionTable[$name]
+
+        $button.add_Click($script:action)
+        $button.add_KeyDown({
+            if ($_.KeyCode -eq 'Space') {
+                & $script:action
+            }
+        })
+    }
+
+    $script:newAction = $actionTable['New']
+    $script:editAction = $actionTable['Edit']
+    $script:deleteAction = $actionTable['Delete']
+
+    $script:listBox.add_keyDown({
+        $myEventArgs = $_
+
+        if ($myEventArgs.Control) {
+            switch ($myEventArgs.KeyCode) {
+                'C' {
+                    $index = $script:listBox.SelectedIndex
+
+                    if ($index -lt 0) {
+                        return
+                    }
+
+                    Set-Clipboard `
+                        -Value $script:listBox.Items[$index]
+
+                    Set-ControlsStatus `
+                        -StatusLine $script:layouts.StatusLine `
+                        -LineName 'TextClipped'
+                }
+
+                'N' {
+                    & $script:newAction
+                    return
+                }
+            }
+        }
+
+        if ($myEventArgs.KeyCode -eq [System.Windows.Forms.Keys]::F2) {
+            & $script:editAction
+            return
+        }
+
+        if ($myEventArgs.KeyCode -eq [System.Windows.Forms.Keys]::Delete) {
+            & $script:deleteAction
+            return
+        }
+    })
+
+    $script:listBox.add_GotFocus({
+        Set-ControlsStatus `
+            -StatusLine $script:layouts.StatusLine `
+            -LineName 'InListBox'
+    })
+
+    $script:listBox.add_LostFocus({
+        Set-ControlsStatus `
+            -StatusLine $script:layouts.StatusLine `
+            -LineName 'Idle'
+    })
+
+    foreach ($item in $Default) {
+        $script:listBox.Items.Add($item)
+    }
+
+    $mainPanel.Height = $buttonPanel.Height
+    $mainPanel.Controls.Add($buttonPanel)
+    $mainPanel.Controls.Add($script:listBox)
+
+    $outerPanel.Controls.Add($row1)
+    $outerPanel.Controls.Add($mainPanel)
+
+    $Layouts = Add-ControlToMultilayout `
+        -Layouts $Layouts `
+        -Control $outerPanel `
+        -Preferences $Preferences
+
+    return $script:listBox
+}
+
 <#
     .NOTE
     Needs to be an 'Add-' cmdlet. Adds multiple controls other than the operative

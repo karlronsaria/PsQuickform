@@ -872,12 +872,34 @@ function Set-QformLayout {
                         -Default $default `
                         -Preferences $Preferences
                 }
+
+                'List' {
+                    $maxCount = $item | Get-PropertyOrDefault `
+                        -Name MaxCount;
+                    $maxLength = $item | Get-PropertyOrDefault `
+                        -Name MaxLength;
+                    $mandatory = $item | Get-PropertyOrDefault `
+                        -Name Mandatory `
+                        -Default $false;
+
+                    Add-ControlsListBox `
+                        -Layouts $Layouts `
+                        -Text $text `
+                        -Mandatory:$mandatory `
+                        -MaxCount $maxCount `
+                        -MaxLength $maxLength `
+                        -Default $default `
+                        -Preferences $Preferences
+                }
             }
 
             $controlTable.Add($item.Name, $value)
 
             if ($mandatory) {
-                $script:mandates += @($value)
+                $script:mandates += @([PsCustomObject]@{
+                    Type = $item.Type;
+                    Control = $value;
+                })
             }
         }
     }
@@ -897,9 +919,18 @@ function Set-QformLayout {
             $action = {
                 $mandatesSet = $true
 
-                foreach ($text in $script:mandates.Text) {
-                    $mandatesSet = $mandatesSet `
-                        -and -not [String]::IsNullOrEmpty($text)
+                foreach ($object in $script:mandates) {
+                    $itemIsSet = switch ($object.Type) {
+                        'List' {
+                            $object.Items.Count -gt 0
+                        }
+
+                        default {
+                            -not [String]::IsNullOrEmpty($object.Control.Text)
+                        }
+                    }
+
+                    $mandatesSet = $mandatesSet -and $itemIsSet
                 }
 
                 if ($mandatesSet) {
@@ -992,6 +1023,10 @@ function Start-QformEvaluate {
                     } else {
                         $null
                     }
+                }
+
+                'List' {
+                    $controlTable[$item.Name].Items
                 }
             }
 
