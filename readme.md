@@ -130,7 +130,7 @@ JSON Example:
 
 ### MenuAnswers
 
-`MenuSpecs` in the module refers to a `PsCustomObject` that contains a list of key-value pairs returned by a completed Quickform.
+`MenuAnswers` in the module refers to a `PsCustomObject` that contains a list of key-value pairs returned by a completed Quickform.
 
 An example form in JSON:
 ```json
