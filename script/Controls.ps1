@@ -442,12 +442,22 @@ function Get-ControlsTextDialog {
         $Preferences = $script:DEFAULT_PREFERENCES,
 
         [String]
-        $Text
+        $Text,
+
+        [String]
+        $Caption,
+
+        [Int]
+        $MaxLength
     )
 
     $textBox = New-Object System.Windows.Forms.TextBox
     $textBox.Width =
         $script:prefs.Width - (4 * $script:prefs.Margin)
+
+    if ($null -ne $MaxLength) {
+        $textBox.MaxLength = $MaxLength
+    }
 
     Set-ControlsWritableText `
         -Control $textBox `
@@ -456,7 +466,7 @@ function Get-ControlsTextDialog {
     $form = New-ControlsMain `
         -Preferences $script:prefs
 
-    $form.Text = 'Edit ListBox Item'
+    $form.Text = $Caption
     $form.KeyPreview = $true
     $form.Controls.Add($textBox)
 
@@ -542,7 +552,7 @@ function Add-ControlsListBox {
         [System.Windows.Forms.AutoSizeMode]::GrowAndShrink
 
     $buttonNames = @(
-        'New', 'Edit', 'Delete', 'Move Up', 'Move Down'
+        'New', 'Edit', 'Delete', 'Move Up', 'Move Down', 'Sort'
     )
 
     $buttonTable = @{}
@@ -563,6 +573,7 @@ function Add-ControlsListBox {
 
     $script:prefs = $Preferences
     $script:maxCount = $MaxCount
+    $script:maxLength = $MaxLength
 
     $actionTable['New'] = {
         $index = $script:listBox.SelectedIndex
@@ -588,7 +599,9 @@ function Add-ControlsListBox {
         $script:listBox.Items[$index] =
             Get-ControlsTextDialog `
                 -Preferences $script:prefs `
-                -Text $script:listBox.Items[$index]
+                -Text $script:listBox.Items[$index] `
+                -Caption 'Edit ListBox Item' `
+                -MaxLength $script:maxLength
     }
 
     $actionTable['Edit'] = {
@@ -601,7 +614,9 @@ function Add-ControlsListBox {
         $script:listBox.Items[$index] =
             Get-ControlsTextDialog `
                 -Preferences $script:prefs `
-                -Text $script:listBox.Items[$index]
+                -Text $script:listBox.Items[$index] `
+                -Caption 'Edit ListBox Item' `
+                -MaxLength $script:maxLength
     }
 
     $actionTable['Delete'] = {
@@ -664,6 +679,18 @@ function Add-ControlsListBox {
         $script:listBox.SetSelected($index + 1, $true)
     }
 
+    $actionTable['Sort'] = {
+        $items = $script:listBox.Items | sort | foreach {
+            [String]::new($_)
+        }
+
+        $script:listBox.Items.Clear()
+
+        foreach ($item in $items) {
+            $script:listBox.Items.Add($item)
+        }
+    }
+
     foreach ($name in $buttonNames) {
         $button = $buttonTable[$name]
         $script:action = $actionTable[$name]
@@ -703,6 +730,17 @@ function Add-ControlsListBox {
                 'N' {
                     & $script:newAction
                     return
+                }
+
+                'Space' {
+                    $index = $script:listBox.SelectedIndex
+
+                    if ($index -lt 0) {
+                        return
+                    }
+
+                    $script:listBox.ClearSelected()
+                    $myEventArgs.Handled = $true
                 }
             }
         }

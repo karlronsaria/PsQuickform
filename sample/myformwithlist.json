@@ -9,6 +9,7 @@
             "Text": "New hostnames:",
             "Mandatory": true,
             "MaxCount": 5,
+            "MaxLength": 20,
             "Default": [
                 "Sample Text",
                 "What?"
