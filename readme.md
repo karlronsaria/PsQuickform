@@ -125,6 +125,26 @@ JSON Example:
 
 ![2022_03_10_023904](/res/2022_03_10_023904.png)
 
+#### List
+
+A list of string values, represented by a ListBox with functional buttons. When procuring parameters from a PowerShell cmdlet or function, any array type is handled using a List.
+
+JSON Example:
+```json
+{
+    "Name": "PsModulePaths",
+    "Type": "List",
+    "Text": "PowerShell Module Paths",
+    "Default": [
+        "C:\\Users\\karlr\\OneDrive\\Documents\\WindowsPowerShell\\Modules",
+        "C:\\Program Files\\WindowsPowerShell\\Modules",
+        "C:\\WINDOWS\\system32\\WindowsPowerShell\\v1.0\\Modules"
+    ]
+}
+```
+
+![2022_03_12_071636](/res/2022_03_12_071636.png)
+
 ### Common Properties
 
 - **Name**: The name of the control to be added. Also the name of the resulting menu answer.

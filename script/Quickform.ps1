@@ -67,19 +67,6 @@ function Get-QformPreference {
             ParameterSetName = 'BuildNewObject',
             ValueFromPipeline = $true
         )]
-        [ValidateScript(
-            {
-                $valid = $true
-
-                foreach ($name in $_.PsObject.Properties.Name) {
-                    $valid = $valid -and ($name -in `
-                        (Get-QformResource `
-                            -Type Preference).Name)
-                }
-
-                return $valid
-            }
-        )]
         [PsCustomObject]
         $Preferences,
 
