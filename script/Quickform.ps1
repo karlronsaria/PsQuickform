@@ -152,7 +152,8 @@ function Get-QformPreference {
     .PARAMETER ParameterSetName
     The name of a ParameterSet used by a PowerShell function or cmdlet. Can be
     procured from a call to 'Get-Command'.
-    Ex:
+
+    Example:
 
         $cmdInfo = Get-Command Get-Item
         $parameterSetNames = $cmdInfo.ParameterSets | foreach { $_.Name }
@@ -374,7 +375,8 @@ function Get-QformControlType {
     .PARAMETER CommandInfo
     An object containing PowerShell function or cmdlet information, typically
     procured from a call to 'Get-Command'.
-    Ex:
+
+    Example:
 
         $cmdInfo = Get-Command Get-Item
         ConvertTo-QformMenuSpec -CommandInfo $cmdInfo
@@ -383,7 +385,8 @@ function Get-QformControlType {
     .PARAMETER ParameterSetName
     The name of a ParameterSet used by a PowerShell function or cmdlet. Can be
     procured from a call to 'Get-Command'.
-    Ex:
+
+    Example:
 
         $cmdInfo = Get-Command Get-Item
         $parameterSetNames = $cmdInfo.ParameterSets | foreach { $_.Name }
@@ -400,7 +403,8 @@ function Get-QformControlType {
     An object containing parameter information associated with a single
     ParameterSet used by a PowerShell function or cmdlet. Can be procured from
     a call to 'Get-Command'.
-    Ex:
+
+    Example:
 
         $cmdInfo = Get-Command Get-Item
         $parameterSet = $cmdInfo.ParameterSets | where Name -eq 'LiteralPath'
@@ -535,7 +539,8 @@ function ConvertTo-QformMenuSpec {
     .PARAMETER CommandInfo
     An object containing PowerShell function or cmdlet information, typically
     procured from a call to 'Get-Command'.
-    Ex:
+
+    Example:
 
         $cmdInfo = Get-Command Get-Item
         Invoke-QformCommand -CommandInfo $cmdInfo
@@ -544,7 +549,8 @@ function ConvertTo-QformMenuSpec {
     .PARAMETER ParameterSetName
     The name of a ParameterSet used by a PowerShell function or cmdlet. Can be
     procured from a call to 'Get-Command'.
-    Ex:
+
+    Example:
 
         $cmdInfo = Get-Command Get-Item
         $parameterSetNames = $cmdInfo.ParameterSets | foreach { $_.Name }
@@ -1299,7 +1305,8 @@ function ConvertTo-QformString {
     .PARAMETER CommandInfo
     An object containing PowerShell function or cmdlet information, typically
     procured from a call to 'Get-Command'.
-    Ex:
+
+    Example:
 
         $cmdInfo = Get-Command Get-Item
         ConvertTo-QformMenuSpec -CommandInfo $cmdInfo
@@ -1308,7 +1315,8 @@ function ConvertTo-QformString {
     .PARAMETER ParameterSetName
     The name of a ParameterSet used by a PowerShell function or cmdlet. Can be
     procured from a call to 'Get-Command'.
-    Ex:
+
+    Example:
 
         $cmdInfo = Get-Command Get-Item
 
