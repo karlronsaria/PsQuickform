@@ -18,19 +18,19 @@ $script:DEFAULT_PREFERENCES =
         Get-Content $script:DEFAULT_PREFERENCES_PATH | ConvertFrom-Json
     } else {
         [PsCustomObject]@{
-            Caption = "Quickform Settings";
-            FontFamily = "Microsoft Sans Serif";
-            Point = 10;
-            Width = 450;
-            Height = 800;
-            Margin = 10;
-            ConfirmType = "TrueOrFalse";
-            EnterToConfirm = $true;
-            EscapeToCancel = $true;
-            DateFormat = "yyyy_MM_dd";
-            NumericMinimum = -9999;
-            NumericMaximum = 9999;
-            NumericDecimalPlaces = 0;
+            Caption = "Quickform Settings"
+            FontFamily = "Microsoft Sans Serif"
+            Point = 10
+            Width = 450
+            Height = 800
+            Margin = 10
+            ConfirmType = "TrueOrFalse"
+            EnterToConfirm = $true
+            EscapeToCancel = $true
+            DateFormat = "yyyy_MM_dd"
+            NumericMinimum = -9999
+            NumericMaximum = 9999
+            NumericDecimalPlaces = 0
         }
     }
 
@@ -145,24 +145,16 @@ function Set-ControlsStatus {
     $StatusLine.ForeColor = $foreColor
 }
 
-function New-ControlsStatusLine {
+function New-ControlsInfoLabel {
     Param(
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES,
-
-        [String]
-        $LineName = 'Idle'
+        $Preferences = $script:DEFAULT_PREFERENCES
     )
 
-    $statusLine = New-Object System.Windows.Forms.Label
-    $statusLine.Left = $Preferences.Margin
-    $statusLine.Width = $Preferences.Width - (2 * $Preferences.Margin)
-
-    Set-ControlsStatus `
-        -StatusLine $statusLine `
-        -LineName $LineName
-
-    return $statusLine
+    $infoLabel = New-Object System.Windows.Forms.Label
+    $infoLabel.Left = $Preferences.Margin
+    $infoLabel.Width = $Preferences.Width - (2 * $Preferences.Margin)
+    return $infoLabel
 }
 
 function New-ControlsLayout {
@@ -199,9 +191,9 @@ function New-ControlsMultilayout {
     $multilayout.Controls.Add($layout)
 
     return [PsCustomObject]@{
-        Multilayout = $multilayout;
-        Sublayouts = @($layout);
-        Controls = @{};
+        Multilayout = $multilayout
+        Sublayouts = @($layout)
+        Controls = @{}
     }
 }
 
@@ -271,7 +263,8 @@ function Add-ControlToMultilayout {
     $totalHeight =
         (Get-WindowsCaptionHeight) `
         + $final.Height `
-        + $Layouts.StatusLine.Height `
+        # TODO
+        + $Layouts.Controls['__StatusLine__'].Height `
         + $captionHeight
 
     $Control | foreach {
@@ -1090,14 +1083,14 @@ function New-ControlsOkCancelButtons {
 
     $endButtons.Controls.Add($okButton)
     $endButtons.Controls.Add($cancelButton)
-    $endButtons.Left = ($Preferences.Width - $endButtons.Width) / 2
+
     $endButtons.Anchor =
         [System.Windows.Forms.AnchorStyles]::None
 
     return [PsCustomObject]@{
-        FlowPanel = $endButtons;
-        OkButton = $okButton;
-        CancelButton = $cancelButton;
+        FlowPanel = $endButtons
+        OkButton = $okButton
+        CancelButton = $cancelButton
     }
 }
 
@@ -1125,8 +1118,8 @@ function Add-ControlsOkCancelButtons {
         -Preferences $Preferences
 
     return [PsCustomObject]@{
-        OkButton = $endButtons.OkButton;
-        CancelButton = $endButtons.CancelButton;
+        OkButton = $endButtons.OkButton
+        CancelButton = $endButtons.CancelButton
     }
 }
 

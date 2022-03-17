@@ -109,7 +109,7 @@ function Get-QformPreference {
             'QueryValues' {
                 foreach ($item in $Name) {
                     [PsCustomObject]@{
-                        Name = $item;
+                        Name = $item
                         Value = $script:DEFAULT_PREFERENCES.$item
                     }
                 }
@@ -333,18 +333,18 @@ function Get-QformControlType {
     )
 
     $defaultName = '_'
-    $listPattern = '*[]'
+    $listPattern = '.*\[\]$'
 
     $table = [PsCustomObject]@{
-        $listPattern = 'List';
-        'String' = 'Field';
-        'Int*' = 'Numeric';
-        'Decimal' = 'Numeric';
-        'Double' = 'Numeric';
-        'Float' = 'Numeric';
-        'Switch*' = 'Check';
-        'Bool*' = 'Check';
-        $defaultName = 'Field';
+        $listPattern = 'List'
+        '^String$' = 'Field'
+        '^Int.*$' = 'Numeric'
+        '^Decimal$' = 'Numeric'
+        '^Double$' = 'Numeric'
+        '^Float$' = 'Numeric'
+        '^Switch.*$' = 'Check'
+        '^Bool.*$' = 'Check'
+        $defaultName = 'Field'
     }
 
     if ([String]::IsNullOrWhiteSpace($TypeName)) {
@@ -352,8 +352,8 @@ function Get-QformControlType {
     }
 
     foreach ($property in $table.PsObject.Properties) {
-        if ($TypeName -like $property.Name) {
-            if ($IgnoreLists -and $TypeName -eq $listPattern) {
+        if ($TypeName -match $property.Name) {
+            if ($IgnoreLists -and $property.Name -eq $listPattern) {
                 continue
             }
 
@@ -562,6 +562,10 @@ function ConvertTo-QformMenuSpec {
     Indicates that Quickform menu specs should be returned along with the menu
     answers.
 
+    .PARAMETER IgnoreLists
+    Indicates that array types should be handled using single-value controls,
+    such as Fields, rather than using a ListBox.
+
     .PARAMETER AnswersAsHashtable
     Indicates that the menu answers returned should be given in hashtable form.
 
@@ -613,6 +617,9 @@ function Invoke-QformCommand {
         $Tee,
 
         [Switch]
+        $IgnoreLists,
+
+        [Switch]
         $AnswersAsHashtable
     )
 
@@ -623,8 +630,8 @@ function Invoke-QformCommand {
         }
 
         $quickform = [PsCustomObject]@{
-            Confirm = $false;
-            MenuAnswers = @{};
+            Confirm = $false
+            MenuAnswers = @{}
         }
 
         switch ($PsCmdlet.ParameterSetName) {
@@ -632,7 +639,8 @@ function Invoke-QformCommand {
                 $quickform = Show-QformMenuForCommand `
                     -CommandName $CommandName `
                     -ParameterSetName:$ParameterSetName `
-                    -IncludeCommonParameters:$IncludeCommonParameters
+                    -IncludeCommonParameters:$IncludeCommonParameters `
+                    -IgnoreLists:$IgnoreLists
 
                 $CommandInfo = Get-Command `
                     -Name $CommandName
@@ -642,7 +650,8 @@ function Invoke-QformCommand {
                 $quickform = Show-QformMenuForCommand `
                     -CommandInfo $CommandInfo `
                     -ParameterSetName:$ParameterSetName `
-                    -IncludeCommonParameters:$IncludeCommonParameters
+                    -IncludeCommonParameters:$IncludeCommonParameters `
+                    -IgnoreLists:$IgnoreLists
 
                 $CommandName = $CommandInfo.Name
             }
@@ -746,11 +755,11 @@ function Get-QformMenu {
 
     End {
         $layouts = [PsCustomObject]@{
-            MainForm = $null;
-            Multilayout = $null;
-            Sublayouts = @();
-            Controls = @{};
-            StatusLine = $null;
+            MainForm = $null
+            Multilayout = $null
+            Sublayouts = @()
+            Controls = @{}
+            StatusLine = $null
         }
 
         $layouts = Set-QformMainLayout `
@@ -776,8 +785,8 @@ function Get-QformMenu {
         }
 
         return [PsCustomObject]@{
-            Confirm = $confirm;
-            MenuAnswers = $out;
+            Confirm = $confirm
+            MenuAnswers = $out
         }
     }
 }
@@ -903,8 +912,8 @@ function Set-QformLayout {
 
             if ($mandatory) {
                 $script:mandates += @([PsCustomObject]@{
-                    Type = $item.Type;
-                    Control = $value;
+                    Type = $item.Type
+                    Control = $value
                 })
             }
         }
@@ -946,7 +955,7 @@ function Set-QformLayout {
                 }
                 else {
                     Set-ControlsStatus `
-                        -StatusLine $script:statusLine `
+                        -StatusLine $script:statusline `
                         -LineName 'MandatoryValuesNotSet'
                 }
             }
@@ -1057,7 +1066,11 @@ function Set-QformMainLayout {
         $MenuSpecs,
 
         [PsCustomObject]
-        $Preferences
+        $Preferences,
+
+        [ValidateSet('StatusLine', 'PageLine')]
+        [String[]]
+        $AddLines = @('StatusLine')
     )
 
     $MainForm.Controls.Clear()
@@ -1065,20 +1078,38 @@ function Set-QformMainLayout {
     $layouts = New-ControlsMultilayout `
         -Preferences $Preferences
 
-    $statusLine = New-ControlsStatusLine `
-        -Preferences $Preferences
-
     $layouts = [PsCustomObject]@{
-        MainForm = $MainForm;
-        Multilayout = $layouts.Multilayout;
-        Sublayouts = $layouts.Sublayouts;
-        Controls = $layouts.Controls;
-        StatusLine = $statusLine;
+        MainForm = $MainForm
+        Multilayout = $layouts.Multilayout
+        Sublayouts = $layouts.Sublayouts
+        Controls = $layouts.Controls
+        StatusLine = $null
+    }
+
+    $lineNames = @()
+
+    foreach ($lineName in $AddLines) {
+        if ($lineName -in $lineNames) {
+            continue
+        }
+
+        $line = New-ControlsInfoLabel `
+            -Preferences $Preferences
+
+        if ($lineName -eq 'StatusLine') {
+            $layouts.StatusLine = $line
+        }
+
+        $lineNames += @($lineName)
     }
 
     $layouts.Controls = $MenuSpecs | Set-QformLayout `
         -Layouts $layouts `
         -Preferences $Preferences
+
+    foreach ($lineName in $lineNames) {
+        $layouts.Controls.Add("__$($lineName)__", $line)
+    }
 
     $MainForm.Text = $Preferences.Caption
 
@@ -1089,7 +1120,17 @@ function Set-QformMainLayout {
         -Preferences $Preferences
 
     $fillLayout.Controls.Add($layouts.Multilayout)
-    $fillLayout.Controls.Add($statusLine)
+
+    foreach ($lineName in $lineNames) {
+        $fillLayout.Controls.Add($layouts.Controls["__$($lineName)__"])
+    }
+
+    if ('StatusLine' -in $lineNames) {
+        Set-ControlsStatus `
+            -StatusLine $layouts.StatusLine `
+            -LineName 'Idle'
+    }
+
     $MainForm.Controls.Add($fillLayout)
     return $layouts
 }
@@ -1107,8 +1148,8 @@ function ConvertTo-QformParameter {
     $validatorType = $null
 
     $obj = [PsCustomObject]@{
-        Name = $ParameterInfo.Name;
-        Type = '';
+        Name = $ParameterInfo.Name
+        Type = ''
     }
 
     if ($validators) {
@@ -1127,7 +1168,7 @@ function ConvertTo-QformParameter {
                     -Name Symbols `
                     -Value ($values | ForEach-Object {
                         [PsCustomObject]@{
-                            Name = $_;
+                            Name = $_
                         }
                     })
             }
@@ -1141,7 +1182,7 @@ function ConvertTo-QformParameter {
                     -Name Symbols `
                     -Value ($values | ForEach-Object {
                         [PsCustomObject]@{
-                            Name = $_;
+                            Name = $_
                         }
                     })
             }
@@ -1413,13 +1454,11 @@ function Show-QformMenuForCommand {
         $what = [PsCustomObject]@{
             ParameterSets = $paramSets | ForEach-Object {
                 [PsCustomObject]@{
-                    Name = $_.Name;
-                    Index = $index;
+                    Name = $_.Name
+                    Index = $index
                     Preferences = [PsCustomObject]@{
-                        Caption =
-                            "Command: $CommandName $([Char] 0x2014) " `
-                          + "ParameterSet $index` of $count`: $($_.Name)";
-                    };
+                        Caption = "Command: $CommandName"
+                    }
                     MenuSpecs = $_.Parameters | Where-Object {
                         $IncludeCommonParameters `
                             -or -not (Test-IsCommonParameter -ParameterInfo $_)
@@ -1427,12 +1466,13 @@ function Show-QformMenuForCommand {
                         ConvertTo-QformParameter `
                             -ParameterInfo $_ `
                             -IgnoreLists:$IgnoreLists
-                    };
+                    }
+                    PageLine = "ParameterSet $index of $count`: $($_.Name)"
                 }
 
                 $index = $index + 1
-            };
-            CurrentParameterSetIndex = $currentIndex;
+            }
+            CurrentParameterSetIndex = $currentIndex
         }
 
         Add-Type -AssemblyName System.Windows.Forms
@@ -1453,16 +1493,27 @@ function Show-QformMenuForCommand {
         $script:menuSpecs = $paramset.MenuSpecs
 
         $script:layouts = [PsCustomObject]@{
-            Multilayout = $null;
-            Sublayouts = @();
-            Controls = @{};
-            StatusLine = $null;
+            Multilayout = $null
+            Sublayouts = @()
+            Controls = @{}
+            StatusLine = $null
         }
+
+        $script:infoLines = @('PageLine', 'StatusLine')
 
         $script:layouts = Set-QformMainLayout `
             -MainForm $form `
             -MenuSpecs $script:menuSpecs `
-            -Preferences $myPreferences
+            -Preferences $myPreferences `
+            -AddLines $script:infoLines
+
+        $pageLine = $script:layouts.Controls['__PageLine__']
+
+        $pageLine.Text =
+            $script:paramSet.PageLine
+
+        $pageLine.TextAlign =
+            [System.Windows.Forms.HorizontalAlignment]::Center
 
         Add-ControlsFormKeyBindings `
             -Control $form `
@@ -1509,7 +1560,16 @@ function Show-QformMenuForCommand {
                 $script:layouts = Set-QformMainLayout `
                     -MainForm $script:form `
                     -MenuSpecs $script:menuSpecs `
-                    -Preferences $script:myPreferences
+                    -Preferences $script:myPreferences `
+                    -AddLines $script:infoLines
+
+                $pageLine = $script:layouts.Controls['__PageLine__']
+
+                $pageLine.Text =
+                    $script:paramSet.PageLine
+
+                $pageLine.TextAlign =
+                    [System.Windows.Forms.HorizontalAlignment]::Center
 
                 Set-ControlsCenterScreen `
                     -Control $script:form
@@ -1546,9 +1606,9 @@ function Show-QformMenuForCommand {
         }
 
         return [PsCustomObject]@{
-            Confirm = $confirm;
-            MenuAnswers = $formResult;
-            CommandString = "$CommandName$parameterString";
+            Confirm = $confirm
+            MenuAnswers = $formResult
+            CommandString = "$CommandName$parameterString"
         }
     }
 }

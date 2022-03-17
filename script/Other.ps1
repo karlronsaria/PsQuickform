@@ -10,12 +10,16 @@ function Get-PropertyOrDefault {
         $Default = $null
     )
 
-    Process {
-        if ($InputObject.PsObject.Properties.Name -contains $Name) {
-            return $InputObject.$Name
+    End {
+        if ($null -eq $InputObject) {
+            return $Default
         }
 
-        return $Default
+        if ($InputObject.PsObject.Properties.Name -notcontains $Name) {
+            return $Default
+        }
+
+        return $InputObject.$Name
     }
 }
 
