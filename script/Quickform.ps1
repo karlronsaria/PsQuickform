@@ -1101,15 +1101,12 @@ function Set-QformMainLayout {
         }
 
         $lineNames += @($lineName)
-    }
-
-    $layouts.Controls = $MenuSpecs | Set-QformLayout `
-        -Layouts $layouts `
-        -Preferences $Preferences
-
-    foreach ($lineName in $lineNames) {
         $layouts.Controls.Add("__$($lineName)__", $line)
     }
+
+    $layouts.Controls += $MenuSpecs | Set-QformLayout `
+        -Layouts $layouts `
+        -Preferences $Preferences
 
     $MainForm.Text = $Preferences.Caption
 

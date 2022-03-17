@@ -263,9 +263,10 @@ function Add-ControlToMultilayout {
     $totalHeight =
         (Get-WindowsCaptionHeight) `
         + $final.Height `
-        # TODO
-        + $Layouts.Controls['__StatusLine__'].Height `
-        + $captionHeight
+        + ($Layouts.Controls.Keys `
+            | where { $_ -match '^__.*__$' } `
+            | foreach { $Layouts.Controls[$_].Height } `
+            | measure -Sum).Sum
 
     $Control | foreach {
         $totalHeight += $Control.Height
