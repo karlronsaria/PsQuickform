@@ -181,3 +181,156 @@ function Get-ThisFunctionName {
     return [String]$(Get-PsCallStack)[$StackIndex].FunctionName
 }
 
+<#
+    .SYNOPSIS
+    Invoke a command using an argument list, in a way that's forgiving of
+    unmatched key-value pairs.
+
+    .PARAMETER CommandName
+    The name of a command.
+
+    .PARAMETER ArgumentList
+    A list of key-value pairs representing parameter-argument pairs in a command
+    call.
+
+    Examples by type:
+
+        Hashtable
+
+            $params = @{
+                Source = '\src\myfile.txt'
+                Destination = '\dst\mynewfile.txt'
+                WhatIf = $true
+                NotInParameters = 'Whatever'
+            }
+
+            Invoke-SplatCommand -CommandName Copy-Item -ArgumentList $params
+
+        PsCustomObject
+
+            $params = [PsCustomObject]@{
+                Source = '\src\myfile.txt'
+                Destination = '\dst\mynewfile.txt'
+                WhatIf = $true
+                NotInParameters = 'Whatever'
+            }
+
+            Invoke-SplatCommand -CommandName Copy-Item -ArgumentList $params
+
+        Object[]
+
+            $param = @(
+                [PsCutomObject]@{
+                    Name = 'Source'
+                    Value = '\src\myfile.txt'
+                },
+                [PsCutomObject]@{
+                    Name = 'Destination'
+                    Value = '\dst\mynewfile.txt'
+                },
+                [PsCutomObject]@{
+                    Name = 'WhatIf'
+                    Value = $true
+                },
+                [PsCutomObject]@{
+                    Name = 'NotInParameters'
+                    Value = 'Whatever'
+                }
+
+        String
+
+            $param = @"
+            {
+                "Source": "\src\myfile.txt",
+                "Destination": "\dst\mynewfile.txt",
+                "WhatIf": true,
+                "NotInParameters": "Whatever"
+            }
+            "@
+
+            Invoke-SplatCommand -CommandName Copy-Item -ArgumentList $params
+
+    .PARAMETER ParameterSetName
+    Specifies the particular parameter set the given ArgumentList should match up
+    with.
+#>
+function Invoke-SplatCommand {
+    [CmdletBinding()]
+    Param(
+        [ArgumentCompleter(
+            {
+                (Get-Command).Name
+            }
+        )]
+        [ValidateScript(
+            {
+                $_ -in (Get-Command).Name
+            }
+        )]
+        [String]
+        $CommandName,
+
+        $ArgumentList,
+
+        [String]
+        $ParameterSetName
+    )
+
+    if (-not $ArgumentList) {
+        return & $CommandName
+    }
+
+    $cmdInfo = Get-Command `
+        -Name $CommandName
+
+    $parameters = if ($ParameterSetName) {
+        $paremeterSet = $cmdInfo.ParameterSets `
+            | where Name -eq $ParameterSetName
+
+        $parameterSet.Parameters
+    } else {
+        $cmdInfo.Parameters
+    }
+
+    $table = @{}
+
+    switch -Regex ($ArgumentList.GetType().Name) {
+        '^Hashtable$' {
+            $nonEmpty = $ArgumentList | Get-NonEmptyTable
+
+            $nonEmpty.Keys `
+                | where { $_ -in $parameters.Keys } `
+                | foreach { $table.Add($_, $nonEmpty[$_]) }
+        }
+
+        '^PsCustomObject$' {
+            $nonEmpty = $ArgumentList | Get-NonEmptyObject
+
+            $nonEmpty.PsObject.Properties `
+                | where { $_.Name -in $parameters.Keys } `
+                | foreach { $table.Add($_.Name, $_.Value) }
+        }
+
+        '^.*Object\[\]$' {
+            $nonEmpty = $ArgumentList `
+                | where { $null -ne $_.Value }
+
+            $nonEmpty `
+                | where { $_.Name -in $parameters.Keys } `
+                | foreach { $table.Add($_.Name, $_.Value) }
+        }
+
+        '^String(\[\])?' {
+            $nonEmpty = $ArgumentList `
+                | ConvertFrom-Json `
+                | Get-NonEmptyObject
+
+            $nonEmpty.PsObject.Properties `
+                | where { $_.Name -in $parameters.Keys } `
+                | foreach { $table.Add($_.Name, $_.Value) }
+        }
+    }
+
+    & $CommandName @table
+}
+

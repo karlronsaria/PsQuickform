@@ -15,6 +15,7 @@ Export-ModuleMember -Function @(
     ## Other.ps1
     ## ---------
     'Get-NonEmpty',
+    'Invoke-SplatCommand',
 
     ## I absolutely believe I should NOT need to expose these functions.
     ## -----------------------------------------------------------------
