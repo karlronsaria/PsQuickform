@@ -564,7 +564,7 @@ function ConvertTo-QformMenuSpec {
 
     See about_CommonParameters
 
-    .PARAMETER Tee
+    .PARAMETER PassThru
     Indicates that Quickform menu specs should be returned along with the menu
     answers.
 
@@ -584,9 +584,9 @@ function ConvertTo-QformMenuSpec {
             The return value of whatever command is called by this cmdlet.
 
         PsCustomObject
-            When Tee is active, an object containing Quickform menu answers, a
-            command call string, and the return value of whatever command is
-            called by this cmdlet.
+            When PassThru is active, an object containing Quickform menu
+            answers, a command call string, and the return value of whatever
+            command is called by this cmdlet.
             Matches the JSON:
 
                 {
@@ -620,7 +620,7 @@ function Invoke-QformCommand {
         $IncludeCommonParameters,
 
         [Switch]
-        $Tee,
+        $PassThru,
 
         [Switch]
         $IgnoreLists,
@@ -630,9 +630,9 @@ function Invoke-QformCommand {
     )
 
     Process {
-        if ($AnswersAsHashtable -and -not $Tee) {
+        if ($AnswersAsHashtable -and -not $PassThru) {
             Write-Warning ((Get-ThisFunctionName) `
-                + ": AnswersAsHashtable has no effect unless Tee is specified.")
+                + ": AnswersAsHashtable has no effect unless PassThru is specified.")
         }
 
         $quickform = [PsCustomObject]@{
@@ -674,7 +674,7 @@ function Invoke-QformCommand {
             $null
         }
 
-        if ($Tee) {
+        if ($PassThru) {
             if ($AnswersAsHashtable) {
                 $quickform.MenuAnswers = $table
             }
