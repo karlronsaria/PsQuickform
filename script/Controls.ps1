@@ -19,8 +19,6 @@ $script:DEFAULT_PREFERENCES =
     } else {
         [PsCustomObject]@{
             Caption = "Quickform Settings"
-            FontFamily = "Microsoft Sans Serif"
-            Point = 10
             Width = 450
             Height = 800
             Margin = 10
@@ -322,15 +320,8 @@ function New-ControlsMain {
         $Preferences = $script:DEFAULT_PREFERENCES
     )
 
-    $font = New-Object System.Drawing.Font(
-        $Preferences.FontFamily,
-        $Preferences.Point,
-        [System.Drawing.FontStyle]::Regular
-    )
-
     $form = New-Object System.Windows.Forms.Form
     $form.Text = $Preferences.Caption
-    $form.Font = $font
     $form.AutoSize = $true
     $form.KeyPreview = $true
     $form.AutoSizeMode =
@@ -1023,11 +1014,14 @@ function Add-ControlsRadioBox {
     $flowPanel.Left = $Preferences.Margin
     $groupBox.Controls.Add($flowPanel)
 
-    if (-not $Mandatory) {
+    if (-not $Mandatory -and @($Symbols | where {
+        $_.Name -like 'None'
+    }).Count -eq 0) {
         $Symbols += @([PsCustomObject]@{ Name = 'None'; })
     }
 
     $buttons = @{}
+    $noneOptionSpecified = $false
 
     foreach ($symbol in $Symbols) {
         $button = New-Object System.Windows.Forms.RadioButton
@@ -1038,11 +1032,12 @@ function Add-ControlsRadioBox {
             -Name Text `
             -Default $symbol.Name
 
+        $noneOptionSpecified = $button.Text -like 'None'
         $buttons.Add($symbol.Name, $button)
         $flowPanel.Controls.Add($button)
     }
 
-    if (-not $Mandatory) {
+    if ($noneOptionSpecified -or (-not $Mandatory)) {
         $buttons['None'].Checked = $true
     }
     elseif ($null -ne $Default) {
