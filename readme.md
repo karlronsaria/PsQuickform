@@ -6,11 +6,11 @@ Create Windows forms on the fly using terse document object specifications.
 
 ## Show-QformMenu
 
-![Show-QformMenu](/res/2022_03_10_185307_Show-QformMenu.gif)
+![Show-QformMenu](./res/2022_03_10_185307_Show-QformMenu.gif)
 
 ## Invoke-QformCommand
 
-![Invoke-QformCommand](/res/2022_03_10_185307_Invoke-QformCommand.gif)
+![Invoke-QformCommand](./res/2022_03_10_185307_Invoke-QformCommand.gif)
 
 # Objects
 
@@ -25,6 +25,7 @@ Any call for `MenuSpecs` in the module refers to a `PsCustomObject` that contain
 A boolean value, represented by a CheckBox. When procuring parameters from a PowerShell cmdlet or function, Switch parameters are handled using Checks.
 
 JSON Example:
+
 ```json
 {
     "Name": "ShowHiddenItems",
@@ -33,13 +34,14 @@ JSON Example:
 }
 ```
 
-![2022_03_10_020921](/res/2022_03_10_020921.png)
+![2022_03_10_020921](./res/2022_03_10_020921.png)
 
 #### Field
 
 A string value, represented by a Label and TextBox. When procuring parameters from a PowerShell cmdlet or function, strings and most other types default to being handled using Fields.
 
 JSON Example:
+
 ```json
 {
     "Name": "NewHostname",
@@ -50,13 +52,14 @@ JSON Example:
 }
 ```
 
-![2022_03_10_023018](/res/2022_03_10_023018.png)
+![2022_03_10_023018](./res/2022_03_10_023018.png)
 
 #### Enum
 
 One of a set of accepted string values, represented by a RadioBox (a GroupBox containing sequence of mutually exclusive Radio buttons). When procuring parameters from a PowerShell cmdlet or function, enumerated types or string parameters with the `ValidateSet` attribute added are handled using Enums.
 
 JSON Example:
+
 ```json
 {
     "Name": "MultipleChoice_20",
@@ -85,11 +88,12 @@ JSON Example:
 }
 ```
 
-![2022_03_10_023557](/res/2022_03_10_023557.png)
+![2022_03_10_023557](./res/2022_03_10_023557.png)
 
 When `Mandatory` is omitted or set `false`, a 'None' button is added to the box and set by default.
 
 JSON Example:
+
 ```json
 {
     "Name": "ClientSize",
@@ -106,13 +110,14 @@ JSON Example:
 }
 ```
 
-![2022_03_10_023739](/res/2022_03_10_023739.png)
+![2022_03_10_023739](./res/2022_03_10_023739.png)
 
 #### Numeric
 
 A numeric value, represented by a Label and a value slider (NumericUpDown). When procuring parameters from a PowerShell cmdlet or function, integral, floating-point, and decimal values are handled using Numerics.
 
 JSON Example:
+
 ```json
 {
     "Name": "TotalCount",
@@ -123,13 +128,14 @@ JSON Example:
 }
 ```
 
-![2022_03_10_023904](/res/2022_03_10_023904.png)
+![2022_03_10_023904](./res/2022_03_10_023904.png)
 
 #### List
 
 A list of string values, represented by a ListBox with functional buttons. When procuring parameters from a PowerShell cmdlet or function, any array type is handled using a List.
 
 JSON Example:
+
 ```json
 {
     "Name": "PsModulePaths",
@@ -143,7 +149,7 @@ JSON Example:
 }
 ```
 
-![2022_03_12_071636](/res/2022_03_12_071636.png)
+![2022_03_12_071636](./res/2022_03_12_071636.png)
 
 ### Common Properties
 
@@ -157,6 +163,7 @@ JSON Example:
 `MenuAnswers` in the module refers to a `PsCustomObject` that contains a list of key-value pairs returned by a completed Quickform.
 
 An example form in JSON:
+
 ```json
 {
     "MenuSpecs": [
@@ -199,9 +206,10 @@ An example form in JSON:
 
 The resulting form:
 
-![2022_03_10_014837](/res/2022_03_10_014837.png)
+![2022_03_10_014837](./res/2022_03_10_014837.png)
 
 PowerShell Output returned by the form:
+
 ```powershell
 Hostname ClientSize NumberOfCpus CreateVirtualDisk
 -------- ---------- ------------ -----------------
@@ -223,5 +231,3 @@ To query for the path to the default preferences file, call the `$QFORM_DEFAULTS
 - **EnterToConfirm**: Specifies that pressing Enter anywhere in the form should be equivalent to clicking 'OK' at the end of the form.
 - **EscapeToCancel**: Specifies that pressing Escape anywhere in the form should be equivalent to closing the form or clicking 'Cancel' at the end of the form.
 - **DateFormat**: The default date-time format to print into a field when a MonthCalendar window is engaged.
-
-

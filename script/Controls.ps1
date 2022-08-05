@@ -44,6 +44,11 @@ $script:DEFAULT_NUMERIC_DECIMALPLACES =
 $script:STATUS =
     (Get-Content $script:TEXT_PATH | ConvertFrom-Json).Status
 
+function Add-FormsTypes {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+}
+
 function Show-ControlRectangle {
     Param(
         [System.Windows.Forms.Control]

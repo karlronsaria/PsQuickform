@@ -743,8 +743,7 @@ function Get-QformMenu {
     )
 
     Begin {
-        Add-Type -AssemblyName System.Windows.Forms
-        Add-Type -AssemblyName System.Drawing
+        Add-FormsTypes
 
         $myPreferences = Get-QformPreference `
             -Preferences $Preferences
@@ -1480,8 +1479,7 @@ function Show-QformMenuForCommand {
             CurrentParameterSetIndex = $currentIndex
         }
 
-        Add-Type -AssemblyName System.Windows.Forms
-        Add-Type -AssemblyName System.Drawing
+        Add-FormsTypes
 
         $script:paramSet = $what.ParameterSets[$what.CurrentParameterSetIndex]
 
