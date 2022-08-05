@@ -1211,7 +1211,7 @@ function Open-ControlsMonthCalendar {
     $label.Text = 'Format:'
 
     $script:endButtons = New-ControlsOkCancelButtons `
-        -Preferences $Preferenes
+        -Preferences $Preferences
 
     $layout.Controls.Add($calendar)
     $layout.Controls.Add($label)
