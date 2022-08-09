@@ -866,6 +866,10 @@ function Set-QformLayout {
                         -Symbols $item.Symbols `
                         -Default $default `
                         -Preferences $Preferences
+
+                    # Mandatory enumerations are self-managed. They either do or don't
+                    # implement 'None'.
+                    $mandatory = $false
                 }
 
                 'Numeric' {
