@@ -1,3 +1,5 @@
+. $PsScriptRoot\Required.ps1
+. $PsScriptRoot\script\Qform.ps1
 . $PsScriptRoot\script\Quickform.ps1
 
 $QFORM_DEFAULTS_PATH = $DEFAULT_PREFERENCES_PATH
