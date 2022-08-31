@@ -1,0 +1,26 @@
+New-QuickformPreferences
+Get-QuickformObject
+New-QuickformObject
+Get-QuickformControlType
+Start-Quickform
+Get-Quickform
+
+
+
+
+
+PreferencesObject -> New-QuickformPreferences -> PreferencesObject
+FormObject -> Get-QuickformObject -> ResultObject
+(ControlObject, PreferenceObject) -> New-QuickformObject -> ResultObject
+DataType: String -> Get-QuickformControlType -> ControlType: String
+CommandInfo -> Start-Quickform -> any
+CommandInfo -> Get-Quickform -> ResultObject
+
+
+
+CommandInfo -> Invoke-Quickform -> any
+
+FormObject -> Get-Quickform -> ResultObject
+(ControlObject, PreferenceObject) -> Get-Quickform -> ResultObject
+CommandInfo -> Get-Quickform -> ResultObject
+

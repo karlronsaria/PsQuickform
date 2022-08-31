@@ -1,0 +1,41 @@
+{
+    "Preferences": {
+        "Caption": "My Form"
+    },
+    "MenuSpecs": [
+        {
+            "Name": "Hostname",
+            "Type": "Field",
+            "Text": "New hostname:"
+        },
+        {
+            "Name": "ClientSize",
+            "Type": "Enum",
+            "Text": "Preferred client size",
+            "Symbols": [
+                {
+                    "Name": "Personal"
+                },
+                {
+                    "Name": "Thin"
+                }
+            ],
+            "Mandatory": true
+        },
+        {
+            "Name": "NumberOfCpus",
+            "Type": "Numeric",
+            "Text": "Number of CPUs:",
+            "Minimum": 1,
+            "Maximum": 9,
+            "Default": 4
+        },
+        {
+            "Name": "CreateVirtualDisk",
+            "Type": "Check",
+            "Text": "Create virtual disk",
+            "Default": true
+        }
+    ]
+}
+

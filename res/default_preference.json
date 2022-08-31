@@ -1,0 +1,15 @@
+{
+    "Caption": "Quickform Settings",
+    "Width": 300,
+    "Height": 800,
+    "Margin": 10,
+    "ConfirmType": "TrueOrFalse",
+    "EnterToConfirm": true,
+    "EscapeToCancel": true,
+    "DateFormat": "yyyy_MM_dd",
+
+    "NumericMinimum": -9999,
+    "NumericMaximum": 9999,
+    "NumericDecimalPlaces": 0
+}
+
