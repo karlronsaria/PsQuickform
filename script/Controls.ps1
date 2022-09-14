@@ -279,6 +279,16 @@ function Add-ControlToMultilayout {
     return $Layouts
 }
 
+function Set-ControlsStyleTransparent {
+    Param(
+        $Window
+    )
+
+    $Window.AllowsTransparency = $true
+    $Window.WindowStyle = [System.Windows.WindowStyle]::None
+    $Window.Background = '#D5F0F0FF'
+}
+
 function New-ControlsMain {
     Param(
         [PsCustomObject]
@@ -289,6 +299,12 @@ function New-ControlsMain {
     $form.Title = $Preferences.Caption
     $form.SizeToContent = 'WidthAndHeight'
     $form.WindowStartupLocation = 'CenterScreen'
+
+<#
+    # TODO: temp, remove
+    Set-ControlsStyleTransparent `
+        -Window $form
+#>
 
     $form.Add_ContentRendered({
         $this.Activate()
