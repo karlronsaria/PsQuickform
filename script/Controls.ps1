@@ -279,6 +279,12 @@ function Add-ControlToMultilayout {
     return $Layouts
 }
 
+<#
+    .LINK
+    Link: https://wpf.2000things.com/2014/11/05/1195-making-a-window-partially-transparent/
+    Link: https://wpf.2000things.com/2011/02/05/208-color-values-are-stored-as-rgb-values/
+    Retrieved: 2022_09_14
+#>
 function Set-ControlsStyleTransparent {
     Param(
         $Window
