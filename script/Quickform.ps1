@@ -680,6 +680,10 @@ function Start-QformEvaluate {
                 'List' {
                     $controlTable[$item.Name].Items
                 }
+
+                'Table' {
+                    $controlTable[$item.Name].SelectedItems
+                }
             }
 
             $out | Add-Member `

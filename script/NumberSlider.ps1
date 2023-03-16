@@ -145,7 +145,7 @@ class NumberSlider : System.Windows.Controls.DockPanel {
 
         $this.Field.Add_TextChanged($closure)
 
-        $this.Field.add_GotFocus({ 
+        $this.Field.add_GotFocus({
             $this.Select($this.Text.Length, 0)
         })
 
@@ -156,10 +156,12 @@ class NumberSlider : System.Windows.Controls.DockPanel {
         $this.DownButton.Add_Click($closure)
 
         if ($null -eq $this.Maximum) {
-            $this.ctrlup_action = New-Closure { $InputObject.Up() } $this
+            $this.ctrlup_action =
+                New-Closure { $InputObject.Up() } $this
         }
         else {
-            $this.ctrlup_action = New-Closure { $InputObject.SetToMaximum() } $this
+            $this.ctrlup_action =
+                New-Closure { $InputObject.SetToMaximum() } $this
 
             $closure = New-Closure `
                 -InputObject $this `
@@ -174,10 +176,12 @@ class NumberSlider : System.Windows.Controls.DockPanel {
         }
 
         if ($null -eq $Minimum) {
-            $this.ctrldown_action = New-Closure { $InputObject.Down() } $this
+            $this.ctrldown_action =
+                New-Closure { $InputObject.Down() } $this
         }
         else {
-            $this.ctrldown_action = New-Closure { $InputObject.SetToMinimum() } $this
+            $this.ctrldown_action =
+                New-Closure { $InputObject.SetToMinimum() } $this
 
             $closure = New-Closure `
                 -InputObject $this `

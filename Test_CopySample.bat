@@ -13,7 +13,7 @@ if "%~1" EQU "" (
     set "command=!command!; cd '%workingDir%'"
 )
 
-set "command=!command!; Import-Module %~dp0.\Quickform.psm1"
+set "command=!command!; Import-Module %~dp0.\PsQuickform.psm1"
 set "command=sudo powershell -NoExit -Command !command!"
 
 echo !command!

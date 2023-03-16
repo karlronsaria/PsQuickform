@@ -436,6 +436,22 @@ function Set-QformLayout {
                         -Default $default `
                         -Preferences $Preferences
                 }
+
+                'Table' {
+                    $mandatory = $item | Get-PropertyOrDefault `
+                        -Name Mandatory `
+                        -Default $false;
+                    $rows = $item | Get-PropertyOrDefault `
+                        -Name Rows `
+                        -Default @()
+
+                    Add-ControlsTable `
+                        -Layouts $Layouts `
+                        -Text $text `
+                        -Mandatory:$mandatory `
+                        -Rows $rows `
+                        -Preferences $Preferences
+                }
             }
 
             $controlTable.Add($item.Name, $value)
@@ -492,12 +508,20 @@ function Set-QformLayout {
                                 $object.Items.Count -gt 0
                             }
 
+                            'Table' {
+                                $object.Control.SelectedItems.Count -gt 0
+                            }
+
                             'Field|Numeric' {
-                                -not [String]::IsNullOrEmpty($object.Control.Text)
+                                -not [String]::IsNullOrEmpty(
+                                    $object.Control.Text
+                                )
                             }
 
                             default {
-                                -not [String]::IsNullOrEmpty($object.Control.Content)
+                                -not [String]::IsNullOrEmpty(
+                                    $object.Control.Content
+                                )
                             }
                         }
 
@@ -519,20 +543,6 @@ function Set-QformLayout {
         }
 
         $endButtons.OkButton.add_Click($action)
-
-# TODO: note: This block might not be necessary.
-<#
-        $action = New-Closure `
-            -InputObject $action
-            -ScriptBlock {
-                if ($_.Key -eq 'Enter') {
-                    & $InputObject
-                }
-            }
-
-        $endButtons.OkButton.add_KeyDown($action)
-#>
-
         $controlTable.Add('__EndButtons__', $endButtons)
 
         foreach ($key in $controlTable.Keys) {
@@ -637,12 +647,10 @@ class Qform {
             return -1
         }
 
-        while ($index -lt $CommandInfo.ParameterSets.Count `
-            -and $CommandInfo.ParameterSets[$index].Name `
-            -ne $name)
-        {
-            $index++
-        }
+        while ( `
+            $index -lt $CommandInfo.ParameterSets.Count `
+            -and $CommandInfo.ParameterSets[$index].Name -ne $name `
+        ) { $index++ }
 
         return $index
     }
@@ -652,19 +660,21 @@ class Qform {
     }
 
     [void] Next() {
-        $this.CurrentIndex = if ($this.CurrentIndex -ge $this.Pages.Count - 1) {
-            0
-        } else {
-            $this.CurrentIndex + 1
-        }
+        $this.CurrentIndex =
+            if ($this.CurrentIndex -ge $this.Pages.Count - 1) {
+                0
+            } else {
+                $this.CurrentIndex + 1
+            }
     }
 
     [void] Previous() {
-        $this.CurrentIndex = if ($this.CurrentIndex -le 0) {
-            $this.Pages.Count - 1
-        } else {
-            $this.CurrentIndex - 1
-        }
+        $this.CurrentIndex =
+            if ($this.CurrentIndex -le 0) {
+                $this.Pages.Count - 1
+            } else {
+                $this.CurrentIndex - 1
+            }
     }
 
     [void] SetPage([Int] $Index) {
@@ -720,11 +730,11 @@ class Qform {
             }
 
         $this.Pages = $parameterSets | ForEach-Object {
-            [Page]::new( `
-                $_, `
-                $myPrefs.PsObject.Copy(), `
-                $IncludeCommonParameters, `
-                $IgnoreLists `
+            [Page]::new(
+                $_,
+                $myPrefs.PsObject.Copy(),
+                $IncludeCommonParameters,
+                $IgnoreLists
             )
         }
 

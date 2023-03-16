@@ -8,7 +8,7 @@ if "%~1" EQU "" (
     set "command=cd %workingDir%"
 )
 
-set "command=%command%; Import-Module %~dp0.\Quickform.psm1"
+set "command=%command%; Import-Module %~dp0.\PsQuickform.psm1"
 
 @echo on
 sudo powershell -NoExit -Command %command%

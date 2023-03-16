@@ -243,17 +243,17 @@ function Add-ControlToMultilayout {
     $nextHeight = if ($null -ne $Control) {
         # link: https://stackoverflow.com/questions/3401636/measuring-controls-created-at-runtime-in-wpf
         # retrieved: 2022_08_28
-        $Control.Measure([System.Windows.Size]::new( `
-            [Double]::PositiveInfinity, `
-            [Double]::PositiveInfinity `
+        $Control.Measure([System.Windows.Size]::new(
+            [Double]::PositiveInfinity,
+            [Double]::PositiveInfinity
         ))
 
         $Control.Height = $Control.DesiredSize.Height
         $Control.Margin = $Preferences.Margin
 
         $Layouts.CurrentHeight `
-        + $Control.DesiredSize.Height `
-        + (2 * $Preferences.Margin)
+            + $Control.DesiredSize.Height `
+            + (2 * $Preferences.Margin)
     }
 
     $needNewSublayout =
@@ -446,6 +446,38 @@ function Get-ControlsTextDialog {
     return $textBox.Text
 }
 
+function Add-ControlsTable {
+    Param(
+        [PsCustomObject]
+        $Layouts,
+
+        [String]
+        $Text,
+
+        [PsCustomObject[]]
+        $Rows,
+
+        [Switch]
+        $Mandatory,
+
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES
+    )
+
+    $tableControl = New-ControlsTable `
+        -Preferences $Preferences `
+        -Text $Text `
+        -Rows $Rows `
+        -Asterized:$Mandatory
+
+    $Layouts = Add-ControlToMultilayout `
+        -Layouts $Layouts `
+        -Control $tableControl.GroupBox `
+        -Preferences $Preferences
+
+    return $tableControl.ListView
+}
+
 function Add-ControlsListBox {
     Param(
         [PsCustomObject]
@@ -472,7 +504,7 @@ function Add-ControlsListBox {
     $label = New-Control Label
     $label.Content = $Text
 
-    $row1 = if ($Mandatory) {
+    $asterism = if ($Mandatory) {
         Get-ControlsAsterized `
             -Control $label
     } else {
@@ -788,7 +820,7 @@ function Add-ControlsListBox {
 
     $mainPanel.AddChild($buttonPanel)
     $mainPanel.AddChild($listBox)
-    $outerPanel.AddChild($row1)
+    $outerPanel.AddChild($asterism)
     $outerPanel.AddChild($mainPanel)
 
     $Layouts = Add-ControlToMultilayout `
@@ -1082,6 +1114,108 @@ function Add-ControlsRadioBox {
     return $buttons
 }
 
+function New-ControlsTable {
+    Param(
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES,
+
+        [String]
+        $Text,
+
+        [PsCustomObject[]]
+        $Rows,
+
+        [Switch]
+        $Asterized
+    )
+
+    $groupBox = New-Object System.Windows.Controls.GroupBox
+    $groupBox.Header = $Text
+
+    $stackPanel = New-Object System.Windows.Controls.StackPanel
+    $groupBox.AddChild($stackPanel)
+
+    $textBox = New-Object System.Windows.Controls.TextBox
+    $textBox.Width = $Preferences.Width
+    $textBox.Margin = $Preferences.Margin
+    $stackPanel.AddChild($textBox)
+
+    Set-ControlsWritableText `
+        -Control $textBox
+
+    $label = New-Object System.Windows.Controls.Label
+    $label.Content = 'Find in table:'
+    $stackPanel.AddChild($label)
+
+    # karlr (2023_03_14)
+    $grid = New-Object System.Windows.Controls.Grid
+
+    $asterism = if ($Asterized) {
+        Get-ControlsAsterized `
+            -Control $grid
+    } else {
+        $grid
+    }
+
+    $grid.Margin = $Preferences.Margin
+    $listView = New-Object System.Windows.Controls.ListView
+    $listView.HorizontalAlignment = 'Stretch'
+    $grid.AddChild($listView)
+    $stackPanel.AddChild($asterism)
+
+    if ($Rows.Count -gt 0) {
+        $header = $Rows[0]
+        $gridView = New-Object System.Windows.Controls.GridView
+
+        foreach ($property in $header.PsObject.Properties) {
+            $column = New-Object System.Windows.Controls.GridViewColumn
+            $column.Header = $property.Name
+            $column.Width = 50
+            $column.DisplayMemberBinding =
+                [System.Windows.Data.Binding]::new($property.Name)
+            $gridView.Columns.Add($column)
+        }
+
+        $listView.View = $gridView
+
+        foreach ($row in $Rows) {
+            [void]$listView.Items.Add($row)
+        }
+    }
+
+    $textBox.add_TextChanged(( `
+        New-Closure `
+            -InputObject ( `
+                [PsCustomObject]@{
+                    TextBox = $textBox
+                    ListView = $listView
+                    Rows = $Rows
+                }
+            ) `
+            -ScriptBlock {
+                $InputObject.ListView.Items.Clear()
+                $text = $InputObject.TextBox.Text
+
+                $items = if ([String]::IsNullOrEmpty($text)) {
+                    $InputObject.Rows
+                } else {
+                    $InputObject.Rows | where {
+                        $_.PsObject.Properties.Value -like "*$text*"
+                    }
+                }
+
+                foreach ($item in $items) {
+                    [void]$InputObject.ListView.Items.Add($item)
+                }
+            }
+    ))
+
+    return [PsCustomObject]@{
+        GroupBox = $groupBox
+        ListView = $listView
+    }
+}
+
 function New-ControlsOkCancelButtons {
     Param(
         [PsCustomObject]
@@ -1139,6 +1273,79 @@ function Add-ControlsOkCancelButtons {
         OkButton = $endButtons.OkButton
         CancelButton = $endButtons.CancelButton
     }
+}
+
+function Open-ControlsTable {
+    Param(
+        [PsCustomObject]
+        $Preferences = $script:DEFAULT_PREFERENCES,
+
+        [String]
+        $Text,
+
+        [PsCustomObject[]]
+        $Rows
+    )
+
+    $main = New-ControlsMain `
+        -Preferences $Preferences
+
+    $tableControl = New-ControlsTable `
+        -Preferences $Preferences `
+        -Text $Text `
+        -Rows $Rows
+
+    $endButtons = New-ControlsOkCancelButtons `
+        -Preferences $Preferences
+
+    $okAction = New-Closure `
+        -InputObject $main.Window `
+        -ScriptBlock {
+            $InputObject.DialogResult = $true
+            $InputObject.Close()
+        }
+
+    $cancelAction = New-Closure `
+        -InputObject $main.Window `
+        -ScriptBlock {
+            $InputObject.DialogResult = $false
+            $InputObject.Close()
+        }
+
+    $endButtons.OkButton.Add_Click($okAction)
+    $endButtons.CancelButton.Add_Click($cancelAction)
+
+    $main.Grid.AddChild($tableControl.GroupBox)
+    $main.Grid.AddChild($endButtons.Panel)
+
+    $parameters = [PsCustomObject]@{
+        OkAction = $okAction
+        CancelAction = $cancelAction
+    }
+
+    $main.Window.add_PreViewKeyDown(( `
+        New-Closure `
+            -InputObject $parameters `
+            -ScriptBlock {
+                if ($_.Key -eq 'Enter') {
+                    & $InputObject.OkAction
+                    $_.Handled = $true
+                    return
+                }
+
+                if ($_.Key -eq 'Escape') {
+                    & $InputObject.CancelAction
+                    $_.Handled = $true
+                    return
+                }
+            } `
+    ))
+
+    if (-not $main.Window.ShowDialog()) {
+        return
+    }
+
+    return $tableControl.ListView.SelectedItems
 }
 
 function Open-ControlsFileDialog {
@@ -1202,9 +1409,6 @@ function Open-ControlsMonthCalendar {
     $main = New-ControlsMain `
         -Preferences $Preferences
 
-    # $layout = New-ControlsLayout `
-    #     -Preferences $Preferences
-
     $calendar = New-Object System.Windows.Controls.Calendar
     $calendar.DisplayMode = 'Month'
     $textBox = New-Object System.Windows.Controls.TextBox
@@ -1241,7 +1445,6 @@ function Open-ControlsMonthCalendar {
     $main.Grid.AddChild($label)
     $main.Grid.AddChild($textBox)
     $main.Grid.AddChild($endButtons.Panel)
-    # $main.Grid.AddChild($layout)
 
     $parameters = [PsCustomObject]@{
         OkAction = $okAction

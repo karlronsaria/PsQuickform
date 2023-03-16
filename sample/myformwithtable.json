@@ -1,0 +1,30 @@
+{
+    "Preferences": {
+        "Caption": "Who Am I?",
+        "Width": 500
+    },
+    "MenuSpecs": [
+        {
+            "Name": "Students",
+            "Type": "Table",
+            "Mandatory": true,
+            "Rows": [
+                {
+                    "Id": 2,
+                    "First": "Dooby",
+                    "Last": "McFoosen",
+                    "Course": "Algebra",
+                    "Progress": 60
+                },
+                {
+                    "Id": 7,
+                    "First": "Nargis",
+                    "Last": "Farrakhan-Doogal-Schnitt",
+                    "Course": "Operations Research",
+                    "Progress": 120
+                }
+            ]
+        }
+    ]
+}
+
