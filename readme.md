@@ -231,3 +231,7 @@ To query for the path to the default preferences file, call the `$QFORM_DEFAULTS
 - **EnterToConfirm**: Specifies that pressing Enter anywhere in the form should be equivalent to clicking 'OK' at the end of the form.
 - **EscapeToCancel**: Specifies that pressing Escape anywhere in the form should be equivalent to closing the form or clicking 'Cancel' at the end of the form.
 - **DateFormat**: The default date-time format to print into a field when a MonthCalendar window is engaged.
+
+# Todo
+
+- [ ] Document Table type
