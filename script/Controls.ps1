@@ -1129,6 +1129,11 @@ function New-ControlsTable {
         $Asterized
     )
 
+    <#
+    .LINK
+    Url: https://stackoverflow.com/questions/560581/how-to-autosize-and-right-align-gridviewcolumn-data-in-wpf
+    Retrieved: 2023_03_16
+    #>
     function Set-ColumnPreferredSize {
         Param(
             [System.Windows.Controls.GridView]
