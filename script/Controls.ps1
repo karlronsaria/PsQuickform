@@ -1129,6 +1129,21 @@ function New-ControlsTable {
         $Asterized
     )
 
+    function Set-ColumnPreferredSize {
+        Param(
+            [System.Windows.Controls.GridView]
+            $GridViewControl
+        )
+
+        foreach ($col in $GridViewControl.Columns) {
+            if ([double]::IsNaN($col.Width)) {
+                $col.Width = $col.ActualWidth
+            }
+
+            $col.Width = [double]::NaN
+        }
+    }
+
     $groupBox = New-Object System.Windows.Controls.GroupBox
     $groupBox.Header = $Text
 
@@ -1170,7 +1185,6 @@ function New-ControlsTable {
         foreach ($property in $header.PsObject.Properties) {
             $column = New-Object System.Windows.Controls.GridViewColumn
             $column.Header = $property.Name
-            $column.Width = 50
             $column.DisplayMemberBinding =
                 [System.Windows.Data.Binding]::new($property.Name)
             $gridView.Columns.Add($column)
@@ -1183,12 +1197,27 @@ function New-ControlsTable {
         }
     }
 
+    $stackPanel.add_Loaded(( `
+        New-Closure `
+            -InputObject ( `
+                [PsCustomObject]@{
+                    GridView = $gridView
+                    Resize =
+                        (Get-Command Set-ColumnPreferredSize).ScriptBlock
+                } `
+            ) `
+            -ScriptBlock {
+                & $InputObject.Resize $InputObject.GridView
+            } `
+    ))
+
     $textBox.add_TextChanged(( `
         New-Closure `
             -InputObject ( `
                 [PsCustomObject]@{
                     TextBox = $textBox
                     ListView = $listView
+                    GridView = $gridView
                     Rows = $Rows
                 }
             ) `
