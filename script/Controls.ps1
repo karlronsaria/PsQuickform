@@ -306,12 +306,6 @@ function New-ControlsMain {
     $form.SizeToContent = 'WidthAndHeight'
     $form.WindowStartupLocation = 'CenterScreen'
 
-<#
-    # TODO: temp, remove
-    Set-ControlsStyleTransparent `
-        -Window $form
-#>
-
     $form.Add_ContentRendered({
         $this.Activate()
     })
@@ -474,6 +468,14 @@ function Add-ControlsTable {
         -Layouts $Layouts `
         -Control $tableControl.GroupBox `
         -Preferences $Preferences
+
+    $Layouts.Sublayouts[-1].Add_Loaded({
+        if ([double]::IsNaN($this.Width)) {
+            $this.Width = $this.ActualWidth
+        }
+
+        $this.Width = [double]::NaN
+    })
 
     return $tableControl.ListView
 }
@@ -1156,7 +1158,6 @@ function New-ControlsTable {
     $groupBox.AddChild($stackPanel)
 
     $textBox = New-Object System.Windows.Controls.TextBox
-    $textBox.Width = $Preferences.Width
     $textBox.Margin = $Preferences.Margin
     $stackPanel.AddChild($textBox)
 

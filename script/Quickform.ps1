@@ -79,6 +79,8 @@ function Show-QformMenu {
         [Parameter(
             ParameterSetName = 'BySingleObject',
             ValueFromPipeline = $true)]
+
+        # todo: consider removing
         [ValidateScript(
             {
                 $valid = $true
@@ -104,9 +106,10 @@ function Show-QformMenu {
                 $valid = $true
 
                 foreach ($name in $_.PsObject.Properties.Name) {
-                    $valid = $valid -and ($name -in `
-                        (Get-QformResource `
-                            -Type MenuSpec).Name)
+                    $valid = $valid -and ( `
+                        $name -in `
+                            (Get-QformResource -Type MenuSpec).Name `
+                    )
                 }
 
                 return $valid

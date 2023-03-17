@@ -1,7 +1,13 @@
 {
+    "Comments": [
+        {
+            "Preferences": {
+                "Width": 500
+            }
+        }
+    ],
     "Preferences": {
-        "Caption": "Who Am I?",
-        "Width": 500
+        "Caption": "Who Am I?"
     },
     "MenuSpecs": [
         {
