@@ -3,53 +3,6 @@
 . $PsScriptRoot\Other.ps1
 . $PsScriptRoot\NumberSlider.ps1
 
-$script:RESOURCE_PATH =
-    if ((Test-Path "$PsScriptRoot\res")) {
-        "$PsScriptRoot\res"
-    } else {
-        "$PsScriptRoot\..\res"
-    }
-
-$script:DEFAULT_PREFERENCES_PATH =
-    "$($script:RESOURCE_PATH)\default_preference.json"
-
-$script:TEXT_PATH =
-    "$($script:RESOURCE_PATH)\text.json"
-
-$script:DEFAULT_PREFERENCES =
-    if ((Test-Path $script:DEFAULT_PREFERENCES_PATH)) {
-        Get-Content $script:DEFAULT_PREFERENCES_PATH | ConvertFrom-Json
-    } else {
-        [PsCustomObject]@{
-            Caption = "Quickform Settings"
-            Width = 300
-            Height = 800
-            Margin = 10
-            ConfirmType = "TrueOrFalse"
-            EnterToConfirm = $true
-            EscapeToCancel = $true
-            DateFormat = "yyyy_MM_dd"
-            NumericMinimum = -9999
-            NumericMaximum = 9999
-            NumericDecimalPlaces = 0
-        }
-    }
-
-$script:DEFAULT_NUMERIC_MINIMUM =
-    $script:DEFAULT_PREFERENCES.NumericMinimum
-
-$script:DEFAULT_NUMERIC_MAXIMUM =
-    $script:DEFAULT_PREFERENCES.NumericMaximum
-
-$script:DEFAULT_NUMERIC_DECIMALPLACES =
-    $script:DEFAULT_PREFERENCES.NumericDecimalPlaces
-
-$script:STATUS =
-    (Get-Content $script:TEXT_PATH | ConvertFrom-Json).Status
-
-$script:__RADIOBUTTON_HEIGHT__ = 15
-$script:__LABEL_HEIGHT__ = 30
-
 function New-Closure {
     Param(
         [ScriptBlock]
@@ -81,8 +34,8 @@ function Show-ControlRectangle {
 
 <#
     .LINK
-    Link: https://stackoverflow.com/questions/34552311/wpf-systemparameters-windowcaptionbuttonheight-returns-smaller-number-than-expe
-    Link: https://stackoverflow.com/users/3137337/emoacht
+    Url: https://stackoverflow.com/questions/34552311/wpf-systemparameters-windowcaptionbuttonheight-returns-smaller-number-than-expe
+    Url: https://stackoverflow.com/users/3137337/emoacht
     Retrieved: 2022_03_07
 #>
 function Get-WindowsCaptionHeight {
@@ -98,8 +51,8 @@ function Get-WindowsCaptionHeight {
 
 <#
     .LINK
-    Link: https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox
-    Link: https://stackoverflow.com/users/1042848/vishal-suthar
+    Url: https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox
+    Url: https://stackoverflow.com/users/1042848/vishal-suthar
     Retreived: 2022_03_02
 #>
 function Set-ControlsWritableText {
@@ -124,7 +77,11 @@ function Set-ControlsStatus {
         $LineName
     )
 
-    $status = $script:STATUS | where Name -eq $LineName
+    $status = ( `
+        Get-Content "$PsScriptRoot/../res/text.json" `
+            | ConvertFrom-Json `
+    ).Status `
+        | where Name -eq $LineName
 
     $text = $status | Get-PropertyOrDefault `
         -Name Text `
@@ -141,7 +98,7 @@ function Set-ControlsStatus {
 function New-ControlsLayout {
     Param(
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
 
     $layout = New-Object System.Windows.Controls.StackPanel
@@ -152,7 +109,7 @@ function New-ControlsLayout {
 function New-ControlsMultilayout {
     Param(
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
 
     $multilayout = New-Object System.Windows.Controls.StackPanel
@@ -160,8 +117,9 @@ function New-ControlsMultilayout {
     $multilayout.Orientation = 'Horizontal'
     $multilayout.Margin = $Preferences.Margin
 
-    # link: https://stackoverflow.com/questions/1927540/how-to-get-the-size-of-the-current-screen-in-wpf
-    # retrieved: 2022_08_28
+    # link
+    # - url: https://stackoverflow.com/questions/1927540/how-to-get-the-size-of-the-current-screen-in-wpf
+    # - retrieved: 2022_08_28
     $maxHeight =
         [System.Windows.SystemParameters]::WorkArea.Height - 200
 
@@ -214,19 +172,25 @@ function Add-ControlsFormKeyBindings {
         })
     }
 
-    $Control.add_KeyDown({
-        if ($_.Key -eq [System.Windows.Input.Key]::OemQuestion `
-            -and $_.Control)
-        {
-            $message = (Get-Content `
-                -Path $script:TEXT_PATH `
-                | ConvertFrom-Json).Help
+    $helpMessage = ( `
+        Get-Content `
+            "$PsScriptRoot/../res/text.json" `
+            | ConvertFrom-Json `
+    ).Help
 
-            $message = $message -join "`r`n"
-            $caption = 'Help'
-            [System.Windows.MessageBox]::Show($message, $caption)
-        }
-    })
+    $Control.add_KeyDown(( `
+        New-Closure `
+            -InputObject $helpMessage `
+            -ScriptBlock {
+                if ($_.Key -eq [System.Windows.Input.Key]::OemQuestion `
+                    -and $_.Control)
+                {
+                    $message = $InputObject -join "`r`n"
+                    $caption = 'Help'
+                    [System.Windows.MessageBox]::Show($message, $caption)
+                }
+            } `
+    ))
 }
 
 function Add-ControlToMultilayout {
@@ -241,8 +205,9 @@ function Add-ControlToMultilayout {
     )
 
     $nextHeight = if ($null -ne $Control) {
-        # link: https://stackoverflow.com/questions/3401636/measuring-controls-created-at-runtime-in-wpf
-        # retrieved: 2022_08_28
+        # link
+        # - url: https://stackoverflow.com/questions/3401636/measuring-controls-created-at-runtime-in-wpf
+        # - retrieved: 2022_08_28
         $Control.Measure([System.Windows.Size]::new(
             [Double]::PositiveInfinity,
             [Double]::PositiveInfinity
@@ -281,8 +246,8 @@ function Add-ControlToMultilayout {
 
 <#
     .LINK
-    Link: https://wpf.2000things.com/2014/11/05/1195-making-a-window-partially-transparent/
-    Link: https://wpf.2000things.com/2011/02/05/208-color-values-are-stored-as-rgb-values/
+    Url: https://wpf.2000things.com/2014/11/05/1195-making-a-window-partially-transparent/
+    Url: https://wpf.2000things.com/2011/02/05/208-color-values-are-stored-as-rgb-values/
     Retrieved: 2022_09_14
 #>
 function Set-ControlsStyleTransparent {
@@ -298,8 +263,13 @@ function Set-ControlsStyleTransparent {
 function New-ControlsMain {
     Param(
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
+
+    if ($null -eq $Preferences) {
+        $Preferences = Get-Content "$PsScriptRoot/../res/preference.json" `
+            | ConvertFrom-Json
+    }
 
     $form = New-Object System.Windows.Window
     $form.Title = $Preferences.Caption
@@ -341,7 +311,7 @@ function Add-ControlsCheckBox {
         $Default,
 
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
 
     $checkBox = New-Control CheckBox
@@ -381,7 +351,7 @@ function Get-ControlsAsterized {
 function Get-ControlsTextDialog {
     Param(
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES,
+        $Preferences,
 
         [String]
         $Text,
@@ -392,6 +362,11 @@ function Get-ControlsTextDialog {
         [Int]
         $MaxLength
     )
+
+    if ($null -eq $Preferences) {
+        $Preferences = Get-Content "$PsScriptRoot/../res/preference.json" `
+            | ConvertFrom-Json
+    }
 
     $textBox = New-Object System.Windows.Controls.TextBox
     $textBox.Width = $Preferences.Width
@@ -455,14 +430,14 @@ function Add-ControlsTable {
         $Mandatory,
 
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
 
     $tableControl = New-ControlsTable `
-        -Preferences $Preferences `
         -Text $Text `
         -Rows $Rows `
-        -Asterized:$Mandatory
+        -Asterized:$Mandatory `
+        -Margin $Preferences.Margin
 
     $Layouts = Add-ControlToMultilayout `
         -Layouts $Layouts `
@@ -496,7 +471,7 @@ function Add-ControlsListBox {
         $Default,
 
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
 
     $outerPanel = New-Object System.Windows.Controls.StackPanel
@@ -835,9 +810,9 @@ function Add-ControlsListBox {
 
 <#
     .NOTE
-    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the operative
-    control, to a target container. 'Add-' rather than 'New-' helps encapsulate
-    inoperative controls.
+    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
+    operative control, to a target container. 'Add-' rather than 'New-'
+    helps encapsulate inoperative controls.
 #>
 function Add-ControlsFieldBox {
     Param(
@@ -854,7 +829,7 @@ function Add-ControlsFieldBox {
         $Default,
 
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
 
     $stackPanel = New-Object System.Windows.Controls.StackPanel
@@ -948,9 +923,9 @@ function New-ControlsSlider {
 
 <#
     .NOTE
-    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the operative
-    control, to a target container. 'Add-' rather than 'New-' helps encapsulate
-    inoperative controls.
+    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
+    operative control, to a target container. 'Add-' rather than 'New-'
+    helps encapsulate inoperative controls.
 #>
 function Add-ControlsSlider {
     Param(
@@ -963,14 +938,26 @@ function Add-ControlsSlider {
         [Switch]
         $Mandatory,
 
-        $Minimum = $script:DEFAULT_NUMERIC_MINIMUM,
-        $Maximum = $script:DEFAULT_NUMERIC_MAXIMUM,
-        $DecimalPlaces = $script:DEFAULT_NUMERIC_DECIMALPLACES,
+        $Minimum,
+        $Maximum,
+        $DecimalPlaces,
         $Default,
 
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
+
+    if ($null -eq $Minimum) {
+        $Minimum = $Preferences.NumericMinimum
+    }
+
+    if ($null -eq $Maximum) {
+        $Maximum = $Preferences.NumericMaximum
+    }
+
+    if ($null -eq $DecimalPlaces) {
+        $DecimalPlaces = $Preferences.NumericDecimalPlaces
+    }
 
     $dockPanel = New-Object System.Windows.Controls.StackPanel
     $label = New-Control Label
@@ -1043,9 +1030,9 @@ function Add-ControlsSlider {
 
 <#
     .NOTE
-    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the operative
-    control, to a target container. 'Add-' rather than 'New-' helps encapsulate
-    inoperative controls.
+    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
+    operative control, to a target container. 'Add-' rather than 'New-'
+    helps encapsulate inoperative controls.
 #>
 function Add-ControlsRadioBox {
     Param(
@@ -1064,7 +1051,7 @@ function Add-ControlsRadioBox {
         $Default,
 
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
 
     $groupBox = New-Object System.Windows.Controls.GroupBox
@@ -1118,9 +1105,6 @@ function Add-ControlsRadioBox {
 
 function New-ControlsTable {
     Param(
-        [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES,
-
         [String]
         $Text,
 
@@ -1128,7 +1112,10 @@ function New-ControlsTable {
         $Rows,
 
         [Switch]
-        $Asterized
+        $Asterized,
+
+        [Int]
+        $Margin
     )
 
     <#
@@ -1158,7 +1145,7 @@ function New-ControlsTable {
     $groupBox.AddChild($stackPanel)
 
     $textBox = New-Object System.Windows.Controls.TextBox
-    $textBox.Margin = $Preferences.Margin
+    $textBox.Margin = $Margin
     $stackPanel.AddChild($textBox)
 
     Set-ControlsWritableText `
@@ -1178,7 +1165,7 @@ function New-ControlsTable {
         $grid
     }
 
-    $grid.Margin = $Preferences.Margin
+    $grid.Margin = $Margin
     $listView = New-Object System.Windows.Controls.ListView
     $listView.HorizontalAlignment = 'Stretch'
     $grid.AddChild($listView)
@@ -1254,7 +1241,7 @@ function New-ControlsTable {
 function New-ControlsOkCancelButtons {
     Param(
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
 
     $endButtons = New-Object System.Windows.Controls.WrapPanel
@@ -1283,9 +1270,9 @@ function New-ControlsOkCancelButtons {
 
 <#
     .NOTE
-    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the operative
-    control, to a target container. 'Add-' rather than 'New-' helps encapsulate
-    inoperative controls.
+    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
+    operative control, to a target container. 'Add-' rather than 'New-'
+    helps encapsulate inoperative controls.
 #>
 function Add-ControlsOkCancelButtons {
     Param(
@@ -1293,7 +1280,7 @@ function Add-ControlsOkCancelButtons {
         $Layouts,
 
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
 
     $endButtons = New-ControlsOkCancelButtons `
@@ -1313,7 +1300,7 @@ function Add-ControlsOkCancelButtons {
 function Open-ControlsTable {
     Param(
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES,
+        $Preferences,
 
         [String]
         $Text,
@@ -1322,13 +1309,18 @@ function Open-ControlsTable {
         $Rows
     )
 
+    if ($null -eq $Preferences) {
+        $Preferences = Get-Content "$PsScriptRoot/../res/preference.json" `
+            | ConvertFrom-Json
+    }
+
     $main = New-ControlsMain `
         -Preferences $Preferences
 
     $tableControl = New-ControlsTable `
-        -Preferences $Preferences `
         -Text $Text `
-        -Rows $Rows
+        -Rows $Rows `
+        -Margin $Preferences.Margin
 
     $endButtons = New-ControlsOkCancelButtons `
         -Preferences $Preferences
@@ -1438,8 +1430,13 @@ function Open-ControlsFileDialog {
 function Open-ControlsMonthCalendar {
     Param(
         [PsCustomObject]
-        $Preferences = $script:DEFAULT_PREFERENCES
+        $Preferences
     )
+
+    if ($null -eq $Preferences) {
+        $Preferences = Get-Content "$PsScriptRoot/../res/preference.json" `
+            | ConvertFrom-Json
+    }
 
     $main = New-ControlsMain `
         -Preferences $Preferences

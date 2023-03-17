@@ -192,7 +192,7 @@ function Get-QformResource {
 
     Begin {
         $masterObj = Get-Content `
-            -Path "$($script:RESOURCE_PATH)\properties.json" `
+            -Path "$PsScriptRoot/../res/properties.json" `
         | ConvertFrom-Json
     }
 
@@ -248,14 +248,20 @@ function Get-QformPreference {
         $Name
     )
 
+    Begin {
+        $defaultPreferences =
+            Get-Content "$PsScriptRoot/../res/preference.json" `
+                | ConvertFrom-Json
+    }
+
     Process {
         switch ($PsCmdlet.ParameterSetName) {
             'BuildNewObject' {
                 if (-not $Preferences) {
-                    return $script:DEFAULT_PREFERENCES.PsObject.Copy()
+                    return $defaultPreferences.PsObject.Copy()
                 }
 
-                $myPreferences = $script:DEFAULT_PREFERENCES.PsObject.Copy()
+                $myPreferences = $defaultPreferences.PsObject.Copy()
                 $names = $Preferences.PsObject.Properties.Name
 
                 if ($Preferences) {
@@ -285,7 +291,7 @@ function Get-QformPreference {
                 foreach ($item in $Name) {
                     [PsCustomObject]@{
                         Name = $item
-                        Value = $script:DEFAULT_PREFERENCES.$item
+                        Value = $defaultPreferences.$item
                     }
                 }
             }
@@ -764,8 +770,14 @@ class Qform {
             })
         }
 
+        $helpMessage = ( `
+            Get-Content `
+                "$PsScriptRoot/../res/text.json" `
+                | ConvertFrom-Json `
+        ).Help
+
         $closure = New-Closure `
-            -InputObject $script:TEXT_PATH `
+            -InputObject $helpMessage `
             -ScriptBlock {
                 $isKeyComb =
                     $_.Key -eq [System.Windows.Input.Key]::OemQuestion `
@@ -773,11 +785,7 @@ class Qform {
                         -eq [System.Windows.Input.ModifierKeys]::Control
 
                 if ($isKeyComb) {
-                    $message = (Get-Content `
-                        -Path $InputObject `
-                        | ConvertFrom-Json).Help
-
-                    $message = $message -Join "`r`n"
+                    $message = $InputObject -Join "`r`n"
                     $caption = 'Help'
                     [System.Windows.MessageBox]::Show($message, $caption)
                 }
