@@ -8,7 +8,7 @@
 
     .PARAMETER InputObject
     An object containing the specifications for a Quickform menu.
-    Must match the JSON:
+    Should match the JSON:
 
         {
             Preferences: [],
@@ -79,23 +79,6 @@ function Show-QformMenu {
         [Parameter(
             ParameterSetName = 'BySingleObject',
             ValueFromPipeline = $true)]
-
-        # todo: consider removing
-        [ValidateScript(
-            {
-                $valid = $true
-                $what = $_
-
-                foreach ($name in $what.PsObject.Properties.Name) {
-                    $valid = $valid -and ($name -in @(
-                        'Preferences',
-                        'MenuSpecs'
-                    ))
-                }
-
-                return $valid
-            }
-        )]
         [PsCustomObject]
         $InputObject,
 
