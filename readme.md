@@ -234,4 +234,9 @@ To query for the path to the default preferences file, call the `$QFORM_DEFAULTS
 
 # Todo
 
-- [ ] Document Table type
+- [ ] document Table type
+- feat
+  - [ ] dark theme
+  - [ ] parameter set tabs
+  - [ ] scrollbar version
+
