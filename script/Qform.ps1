@@ -722,16 +722,20 @@ class Qform {
         $this.PageLine = $false
         $this.InfoLines = @('StatusLine')
         $this.CurrentIndex =
-        $this.DefaultIndex = 0
+            $this.DefaultIndex = 0
+
+        $myPrefs = $Preferences.PsObject.Copy()
 
         $this.Pages = @(
             [Page]::new(
-                $Preferences.PsObject.Copy(),
+                $myPrefs,
                 $MenuSpecs
             )
         )
 
-        $this.Main = Get-QformMenu
+        $this.Main = New-ControlsMain `
+            -Preferences $myPrefs
+
         $this.SetKeyDownEventHandlers()
     }
 

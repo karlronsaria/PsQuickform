@@ -554,49 +554,37 @@ function Get-QformMenu {
     )
 
     Begin {
-        $myPreferences = Get-QformPreference `
-            -Preferences $Preferences.PsObject.Copy()
-
-        $main = New-ControlsMain `
-            -Preferences $myPreferences
-
-        $list = @()
+        $myMenuSpecs = @()
     }
 
     Process {
-        $list += @($MenuSpecs)
+        $myMenuSpecs += @($MenuSpecs)
     }
 
     End {
-        # todo
-        $layouts = [PsCustomObject]@{
-            Window = $null
-            Grid = $null
-            Multilayout = $null
-            Sublayouts = @()
-            Controls = @{}
-            MaxHeight = $null
-            CurrentHeight = $null
-            StatusLine = $null
-        }
+        $myPreferences = Get-QformPreference `
+            -Preferences $Preferences.PsObject.Copy()
 
-        $layouts = Set-QformMainLayout `
-            -MainForm $main `
-            -MenuSpecs $list `
-            -Preferences $myPreferences
+        $form = [Qform]::new(
+            $myPreferences,
+            $myMenuSpecs
+        )
 
-        $confirm = $main.Window.ShowDialog()
+        $confirm = $form.ShowDialog()
 
-        $out = $list | Start-QformEvaluate `
-            -Layouts $layouts
+        $answers = $myMenuSpecs `
+            | Start-QformEvaluate `
+                -Layouts $form.Layouts `
+            | Get-NonEmptyObject `
+                -RemoveEmptyString
 
         if ($AnswersAsHashtable) {
-            $out = $out | ConvertTo-Hashtable
+            $answers = $answers | ConvertTo-Hashtable
         }
 
         return [PsCustomObject]@{
             Confirm = $confirm
-            MenuAnswers = $out
+            MenuAnswers = $answers
         }
     }
 }
