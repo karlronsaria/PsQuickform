@@ -84,6 +84,24 @@ function Get-NonEmpty {
     }
 }
 
+function Test-ValueIsNonEmpty {
+    Param(
+        $InputObject,
+
+        [Switch]
+        $RemoveEmptyString
+    )
+
+    return `
+        $null -ne $InputObject `
+        -and `
+        (-not ($InputObject -is [String]) `
+            -or (-not $RemoveEmptyString -or $InputObject -ne '')) `
+        -and `
+        (-not ($InputObject -is [Boolean]) `
+            -or $InputObject)
+}
+
 function Get-NonEmptyTable {
     [OutputType([Hashtable])]
     Param(
@@ -105,9 +123,7 @@ function Get-NonEmptyTable {
         $InputObject.Keys | where {
             $name = $_;
             $value = $InputObject[$_];
-
-            (-not $RemoveEmptyString -or '' -ne $value) `
-                -and $null -ne $value
+            Test-ValueIsNonEmpty $value $RemoveEmptyString
         } | foreach {
             $table.Add($name, $value)
         }
@@ -134,9 +150,7 @@ function Get-NonEmptyObject {
             $type = $_.MemberType;
             $name = $_.Name;
             $value = $_.Value;
-
-            (-not $RemoveEmptyString -or '' -ne $value) `
-                -and $null -ne $value
+            Test-ValueIsNonEmpty $value $RemoveEmptyString
         } | foreach {
             $obj | Add-Member `
                 -MemberType $type `

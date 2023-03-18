@@ -568,6 +568,7 @@ function Get-QformMenu {
     }
 
     End {
+        # todo
         $layouts = [PsCustomObject]@{
             Window = $null
             Grid = $null
@@ -620,20 +621,7 @@ function Start-QformEvaluate {
         foreach ($item in $MenuSpecs) {
             $value = switch ($item.Type) {
                 'Check' {
-                    $tempValue = $controlTable[$item.Name].Checked;
-
-                    switch ($myPreferences.ConfirmType) {
-                        'TrueOrFalse' {
-                            $tempValue
-                        }
-
-                        'AllowOrDeny' {
-                            switch ($tempValue) {
-                                'True' { 'Allow' }
-                                'False' { 'Deny' }
-                            }
-                        }
-                    }
+                    $controlTable[$item.Name].IsChecked
                 }
 
                 'Field' {
@@ -641,11 +629,11 @@ function Start-QformEvaluate {
                 }
 
                 'Enum' {
-                    $buttons = $controlTable[$item.Name];
+                    $buttons = $controlTable[$item.Name]
 
                     $temp = if ($buttons) {
                         $buttons.Keys | Where-Object {
-                            $buttons[$_].Checked
+                            $buttons[$_].IsChecked
                         }
                     } else {
                         $null

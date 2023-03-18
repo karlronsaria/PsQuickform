@@ -300,13 +300,18 @@ function Get-QformPreference {
     }
 }
 
-<#
-.DESCRIPTION
-#>
 class Page {
     $Name = ''
     $Preferences = @{}
-    $MenuSpecs = @{}
+    $MenuSpecs = @()
+
+    Page(
+        [PsCustomObject] $Preferences,
+        [PsCustomObject[]] $MenuSpecs
+    ) {
+        $this.Preferences = $Preferences
+        $this.MenuSpecs = $MenuSpecs
+    }
 
     Page(
         $ParameterSet,
@@ -398,8 +403,8 @@ function Set-QformLayout {
                         -Default $default `
                         -Preferences $Preferences
 
-                    # Mandatory enumerations are self-managed. They either do or don't
-                    # implement 'None'.
+                    # Mandatory enumerations are self-managed. They either do
+                    # or don't implement 'None'.
                     $mandatory = $false
                 }
 
@@ -556,10 +561,10 @@ function Set-QformLayout {
         $controlTable.Add('__EndButtons__', $endButtons)
 
         foreach ($key in $controlTable.Keys) {
-            $layouts.Controls.Add($key, $controlTable[$key])
+            $Layouts.Controls.Add($key, $controlTable[$key])
         }
 
-        return $layouts
+        return $Layouts
     }
 }
 
@@ -602,7 +607,7 @@ function Set-QformMainLayout {
             continue
         }
 
-        $line = New-Object System.Windows.Controls.Label
+        $line = New-Control Label
 
         if ($lineName -eq 'StatusLine') {
             $layouts.StatusLine = $line
@@ -621,7 +626,7 @@ function Set-QformMainLayout {
     # Resolving a possible race condition
     while ($null -eq $layouts.Multilayout) { }
 
-    $fillLayout = New-Object System.Windows.Controls.StackPanel
+    $fillLayout = New-Control StackPanel
     $fillLayout.AddChild($layouts.Multilayout)
 
     foreach ($lineName in $lineNames) {
@@ -645,6 +650,7 @@ class Qform {
     $DefaultIndex = $null
     $Pages = @()
     $InfoLines = @('PageLine', 'StatusLine')
+    $PageLine = $false
 
     static [Int] FindDefaultParameterSet($CommandInfo) {
         $index = 0
@@ -699,11 +705,34 @@ class Qform {
             -Preferences $page.Preferences `
             -AddLines $this.InfoLines
 
-        $pageLine = $this.Layouts.Controls['__PageLine__']
-        $pageLine.Content =
-            [Qform]::GetPageLine($Index, $this.Pages.Count, $page.Name)
-        $pageLine.HorizontalAlignment = 'Center'
+        if ($this.PageLine) {
+            $control = $this.Layouts.Controls['__PageLine__']
+            $control.Content =
+                [Qform]::GetPageLine($Index, $this.Pages.Count, $page.Name)
+            $control.HorizontalAlignment = 'Center'
+        }
+
         $this.Main.Window.Focus()
+    }
+
+    Qform(
+        [PsCustomObject] $Preferences,
+        [PsCustomObject[]] $MenuSpecs
+    ) {
+        $this.PageLine = $false
+        $this.InfoLines = @('StatusLine')
+        $this.CurrentIndex =
+        $this.DefaultIndex = 0
+
+        $this.Pages = @(
+            [Page]::new(
+                $Preferences.PsObject.Copy(),
+                $MenuSpecs
+            )
+        )
+
+        $this.Main = Get-QformMenu
+        $this.SetKeyDownEventHandlers()
     }
 
     Qform(
@@ -713,6 +742,7 @@ class Qform {
         [Boolean] $IncludeCommonParameters,
         [Boolean] $IgnoreLists
     ) {
+        $this.PageLine = $true
         $myPrefs = $Preferences.PsObject.Copy()
         $parameterSets = $CommandInfo.ParameterSets
 
@@ -750,11 +780,52 @@ class Qform {
 
         if ($null -eq $this.Pages -or $this.Pages.Count -eq 0) {
             $this.Main = Get-QformMenu
-            return
+        }
+        else {
+            $this.Main = New-ControlsMain `
+                -Preferences $myPrefs
+
+            # issue: Event handler fails to update variable from outer scope
+            # link:
+            # - url: https://stackoverflow.com/questions/55403528/why-wont-variable-update
+            # - retreived: 2022_03_02
+
+            $closure = New-Closure `
+                -InputObject $this `
+                -ScriptBlock {
+                    $refresh = $false
+                    $isKeyCombo = [System.Windows.Input.Keyboard]::Modifiers `
+                        -and [System.Windows.Input.ModifierKeys]::Alt
+
+                    if ($isKeyCombo) {
+                        if ([System.Windows.Input.Keyboard]::IsKeyDown(
+                            'Right'
+                        )) {
+                            $InputObject.Next()
+                            $refresh = $true
+                        }
+
+                        if ([System.Windows.Input.Keyboard]::IsKeyDown(
+                            'Left'
+                        )) {
+                            $InputObject.Previous()
+                            $refresh = $true
+                        }
+                    }
+
+                    if ($refresh) {
+                        $InputObject.SetPage($InputObject.CurrentIndex)
+                    }
+                }
+
+            $this.Main.Window.add_KeyDown($closure)
         }
 
-        $this.Main = New-ControlsMain `
-            -Preferences $myPrefs
+        $this.SetKeyDownEventHandlers()
+    }
+
+    [void] SetKeyDownEventHandlers() {
+        $myPrefs = $this.Pages[$this.CurrentIndex].Preferences
 
         if ($myPrefs.EnterToConfirm) {
             $this.Main.Window.add_KeyDown({
@@ -780,48 +851,18 @@ class Qform {
                 | ConvertFrom-Json `
         ).Help
 
+        $helpMessage = $helpMessage -Join "`r`n"
+
         $closure = New-Closure `
             -InputObject $helpMessage `
             -ScriptBlock {
-                $isKeyComb =
+                $isKeyCombo =
                     $_.Key -eq [System.Windows.Input.Key]::OemQuestion `
                     -and $_.KeyboardDevice.Modifiers `
                         -eq [System.Windows.Input.ModifierKeys]::Control
 
-                if ($isKeyComb) {
-                    $message = $InputObject -Join "`r`n"
-                    $caption = 'Help'
-                    [System.Windows.MessageBox]::Show($message, $caption)
-                }
-            }
-
-        $this.Main.Window.add_KeyDown($closure)
-
-        # issue: Event handler fails to update variable from outer scope
-        # link: https://stackoverflow.com/questions/55403528/why-wont-variable-update
-        # retreived: 2022_03_02
-
-        $closure = New-Closure `
-            -InputObject $this `
-            -ScriptBlock {
-                $refresh = $false
-                $isKeyComb = [System.Windows.Input.Keyboard]::Modifiers `
-                    -and [System.Windows.Input.ModifierKeys]::Alt
-
-                if ($isKeyComb) {
-                    if ([System.Windows.Input.Keyboard]::IsKeyDown('Right')) {
-                        $InputObject.Next()
-                        $refresh = $true
-                    }
-
-                    if ([System.Windows.Input.Keyboard]::IsKeyDown('Left')) {
-                        $InputObject.Previous()
-                        $refresh = $true
-                    }
-                }
-
-                if ($refresh) {
-                    $InputObject.SetPage($InputObject.CurrentIndex)
+                if ($isKeyCombo) {
+                    [System.Windows.MessageBox]::Show($InputObject, 'Help')
                 }
             }
 
