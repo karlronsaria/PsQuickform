@@ -33,6 +33,7 @@ function Get-QformControlType {
     $listPattern = '.*\[\]$'
 
     $table = [PsCustomObject]@{
+        '^PsCustomObject\[\]$' = 'Table'
         $listPattern = 'List'
         '^String$' = 'Field'
         '^Int.*$' = 'Numeric'
@@ -299,6 +300,9 @@ function Get-QformPreference {
     }
 }
 
+<#
+.DESCRIPTION
+#>
 class Page {
     $Name = ''
     $Preferences = @{}
