@@ -101,7 +101,7 @@ function New-ControlsLayout {
         $Preferences
     )
 
-    $layout = New-Object System.Windows.Controls.StackPanel
+    $layout = New-Control StackPanel
     $layout.Width = $Preferences.Width
     return $layout
 }
@@ -112,7 +112,7 @@ function New-ControlsMultilayout {
         $Preferences
     )
 
-    $multilayout = New-Object System.Windows.Controls.StackPanel
+    $multilayout = New-Control StackPanel
     $multilayout.MaxWidth = [Double]::PositiveInfinity
     $multilayout.Orientation = 'Horizontal'
     $multilayout.Margin = $Preferences.Margin
@@ -280,7 +280,7 @@ function New-ControlsMain {
         $this.Activate()
     })
 
-    $grid = New-Object System.Windows.Controls.StackPanel
+    $grid = New-Control StackPanel
     $form.AddChild($grid)
 
     return [PsCustomObject]@{
@@ -334,13 +334,13 @@ function Get-ControlsAsterized {
         $Control
     )
 
-    $asterisk = New-Object System.Windows.Controls.Label
+    $asterisk = New-Control Label
     $asterisk.Content = '*'
     $asterisk.FontSize = $asterisk.FontSize + 5
     $asterisk.Foreground = 'DarkRed'
     $asterisk.VerticalContentAlignment = 'Center'
     $asterisk.HorizontalContentAlignment = 'Center'
-    $row = New-Object System.Windows.Controls.DockPanel
+    $row = New-Control DockPanel
     $row.Margin = $Control.Margin
     $Control.Margin = 0
     $row.AddChild($asterisk)
@@ -368,7 +368,7 @@ function Get-ControlsTextDialog {
             | ConvertFrom-Json
     }
 
-    $textBox = New-Object System.Windows.Controls.TextBox
+    $textBox = New-Control TextBox
     $textBox.Width = $Preferences.Width
     $textBox.Margin = $Preferences.Margin
 
@@ -474,9 +474,9 @@ function Add-ControlsListBox {
         $Preferences
     )
 
-    $outerPanel = New-Object System.Windows.Controls.StackPanel
-    $mainPanel = New-Object System.Windows.Controls.DockPanel
-    $buttonPanel = New-Object System.Windows.Controls.StackPanel
+    $outerPanel = New-Control StackPanel
+    $mainPanel = New-Control DockPanel
+    $buttonPanel = New-Control StackPanel
 
     $label = New-Control Label
     $label.Content = $Text
@@ -496,13 +496,13 @@ function Add-ControlsListBox {
     $actionTable = @{}
 
     foreach ($name in $buttonNames) {
-        $button = New-Object System.Windows.Controls.Button
+        $button = New-Control Button
         $button.Content = $name
         $buttonPanel.AddChild($button)
         $buttonTable.Add($name, $button)
     }
 
-    $listBox = New-Object System.Windows.Controls.ListBox
+    $listBox = New-Control ListBox
     $listBox.Height = 200
     $listBox.SelectionMode = 'Multiple'
 
@@ -832,7 +832,7 @@ function Add-ControlsFieldBox {
         $Preferences
     )
 
-    $stackPanel = New-Object System.Windows.Controls.StackPanel
+    $stackPanel = New-Control StackPanel
     $label = New-Control Label
     $label.Content = $Text
     $textBox = New-Control TextBox
@@ -959,7 +959,7 @@ function Add-ControlsSlider {
         $DecimalPlaces = $Preferences.NumericDecimalPlaces
     }
 
-    $dockPanel = New-Object System.Windows.Controls.StackPanel
+    $dockPanel = New-Control StackPanel
     $label = New-Control Label
     $label.Content = $Text
 
@@ -1054,10 +1054,10 @@ function Add-ControlsRadioBox {
         $Preferences
     )
 
-    $groupBox = New-Object System.Windows.Controls.GroupBox
+    $groupBox = New-Control GroupBox
     $groupBox.Header = $Text
 
-    $stackPanel = New-Object System.Windows.Controls.StackPanel
+    $stackPanel = New-Control StackPanel
     $groupBox.AddChild($stackPanel)
 
     if (-not $Mandatory -and @($Symbols | where {
@@ -1138,25 +1138,25 @@ function New-ControlsTable {
         }
     }
 
-    $groupBox = New-Object System.Windows.Controls.GroupBox
+    $groupBox = New-Control GroupBox
     $groupBox.Header = $Text
 
-    $stackPanel = New-Object System.Windows.Controls.StackPanel
+    $stackPanel = New-Control StackPanel
     $groupBox.AddChild($stackPanel)
 
-    $textBox = New-Object System.Windows.Controls.TextBox
+    $textBox = New-Control TextBox
     $textBox.Margin = $Margin
     $stackPanel.AddChild($textBox)
 
     Set-ControlsWritableText `
         -Control $textBox
 
-    $label = New-Object System.Windows.Controls.Label
+    $label = New-Control Label
     $label.Content = 'Find in table:'
     $stackPanel.AddChild($label)
 
     # karlr (2023_03_14)
-    $grid = New-Object System.Windows.Controls.Grid
+    $grid = New-Control Grid
 
     $asterism = if ($Asterized) {
         Get-ControlsAsterized `
@@ -1166,17 +1166,17 @@ function New-ControlsTable {
     }
 
     $grid.Margin = $Margin
-    $listView = New-Object System.Windows.Controls.ListView
+    $listView = New-Control ListView
     $listView.HorizontalAlignment = 'Stretch'
     $grid.AddChild($listView)
     $stackPanel.AddChild($asterism)
 
     if ($Rows.Count -gt 0) {
         $header = $Rows[0]
-        $gridView = New-Object System.Windows.Controls.GridView
+        $gridView = New-Control GridView
 
         foreach ($property in $header.PsObject.Properties) {
-            $column = New-Object System.Windows.Controls.GridViewColumn
+            $column = New-Control GridViewColumn
             $column.Header = $property.Name
             $column.DisplayMemberBinding =
                 [System.Windows.Data.Binding]::new($property.Name)
@@ -1244,7 +1244,7 @@ function New-ControlsOkCancelButtons {
         $Preferences
     )
 
-    $endButtons = New-Object System.Windows.Controls.WrapPanel
+    $endButtons = New-Control WrapPanel
 
     $okButton = New-Control Button
     $okButton.Width = 50
@@ -1395,7 +1395,7 @@ function Open-ControlsFileDialog {
 
     Add-Type -AssemblyName System.Windows.Forms
 
-    $openFile = New-Object System.Windows.Forms.OpenFileDialog
+    $openFile = New-Control OpenFileDialog
     $openFile.Title = $Caption
     $openFile.Filter = $Filter
     $openFile.FilterIndex = 1
@@ -1441,9 +1441,9 @@ function Open-ControlsMonthCalendar {
     $main = New-ControlsMain `
         -Preferences $Preferences
 
-    $calendar = New-Object System.Windows.Controls.Calendar
+    $calendar = New-Control Calendar
     $calendar.DisplayMode = 'Month'
-    $textBox = New-Object System.Windows.Controls.TextBox
+    $textBox = New-Control TextBox
     $textBox.Width = $Preferences.Width
     $textBox.Margin = $Preferences.Margin
 
@@ -1451,7 +1451,7 @@ function Open-ControlsMonthCalendar {
         -Control $textBox `
         -Text $Preferences.DateFormat
 
-    $label = New-Object System.Windows.Controls.Label
+    $label = New-Control Label
     $label.Content = 'Format:'
 
     $endButtons = New-ControlsOkCancelButtons `
