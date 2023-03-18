@@ -96,10 +96,7 @@ function Test-ValueIsNonEmpty {
         $null -ne $InputObject `
         -and `
         (-not ($InputObject -is [String]) `
-            -or (-not $RemoveEmptyString -or $InputObject -ne '')) `
-        -and `
-        (-not ($InputObject -is [Boolean]) `
-            -or $InputObject)
+            -or (-not $RemoveEmptyString -or $InputObject -ne ''))
 }
 
 function Get-NonEmptyTable {
