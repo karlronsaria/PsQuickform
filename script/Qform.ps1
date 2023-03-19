@@ -611,7 +611,6 @@ function Set-QformMainLayout {
         $pageControl.Controls.Add("__$($lineName)__", $line)
     }
 
-    # todo
     $pageControl = $MenuSpecs | Set-QformLayout `
         -Window $MainForm.Window `
         -PageControl $pageControl `
@@ -742,7 +741,7 @@ class Qform {
         $this.Main = New-ControlsMain `
             -Preferences $myPrefs
 
-        $this.InitKeyDownEventHandlers()
+        $this.InitKeyBindings()
     }
 
     Qform(
@@ -834,10 +833,10 @@ class Qform {
             $this.Main.Window.Add_KeyDown($closure)
         }
 
-        $this.InitKeyDownEventHandlers()
+        $this.InitKeyBindings()
     }
 
-    [void] InitKeyDownEventHandlers() {
+    [void] InitKeyBindings() {
         $myPrefs = $this.Pages[$this.CurrentIndex].Preferences
 
         if ($myPrefs.EnterToConfirm) {
