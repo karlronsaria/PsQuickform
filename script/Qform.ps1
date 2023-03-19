@@ -341,7 +341,13 @@ function Set-QformLayout {
         $MenuSpecs,
 
         [PsCustomObject]
-        $Layouts,
+        $PageControl,
+
+        [System.Windows.Window]
+        $Window,
+
+        [System.Windows.Controls.Label]
+        $StatusLine,
 
         [PsCustomObject]
         $Preferences
@@ -368,7 +374,7 @@ function Set-QformLayout {
             $value = switch ($item.Type) {
                 'Check' {
                     Add-ControlsCheckBox `
-                        -Layouts $Layouts `
+                        -PageControl $PageControl `
                         -Text $text `
                         -Default $default `
                         -Preferences $Preferences
@@ -382,7 +388,7 @@ function Set-QformLayout {
                         -Default $false;
 
                     Add-ControlsFieldBox `
-                        -Layouts $Layouts `
+                        -PageControl $PageControl `
                         -Text $text `
                         -Mandatory:$mandatory `
                         -MaxLength $maxLength `
@@ -396,7 +402,7 @@ function Set-QformLayout {
                         -Default $false;
 
                     Add-ControlsRadioBox `
-                        -Layouts $Layouts `
+                        -PageControl $PageControl `
                         -Text $text `
                         -Mandatory:$mandatory `
                         -Symbols $item.Symbols `
@@ -423,13 +429,14 @@ function Set-QformLayout {
                         -Default $false;
 
                     Add-ControlsSlider `
-                        -Layouts $Layouts `
+                        -PageControl $PageControl `
                         -Text $text `
                         -Mandatory:$mandatory `
                         -DecimalPlaces $places `
                         -Minimum $min `
                         -Maximum $max `
                         -Default $default `
+                        -StatusLine $StatusLine `
                         -Preferences $Preferences
                 }
 
@@ -443,12 +450,13 @@ function Set-QformLayout {
                         -Default $false;
 
                     Add-ControlsListBox `
-                        -Layouts $Layouts `
+                        -PageControl $PageControl `
                         -Text $text `
                         -Mandatory:$mandatory `
                         -MaxCount $maxCount `
                         -MaxLength $maxLength `
                         -Default $default `
+                        -StatusLine $StatusLine `
                         -Preferences $Preferences
                 }
 
@@ -461,7 +469,7 @@ function Set-QformLayout {
                         -Default @()
 
                     Add-ControlsTable `
-                        -Layouts $Layouts `
+                        -PageControl $PageControl `
                         -Text $text `
                         -Mandatory:$mandatory `
                         -Rows $rows `
@@ -481,17 +489,13 @@ function Set-QformLayout {
     }
 
     End {
-        $window = $Layouts.Window
-        $grid = $Layouts.Grid
-        $statusLine = $Layouts.StatusLine
-
         $endButtons = Add-ControlsOkCancelButtons `
-            -Layouts $Layouts `
+            -PageControl $PageControl `
             -Preferences $Preferences
 
         $endButtons.CancelButton.Add_Click(( `
             New-Closure `
-                -InputObject $window `
+                -InputObject $Window `
                 -ScriptBlock {
                     $InputObject.DialogResult = $false
                     $InputObject.Close()
@@ -500,16 +504,16 @@ function Set-QformLayout {
 
         $action = if ($script:mandates.Count -eq 0) {
             New-Closure `
-                -InputObject $window `
+                -InputObject $Window `
                 -ScriptBlock {
                     $InputObject.DialogResult = $true
                     $InputObject.Close()
                 }
         } else {
             $parameters = [PsCustomObject]@{
-                Window = $window
+                Window = $Window
                 Mandates = $mandates
-                StatusLine = $statusLine
+                StatusLine = $StatusLine
             }
 
             New-Closure `
@@ -557,14 +561,14 @@ function Set-QformLayout {
                 }
         }
 
-        $endButtons.OkButton.add_Click($action)
+        $endButtons.OkButton.Add_Click($action)
         $controlTable.Add('__EndButtons__', $endButtons)
 
         foreach ($key in $controlTable.Keys) {
-            $Layouts.Controls.Add($key, $controlTable[$key])
+            $PageControl.Controls.Add($key, $controlTable[$key])
         }
 
-        return $Layouts
+        return $PageControl
     }
 }
 
@@ -586,21 +590,11 @@ function Set-QformMainLayout {
 
     $MainForm.Grid.Children.Clear()
 
-    $layouts = New-ControlsMultilayout `
+    $pageControl = New-ControlsMultilayout `
         -Preferences $Preferences
 
-    $layouts = [PsCustomObject]@{
-        Window = $MainForm.Window
-        Grid = $MainForm.Grid
-        Multilayout = $layouts.Multilayout
-        Sublayouts = $layouts.Sublayouts
-        Controls = $layouts.Controls
-        MaxHeight = $layouts.MaxHeight
-        CurrentHeight = $layouts.CurrentHeight
-        StatusLine = $null
-    }
-
     $lineNames = @()
+    $statusLine = $null
 
     foreach ($lineName in $AddLines) {
         if ($lineName -in $lineNames) {
@@ -610,42 +604,52 @@ function Set-QformMainLayout {
         $line = New-Control Label
 
         if ($lineName -eq 'StatusLine') {
-            $layouts.StatusLine = $line
+            $statusLine = $line
         }
 
         $lineNames += @($lineName)
-        $layouts.Controls.Add("__$($lineName)__", $line)
+        $pageControl.Controls.Add("__$($lineName)__", $line)
     }
 
-    $layouts = $MenuSpecs | Set-QformLayout `
-        -Layouts $layouts `
+    # todo
+    $pageControl = $MenuSpecs | Set-QformLayout `
+        -Window $MainForm.Window `
+        -PageControl $pageControl `
+        -StatusLine $statusLine `
         -Preferences $Preferences
 
     $MainForm.Window.Title = $Preferences.Caption
 
-    # Resolving a possible race condition
-    while ($null -eq $layouts.Multilayout) { }
+    # Resolve a possible race condition
+    while ($null -eq $pageControl.Multilayout) { }
+
+# todo: start somewhere around here
 
     $fillLayout = New-Control StackPanel
-    $fillLayout.AddChild($layouts.Multilayout)
+    $fillLayout.AddChild($pageControl.Multilayout)
 
     foreach ($lineName in $lineNames) {
-        $fillLayout.AddChild($layouts.Controls["__$($lineName)__"])
+        $fillLayout.AddChild($pageControl.Controls["__$($lineName)__"])
     }
 
     if ('StatusLine' -in $lineNames) {
         Set-ControlsStatus `
-            -StatusLine $layouts.StatusLine `
+            -StatusLine $statusLine `
             -LineName 'Idle'
     }
 
     $MainForm.Grid.AddChild($fillLayout)
-    return $layouts
+
+    return [PsCustomObject]@{
+        MainForm = $MainForm
+        PageControl = $pageControl
+        StatusLine = $statusLine
+    }
 }
 
 class Qform {
     $Main
-    $Layouts
+    $PageControl
     $CurrentIndex = $null
     $DefaultIndex = $null
     $Pages = @()
@@ -699,14 +703,16 @@ class Qform {
         $page.Preferences = Get-QformPreference `
             -Preferences $page.Preferences
 
-        $this.Layouts = Set-QformMainLayout `
+        $pageInfo = Set-QformMainLayout `
             -MainForm $this.Main `
             -MenuSpecs $page.MenuSpecs `
             -Preferences $page.Preferences `
             -AddLines $this.InfoLines
 
+        $this.PageControl = $pageInfo.PageControl
+
         if ($this.PageLine) {
-            $control = $this.Layouts.Controls['__PageLine__']
+            $control = $this.PageControl.Controls['__PageLine__']
             $control.Content =
                 [Qform]::GetPageLine($Index, $this.Pages.Count, $page.Name)
             $control.HorizontalAlignment = 'Center'
@@ -736,7 +742,7 @@ class Qform {
         $this.Main = New-ControlsMain `
             -Preferences $myPrefs
 
-        $this.SetKeyDownEventHandlers()
+        $this.InitKeyDownEventHandlers()
     }
 
     Qform(
@@ -801,6 +807,8 @@ class Qform {
                     $isKeyCombo = [System.Windows.Input.Keyboard]::Modifiers `
                         -and [System.Windows.Input.ModifierKeys]::Alt
 
+# todo: switch to tab control
+# start
                     if ($isKeyCombo) {
                         if ([System.Windows.Input.Keyboard]::IsKeyDown(
                             'Right'
@@ -820,19 +828,20 @@ class Qform {
                     if ($refresh) {
                         $InputObject.SetPage($InputObject.CurrentIndex)
                     }
+# end
                 }
 
-            $this.Main.Window.add_KeyDown($closure)
+            $this.Main.Window.Add_KeyDown($closure)
         }
 
-        $this.SetKeyDownEventHandlers()
+        $this.InitKeyDownEventHandlers()
     }
 
-    [void] SetKeyDownEventHandlers() {
+    [void] InitKeyDownEventHandlers() {
         $myPrefs = $this.Pages[$this.CurrentIndex].Preferences
 
         if ($myPrefs.EnterToConfirm) {
-            $this.Main.Window.add_KeyDown({
+            $this.Main.Window.Add_KeyDown({
                 if ($_.Key -eq 'Enter') {
                     $this.DialogResult = $true
                     $this.Close()
@@ -841,7 +850,7 @@ class Qform {
         }
 
         if ($myPrefs.EscapeToCancel) {
-            $this.Main.Window.add_KeyDown({
+            $this.Main.Window.Add_KeyDown({
                 if ($_.Key -eq 'Escape') {
                     $this.DialogResult = $false
                     $this.Close()
@@ -870,7 +879,7 @@ class Qform {
                 }
             }
 
-        $this.Main.Window.add_KeyDown($closure)
+        $this.Main.Window.Add_KeyDown($closure)
     }
 
     [Boolean] ShowDialog() {

@@ -123,7 +123,7 @@ function New-ControlsMultilayout {
     $maxHeight =
         [System.Windows.SystemParameters]::WorkArea.Height - 200
 
-    $layouts = [PsCustomObject]@{
+    $pageControl = [PsCustomObject]@{
         Multilayout = $multilayout
         Sublayouts = @()
         Controls = @{}
@@ -132,8 +132,50 @@ function New-ControlsMultilayout {
     }
 
     return Add-ControlToMultiLayout `
-        -Layouts $layouts `
+        -PageControl $pageControl `
         -Preferences $Preferences
+}
+
+function Add-ControlsTabItem {
+    Param(
+        [System.Windows.Controls.TabControl]
+        $TabControl,
+
+        [PsCustomObject]
+        $PageControl,
+
+        [String]
+        $Header
+    )
+
+    $tab = New-Control TabItem
+    $tab.Header = $Header
+    $tab.AddChild($PageControl.Multilayout)
+    $TabControl.AddChild($tab)
+}
+
+function New-ControlsTabLayout {
+    Param(
+        [PsCustomObject[]]
+        $PageControl,
+
+        [String[]]
+        $Header
+    )
+
+    $tabs = New-Control TabControl
+    $count = [Math]::Min($PageControl.Count, $Header.Count)
+    $index = 0
+
+    while ($index -lt $count) {
+        Add-ControlsTabItem `
+            -PageControl @($PageControl)[$index] `
+            -Header @($Header)[$index]
+
+        $index = $index + 1
+    }
+
+    return $tabs
 }
 
 function Add-ControlsFormKeyBindings {
@@ -142,34 +184,36 @@ function Add-ControlsFormKeyBindings {
         $Control,
 
         [PsCustomObject]
-        $Layouts,
+        $PageControl,
 
         [PsCustomObject]
         $Preferences
     )
 
-    $script:layouts = $Layouts
-
-    # TODO
     if ($Preferences.EnterToConfirm) {
-        $Control.add_KeyDown({
-            if ($_.Key -eq 'Enter') {
-                $script:layouts.Controls[
-                '__EndButtons__'
-                ].OkButton.PerformClick()
-            }
-        })
+        $Control.Add_KeyDown(( `
+            New-Closure `
+                -InputObject `
+                    $PageControl.Controls['__EndButtons__'].OkButton `
+                -ScriptBlock {
+                    if ($_.Key -eq 'Enter') {
+                        $InputObject.PerformClick()
+                    }
+                } `
+        ))
     }
 
-    # TODO
     if ($Preferences.EscapeToCancel) {
-        $Control.add_KeyDown({
-            if ($_.Key -eq 'Escape') {
-                $script:layouts.Controls[
-                '__EndButtons__'
-                ].CancelButton.PerformClick()
-            }
-        })
+        $Control.Add_KeyDown(( `
+            New-Closure `
+                -InputObject `
+                    $PageControl.Controls['__EndButtons__'].CancelButton `
+                -ScriptBlock {
+                    if ($_.Key -eq 'Escape') {
+                        $InputObject.PerformClick()
+                    }
+                } `
+        ))
     }
 
     $helpMessage = ( `
@@ -178,7 +222,7 @@ function Add-ControlsFormKeyBindings {
             | ConvertFrom-Json `
     ).Help
 
-    $Control.add_KeyDown(( `
+    $Control.Add_KeyDown(( `
         New-Closure `
             -InputObject $helpMessage `
             -ScriptBlock {
@@ -196,7 +240,7 @@ function Add-ControlsFormKeyBindings {
 function Add-ControlToMultilayout {
     Param(
         [PsCustomObject]
-        $Layouts,
+        $PageControl,
 
         $Control,
 
@@ -216,32 +260,33 @@ function Add-ControlToMultilayout {
         $Control.Height = $Control.DesiredSize.Height
         $Control.Margin = $Preferences.Margin
 
-        $Layouts.CurrentHeight `
+        $PageControl.CurrentHeight `
             + $Control.DesiredSize.Height `
             + (2 * $Preferences.Margin)
     }
 
     $needNewSublayout =
         $null -eq $Control `
-        -or $Layouts.Multilayout.Children.Count -eq 0 `
+        -or $PageControl.Multilayout.Children.Count -eq 0 `
         -or $nextHeight -gt $Preferences.Height `
-        -or $nextHeight -gt $Layouts.MaxHeight
+        -or $nextHeight -gt $PageControl.MaxHeight
 
     if ($needNewSublayout) {
         $layout = New-ControlsLayout `
             -Preferences $Preferences
 
-        $Layouts.Multilayout.AddChild($layout)
-        $Layouts.Sublayouts += @($layout)
-        $Layouts.CurrentHeight = 0
+        $PageControl.Multilayout.AddChild($layout)
+        $PageControl.Sublayouts += @($layout)
+        $PageControl.CurrentHeight = 0
     }
 
     if ($null -ne $Control) {
-        $Layouts.Sublayouts[-1].AddChild($Control)
-        $Layouts.CurrentHeight += $Control.Height + (2 * $Control.Margin.Top)
+        $PageControl.Sublayouts[-1].AddChild($Control)
+        $PageControl.CurrentHeight +=
+            $Control.Height + (2 * $Control.Margin.Top)
     }
 
-    return $Layouts
+    return $PageControl
 }
 
 <#
@@ -303,7 +348,7 @@ function New-Control {
 function Add-ControlsCheckBox {
     Param(
         [PsCustomObject]
-        $Layouts,
+        $PageControl,
 
         [String]
         $Text,
@@ -321,8 +366,8 @@ function Add-ControlsCheckBox {
         $checkBox.IsChecked = $Default
     }
 
-    $Layouts = Add-ControlToMultilayout `
-        -Layouts $Layouts `
+    $PageControl = Add-ControlToMultilayout `
+        -PageControl $PageControl `
         -Control $checkBox `
         -Preferences $Preferences
 
@@ -386,14 +431,14 @@ function Get-ControlsTextDialog {
     $main.Window.Title = $Caption
     $main.Grid.AddChild($textBox)
 
-    $main.Window.add_KeyDown({
+    $main.Window.Add_KeyDown({
         if ($_.Key -eq 'Enter') {
             $this.DialogResult = $true
             $this.Close()
         }
     })
 
-    $main.Window.add_KeyDown({
+    $main.Window.Add_KeyDown({
         if ($_.Key -eq 'Escape') {
             $this.DialogResult = $false
             $this.Close()
@@ -418,7 +463,7 @@ function Get-ControlsTextDialog {
 function Add-ControlsTable {
     Param(
         [PsCustomObject]
-        $Layouts,
+        $PageControl,
 
         [String]
         $Text,
@@ -439,12 +484,12 @@ function Add-ControlsTable {
         -Asterized:$Mandatory `
         -Margin $Preferences.Margin
 
-    $Layouts = Add-ControlToMultilayout `
-        -Layouts $Layouts `
+    $PageControl = Add-ControlToMultilayout `
+        -PageControl $PageControl `
         -Control $tableControl.GroupBox `
         -Preferences $Preferences
 
-    $Layouts.Sublayouts[-1].Add_Loaded({
+    $PageControl.Sublayouts[-1].Add_Loaded({
         if ([double]::IsNaN($this.Width)) {
             $this.Width = $this.ActualWidth
         }
@@ -458,7 +503,7 @@ function Add-ControlsTable {
 function Add-ControlsListBox {
     Param(
         [PsCustomObject]
-        $Layouts,
+        $PageControl,
 
         [String]
         $Text,
@@ -469,6 +514,9 @@ function Add-ControlsListBox {
         $MaxLength,
         $MaxCount,
         $Default,
+
+        [System.Windows.Controls.Label]
+        $StatusLine,
 
         [PsCustomObject]
         $Preferences
@@ -510,7 +558,8 @@ function Add-ControlsListBox {
         ListBox = $listBox
         MaxCount = $MaxCount
         MaxLength = $MaxLength
-        Layouts = $layouts
+        PageControl = $PageControl
+        StatusLine = $StatusLine
         Preferences = $Preferences
     }
 
@@ -520,7 +569,8 @@ function Add-ControlsListBox {
             $listBox = $InputObject.ListBox
             $maxCount = $InputObject.MaxCount
             $maxLength = $InputObject.MaxLength
-            $layouts = $InputObject.Layouts
+            $pageControl = $InputObject.PageControl
+            $statusLine = $InputObject.StatusLine
             $prefs = $InputObject.Preferences
             $index = $listBox.SelectedIndex
 
@@ -530,7 +580,7 @@ function Add-ControlsListBox {
                 -and $listBox.Items.Count -eq $maxCount)
             {
                 Set-ControlsStatus `
-                    -StatusLine $layouts.StatusLine `
+                    -StatusLine $statusLine `
                     -LineName 'MaxCountReached'
 
                 return
@@ -681,7 +731,7 @@ function Add-ControlsListBox {
     foreach ($name in $buttonNames) {
         $button = $buttonTable[$name]
         $action = $actionTable[$name]
-        $button.add_Click($action)
+        $button.Add_Click($action)
 
         $action = New-Closure `
             -InputObject $action `
@@ -691,7 +741,7 @@ function Add-ControlsListBox {
                 }
             }
 
-        $button.add_KeyDown($action)
+        $button.Add_KeyDown($action)
     }
 
     $newAction = $actionTable['New']
@@ -700,20 +750,22 @@ function Add-ControlsListBox {
 
     $parameters = [PsCustomObject]@{
         ListBox = $listBox
-        Layouts = $layouts
+        PageControl = $PageControl
         NewAction = $newAction
         EditAction = $editAction
         DeleteAction = $deleteAction
+        StatusLine = $StatusLine
     }
 
     $keyDown = New-Closure `
         -InputObject $parameters `
         -ScriptBlock {
             $listBox = $InputObject.ListBox
-            $layouts = $InputObject.Layouts
+            $pageControl = $InputObject.PageControl
             $newAction = $InputObject.NewAction
             $editAction = $InputObject.EditAction
             $deleteAction = $InputObject.DeleteAction
+            $statusLine = $InputObject.StatusLine
             $myEventArgs = $_
 
             $isKeyComb = [System.Windows.Input.Keyboard]::Modifiers `
@@ -733,7 +785,7 @@ function Add-ControlsListBox {
                     . $PsScriptRoot\Controls.ps1
 
                     Set-ControlsStatus `
-                        -StatusLine $layouts.StatusLine `
+                        -StatusLine $statusLine `
                         -LineName 'TextClipped'
                 }
 
@@ -767,10 +819,10 @@ function Add-ControlsListBox {
             }
         }
 
-    $listBox.add_PreViewKeyDown($keyDown)
+    $listBox.Add_PreViewKeyDown($keyDown)
 
-    $listBox.add_GotFocus((New-Closure `
-        -InputObject $layouts.StatusLine `
+    $listBox.Add_GotFocus((New-Closure `
+        -InputObject $StatusLine `
         -ScriptBlock {
             . $PsScriptRoot\Controls.ps1
 
@@ -780,8 +832,8 @@ function Add-ControlsListBox {
         } `
     ))
 
-    $listBox.add_LostFocus((New-Closure `
-        -InputObject $layouts.StatusLine `
+    $listBox.Add_LostFocus((New-Closure `
+        -InputObject $StatusLine `
         -ScriptBlock {
             . $PsScriptRoot\Controls.ps1
 
@@ -800,8 +852,8 @@ function Add-ControlsListBox {
     $outerPanel.AddChild($asterism)
     $outerPanel.AddChild($mainPanel)
 
-    $Layouts = Add-ControlToMultilayout `
-        -Layouts $Layouts `
+    $PageControl = Add-ControlToMultilayout `
+        -PageControl $PageControl `
         -Control $outerPanel `
         -Preferences $Preferences
 
@@ -817,7 +869,7 @@ function Add-ControlsListBox {
 function Add-ControlsFieldBox {
     Param(
         [PsCustomObject]
-        $Layouts,
+        $PageControl,
 
         [String]
         $Text,
@@ -863,7 +915,10 @@ function Add-ControlsFieldBox {
 
                     Set-ControlsWritableText `
                         -Control $this `
-                        -Text ($this.Text + (Open-ControlsFileDialog -Directory))
+                        -Text ( `
+                            $this.Text `
+                            + (Open-ControlsFileDialog -Directory) `
+                        )
 
                     $myEventArgs.Handled = $true
                 }
@@ -883,7 +938,7 @@ function Add-ControlsFieldBox {
             }
         }
 
-    $textBox.add_PreViewKeyDown($keyDown)
+    $textBox.Add_PreViewKeyDown($keyDown)
 
     if ($null -ne $MaxLength) {
         $textBox.MaxLength = $MaxLength
@@ -898,8 +953,8 @@ function Add-ControlsFieldBox {
     $stackPanel.AddChild($label)
     $stackPanel.AddChild($row2)
 
-    $Layouts = Add-ControlToMultilayout `
-        -Layouts $Layouts `
+    $PageControl = Add-ControlToMultilayout `
+        -PageControl $PageControl `
         -Control $stackPanel `
         -Preferences $Preferences
 
@@ -930,7 +985,7 @@ function New-ControlsSlider {
 function Add-ControlsSlider {
     Param(
         [PsCustomObject]
-        $Layouts,
+        $PageControl,
 
         [String]
         $Text,
@@ -942,6 +997,9 @@ function Add-ControlsSlider {
         $Maximum,
         $DecimalPlaces,
         $Default,
+
+        [System.Windows.Controls.Label]
+        $StatusLine,
 
         [PsCustomObject]
         $Preferences
@@ -977,7 +1035,7 @@ function Add-ControlsSlider {
 
     if ($null -ne $Minimum -or $null -ne $Maximum) {
         $closure = New-Closure `
-            -InputObject $Layouts.StatusLine `
+            -InputObject $StatusLine `
             -ScriptBlock {
                 . $PsScriptRoot\Controls.ps1
 
@@ -991,7 +1049,7 @@ function Add-ControlsSlider {
 
     if ($null -ne $Minimum) {
         $closure = New-Closure `
-            -InputObject $Layouts.StatusLine `
+            -InputObject $StatusLine `
             -ScriptBlock {
                 . $PsScriptRoot\Controls.ps1
 
@@ -1005,7 +1063,7 @@ function Add-ControlsSlider {
 
     if ($null -ne $Maximum) {
         $closure = New-Closure `
-            -InputObject $Layouts.StatusLine `
+            -InputObject $StatusLine `
             -ScriptBlock {
                 . $PsScriptRoot\Controls.ps1
 
@@ -1020,8 +1078,8 @@ function Add-ControlsSlider {
     $dockPanel.AddChild($label)
     $dockPanel.AddChild($row2)
 
-    $Layouts = Add-ControlToMultilayout `
-        -Layouts $Layouts `
+    $PageControl = Add-ControlToMultilayout `
+        -PageControl $PageControl `
         -Control $dockPanel `
         -Preferences $Preferences
 
@@ -1037,7 +1095,7 @@ function Add-ControlsSlider {
 function Add-ControlsRadioBox {
     Param(
         [PsCustomObject]
-        $Layouts,
+        $PageControl,
 
         [String]
         $Text,
@@ -1095,8 +1153,8 @@ function Add-ControlsRadioBox {
         $buttons[$key].IsChecked = $true
     }
 
-    $Layouts = Add-ControlToMultilayout `
-        -Layouts $Layouts `
+    $PageControl = Add-ControlToMultilayout `
+        -PageControl $PageControl `
         -Control $groupBox `
         -Preferences $Preferences
 
@@ -1190,7 +1248,7 @@ function New-ControlsTable {
         }
     }
 
-    $stackPanel.add_Loaded(( `
+    $stackPanel.Add_Loaded(( `
         New-Closure `
             -InputObject ( `
                 [PsCustomObject]@{
@@ -1204,7 +1262,7 @@ function New-ControlsTable {
             } `
     ))
 
-    $textBox.add_TextChanged(( `
+    $textBox.Add_TextChanged(( `
         New-Closure `
             -InputObject ( `
                 [PsCustomObject]@{
@@ -1277,7 +1335,7 @@ function New-ControlsOkCancelButtons {
 function Add-ControlsOkCancelButtons {
     Param(
         [PsCustomObject]
-        $Layouts,
+        $PageControl,
 
         [PsCustomObject]
         $Preferences
@@ -1286,8 +1344,8 @@ function Add-ControlsOkCancelButtons {
     $endButtons = New-ControlsOkCancelButtons `
         -Preferences $Preferences
 
-    $Layouts = Add-ControlToMultilayout `
-        -Layouts $Layouts `
+    $PageControl = Add-ControlToMultilayout `
+        -PageControl $PageControl `
         -Control $endButtons.Panel `
         -Preferences $Preferences
 
@@ -1350,7 +1408,7 @@ function Open-ControlsTable {
         CancelAction = $cancelAction
     }
 
-    $main.Window.add_PreViewKeyDown(( `
+    $main.Window.Add_PreViewKeyDown(( `
         New-Closure `
             -InputObject $parameters `
             -ScriptBlock {
@@ -1483,7 +1541,7 @@ function Open-ControlsMonthCalendar {
         CancelAction = $cancelAction
     }
 
-    $main.Window.add_PreViewKeyDown(( `
+    $main.Window.Add_PreViewKeyDown(( `
         New-Closure `
             -InputObject $parameters `
             -ScriptBlock {
