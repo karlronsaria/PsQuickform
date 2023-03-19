@@ -574,8 +574,8 @@ function Set-QformLayout {
 
 function Set-QformMainLayout {
     Param(
-        [PsCustomObject]
-        $MainForm,
+        [System.Windows.Window]
+        $Window,
 
         [PsCustomObject[]]
         $MenuSpecs,
@@ -587,8 +587,6 @@ function Set-QformMainLayout {
         [String[]]
         $AddLines = @('StatusLine')
     )
-
-    $MainForm.Grid.Children.Clear()
 
     $pageControl = New-ControlsMultilayout `
         -Preferences $Preferences
@@ -612,12 +610,10 @@ function Set-QformMainLayout {
     }
 
     $pageControl = $MenuSpecs | Set-QformLayout `
-        -Window $MainForm.Window `
+        -Window $Window `
         -PageControl $pageControl `
         -StatusLine $statusLine `
         -Preferences $Preferences
-
-    $MainForm.Window.Title = $Preferences.Caption
 
     # Resolve a possible race condition
     while ($null -eq $pageControl.Multilayout) { }
@@ -637,12 +633,44 @@ function Set-QformMainLayout {
             -LineName 'Idle'
     }
 
-    $MainForm.Grid.AddChild($fillLayout)
+    return [PsCustomObject]@{
+        FillLayout = $fillLayout
+        PageControl = $pageControl
+        StatusLine = $statusLine
+    }
+}
+
+function Set-QformMainWindow {
+    Param(
+        [PsCustomObject]
+        $MainForm,
+
+        [PsCustomObject[]]
+        $MenuSpecs,
+
+        [PsCustomObject]
+        $Preferences,
+
+        [ValidateSet('StatusLine', 'PageLine')]
+        [String[]]
+        $AddLines = @('StatusLine')
+    )
+
+    $MainForm.Window.Title = $Preferences.Caption
+    $MainForm.Grid.Children.Clear()
+
+    $what = Set-QformMainLayout `
+        -Window $MainForm.Window `
+        -MenuSpecs $MenuSpecs `
+        -Preferences $Preferences `
+        -AddLines $AddLines
+
+    $MainForm.Grid.AddChild($what.FillLayout)
 
     return [PsCustomObject]@{
         MainForm = $MainForm
-        PageControl = $pageControl
-        StatusLine = $statusLine
+        PageControl = $what.PageControl
+        StatusLine = $what.StatusLine
     }
 }
 
@@ -702,7 +730,7 @@ class Qform {
         $page.Preferences = Get-QformPreference `
             -Preferences $page.Preferences
 
-        $pageInfo = Set-QformMainLayout `
+        $pageInfo = Set-QformMainWindow `
             -MainForm $this.Main `
             -MenuSpecs $page.MenuSpecs `
             -Preferences $page.Preferences `
