@@ -574,7 +574,7 @@ function Get-QformMenu {
 
         $answers = $myMenuSpecs `
             | Start-QformEvaluate `
-                -Layouts $form.Layouts `
+                -PageControl $form.PageControl `
             | Get-NonEmptyObject `
                 -RemoveEmptyString
 
@@ -597,12 +597,12 @@ function Start-QformEvaluate {
         $MenuSpecs,
 
         [PsCustomObject]
-        $Layouts
+        $PageControl
     )
 
     Begin {
         $out = [PsCustomObject]@{}
-        $controlTable = $Layouts.Controls
+        $controlTable = $PageControl.Controls
     }
 
     Process {
@@ -838,7 +838,7 @@ function Show-QformMenuForCommand {
 
         $formResult = $menuSpecs `
             | Start-QformEvaluate `
-                -Layouts $form.Layouts `
+                -PageControl $form.PageControl `
             | Get-NonEmptyObject `
                 -RemoveEmptyString
 
