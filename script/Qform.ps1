@@ -301,26 +301,42 @@ function Get-QformPreference {
 }
 
 class Page {
-    $Name = ''
-    $Preferences = @{}
-    $MenuSpecs = @()
+    [String] $Name = ''
+    [PsCustomObject] $PageControl = @{}
+    [PsCustomObject[]] $MenuSpecs = @()
+    $FillLayout = $null
+    $StatusLine = $null
 
     Page(
+        [System.Windows.Window] $Window,
         [PsCustomObject] $Preferences,
         [PsCustomObject[]] $MenuSpecs
     ) {
-        $this.Preferences = $Preferences
         $this.MenuSpecs = $MenuSpecs
+
+        $myPrefs = Get-QformPreference `
+            -Preferences $Preferences.PsObject.Copy()
+
+        $what = Set-QformMainLayout `
+            -Window $Window `
+            -MenuSpecs $MenuSpecs `
+            -Preferences $this.MenuSpecs `
+            -AddLines @('StatusLine')
+
+        $this.PageControl = $what.PageControl
+        $this.FillLayout = $what.FillLayout
+        $this.StatusLine = $what.StatusLine
     }
 
     Page(
+        [System.Windows.Window] $Window,
         $ParameterSet,
         $Preferences,
         [Switch] $IncludeCommonParameters,
         [Switch] $IgnoreLists
     ) {
-        $this.Preferences = $Preferences.PsObject.Copy()
         $this.Name = $ParameterSet.Name
+
         $this.MenuSpecs = $ParameterSet.Parameters | Where-Object {
             $IncludeCommonParameters `
                 -or -not (Test-IsCommonParameter -ParameterInfo $_)
@@ -329,6 +345,19 @@ class Page {
                 -ParameterInfo $_ `
                 -IgnoreLists:$IgnoreLists
         }
+
+        $myPrefs = Get-QformPreference `
+            -Preferences $Preferences.PsObject.Copy()
+
+        $what = Set-QformMainLayout `
+            -Window $Window `
+            -MenuSpecs $this.MenuSpecs `
+            -Preferences $myPrefs `
+            -AddLines @('StatusLine', 'PageLine')
+
+        $this.PageControl = $what.PageControl
+        $this.FillLayout = $what.FillLayout
+        $this.StatusLine = $what.StatusLine
     }
 }
 
@@ -355,7 +384,7 @@ function Set-QformLayout {
 
     Begin {
         $controlTable = @{}
-        $script:mandates = @()
+        $mandates = @()
     }
 
     Process {
@@ -480,7 +509,7 @@ function Set-QformLayout {
             $controlTable.Add($item.Name, $value)
 
             if ($mandatory) {
-                $script:mandates += @([PsCustomObject]@{
+                $mandates += @([PsCustomObject]@{
                     Type = $item.Type
                     Control = $value
                 })
@@ -502,7 +531,7 @@ function Set-QformLayout {
                 } `
         ))
 
-        $action = if ($script:mandates.Count -eq 0) {
+        $action = if ($mandates.Count -eq 0) {
             New-Closure `
                 -InputObject $Window `
                 -ScriptBlock {
@@ -618,8 +647,6 @@ function Set-QformMainLayout {
     # Resolve a possible race condition
     while ($null -eq $pageControl.Multilayout) { }
 
-# todo: start somewhere around here
-
     $fillLayout = New-Control StackPanel
     $fillLayout.AddChild($pageControl.Multilayout)
 
@@ -676,12 +703,12 @@ function Set-QformMainWindow {
 
 class Qform {
     $Main
-    $PageControl
     $CurrentIndex = $null
     $DefaultIndex = $null
     $Pages = @()
     $InfoLines = @('PageLine', 'StatusLine')
     $PageLine = $false
+    $Caption = ''
 
     static [Int] FindDefaultParameterSet($CommandInfo) {
         $index = 0
@@ -706,6 +733,14 @@ class Qform {
         return "ParameterSet $($Index + 1) of $Count`: $Name"
     }
 
+    [PsCustomObject] PageControl() {
+        return $this.Pages[$this.CurrentIndex].PageControl
+    }
+
+    [PsCustomObject[]] MenuSpecs() {
+        return $this.Pages[$this.CurrentIndex].MenuSpecs
+    }
+
     [void] Next() {
         $this.CurrentIndex =
             if ($this.CurrentIndex -ge $this.Pages.Count - 1) {
@@ -726,20 +761,11 @@ class Qform {
 
     [void] SetPage([Int] $Index) {
         $page = $this.Pages[$Index]
-
-        $page.Preferences = Get-QformPreference `
-            -Preferences $page.Preferences
-
-        $pageInfo = Set-QformMainWindow `
-            -MainForm $this.Main `
-            -MenuSpecs $page.MenuSpecs `
-            -Preferences $page.Preferences `
-            -AddLines $this.InfoLines
-
-        $this.PageControl = $pageInfo.PageControl
+        $this.Main.Grid.Children.Clear()
+        $this.Main.Grid.AddChild($page.FillLayout)
 
         if ($this.PageLine) {
-            $control = $this.PageControl.Controls['__PageLine__']
+            $control = $page.PageControl.Controls['__PageLine__']
             $control.Content =
                 [Qform]::GetPageLine($Index, $this.Pages.Count, $page.Name)
             $control.HorizontalAlignment = 'Center'
@@ -753,22 +779,23 @@ class Qform {
         [PsCustomObject[]] $MenuSpecs
     ) {
         $this.PageLine = $false
-        $this.InfoLines = @('StatusLine')
         $this.CurrentIndex =
             $this.DefaultIndex = 0
 
         $myPrefs = $Preferences.PsObject.Copy()
 
+        $this.Main = New-ControlsMain `
+            -Preferences $myPrefs
+
         $this.Pages = @(
             [Page]::new(
+                $this.Main.Window,
                 $myPrefs,
                 $MenuSpecs
             )
         )
 
-        $this.Main = New-ControlsMain `
-            -Preferences $myPrefs
-
+        $this.Main.Window.Title = $Preferences.Caption
         $this.InitKeyBindings()
     }
 
@@ -783,6 +810,8 @@ class Qform {
         $myPrefs = $Preferences.PsObject.Copy()
         $parameterSets = $CommandInfo.ParameterSets
 
+# # parse command info
+# - start
         if ($ParameterSetName) {
             $parameterSets = $parameterSets | Where-Object {
                 $_.Name -like $ParameterSetName
@@ -805,9 +834,14 @@ class Qform {
             } else {
                 0
             }
+# - end
+
+        $this.Main = New-ControlsMain `
+            -Preferences $myPrefs
 
         $this.Pages = $parameterSets | ForEach-Object {
             [Page]::new(
+                $this.Main.Window,
                 $_,
                 $myPrefs.PsObject.Copy(),
                 $IncludeCommonParameters,
@@ -815,13 +849,7 @@ class Qform {
             )
         }
 
-        if ($null -eq $this.Pages -or $this.Pages.Count -eq 0) {
-            $this.Main = Get-QformMenu
-        }
-        else {
-            $this.Main = New-ControlsMain `
-                -Preferences $myPrefs
-
+        if ($null -ne $this.Pages -and $this.Pages.Count -gt 0) {
             # issue: Event handler fails to update variable from outer scope
             # link:
             # - url: https://stackoverflow.com/questions/55403528/why-wont-variable-update
@@ -861,6 +889,7 @@ class Qform {
             $this.Main.Window.Add_KeyDown($closure)
         }
 
+        $this.Main.Window.Title = $Preferences.Caption
         $this.InitKeyBindings()
     }
 

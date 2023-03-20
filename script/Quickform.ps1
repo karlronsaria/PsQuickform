@@ -574,7 +574,7 @@ function Get-QformMenu {
 
         $answers = $myMenuSpecs `
             | Start-QformEvaluate `
-                -PageControl $form.PageControl `
+                -PageControl $form.PageControl() `
             | Get-NonEmptyObject `
                 -RemoveEmptyString
 
@@ -834,11 +834,11 @@ function Show-QformMenuForCommand {
         )
 
         $confirm = $form.ShowDialog()
-        $menuSpecs = $form.Pages[$form.CurrentIndex].MenuSpecs
+        $menuSpecs = $form.MenuSpecs()
 
         $formResult = $menuSpecs `
             | Start-QformEvaluate `
-                -PageControl $form.PageControl `
+                -PageControl $form.PageControl() `
             | Get-NonEmptyObject `
                 -RemoveEmptyString
 
