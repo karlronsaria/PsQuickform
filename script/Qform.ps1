@@ -320,7 +320,7 @@ class Page {
         $what = Set-QformMainLayout `
             -Window $Window `
             -MenuSpecs $MenuSpecs `
-            -Preferences $this.MenuSpecs `
+            -Preferences $myPrefs `
             -AddLines @('StatusLine')
 
         $this.PageControl = $what.PageControl
@@ -702,13 +702,58 @@ function Set-QformMainWindow {
 }
 
 class Qform {
-    $Main
+    $Main = $null
     $CurrentIndex = $null
     $DefaultIndex = $null
     $Pages = @()
     $InfoLines = @('PageLine', 'StatusLine')
     $PageLine = $false
     $Caption = ''
+    $TabControl = $null
+
+    hidden static [ScriptBlock] $UpdateGrid = {
+        Param([Qform] $Qform, [Int] $Index)
+        $Qform.Main.Grid.Children.Clear()
+        $Qform.Main.Grid.AddChild($Qform.Pages[$Index].FillLayout)
+    }
+
+    hidden static [ScriptBlock] $UpdateTabControl = {
+        Param([Qform] $Qform, [Int] $Index)
+        $Qform.TabControl.SelectedIndex = $Index
+    }
+
+    hidden static [ScriptBlock] $AddPageToGrid = {
+        Param([Qform] $Qform, [Page] $Page)
+        $Qform.Pages += @($Page)
+    }
+
+    hidden static [ScriptBlock] $AddPageToTabControl = {
+        Param([Qform] $Qform, [Page] $Page)
+        $Qform.Pages += @($Page)
+
+        Add-ControlsTabItem `
+            -TabControl $Qform.TabControl `
+            -Control $Page.FillLayout `
+            -Header $Page.Name
+    }
+
+    hidden [ScriptBlock] $MyUpdate
+    hidden [ScriptBlock] $MyAddPage
+
+    [void] InitMainFormType([Boolean] $IsTabControl) {
+        $this.PageLine = $this.PageLine -and -not $IsTabControl
+
+        if ($IsTabControl) {
+            $this.TabControl = New-Control TabControl
+            $this.AddToMainGrid($this.TabControl)
+            $this.MyUpdate = [Qform]::UpdateTabControl
+            $this.MyAddPage = [Qform]::AddPageToTabControl
+        }
+        else {
+            $this.MyUpdate = [Qform]::UpdateGrid
+            $this.MyAddPage = [Qform]::AddPageToGrid
+        }
+    }
 
     static [Int] FindDefaultParameterSet($CommandInfo) {
         $index = 0
@@ -759,42 +804,101 @@ class Qform {
             }
     }
 
+    [void] AddToMainGrid($Control) {
+        $this.Main.Grid.AddChild($Control)
+    }
+
+    [void] Update([Int] $Index) {
+        $this.MyUpdate.Invoke($this, $Index)
+    }
+
+    [void] AddPage([Page] $Page) {
+        $this.MyAddPage.Invoke($this, $Page)
+    }
+
+    hidden [void] SetPageLine() {
+        $page = $this.Pages[$this.CurrentIndex]
+        $control = $page.PageControl.Controls['__PageLine__']
+        $control.HorizontalAlignment = 'Center'
+
+        $control.Content =
+            [Qform]::GetPageLine(
+                $this.CurrentIndex,
+                $this.Pages.Count,
+                $page.Name
+            )
+    }
+
     [void] SetPage([Int] $Index) {
-        $page = $this.Pages[$Index]
-        $this.Main.Grid.Children.Clear()
-        $this.Main.Grid.AddChild($page.FillLayout)
+        $this.Update($Index)
 
         if ($this.PageLine) {
-            $control = $page.PageControl.Controls['__PageLine__']
-            $control.Content =
-                [Qform]::GetPageLine($Index, $this.Pages.Count, $page.Name)
-            $control.HorizontalAlignment = 'Center'
+            $this.SetPageLine()
         }
 
         $this.Main.Window.Focus()
     }
 
-    Qform(
+    static [Qform] SinglePage(
         [PsCustomObject] $Preferences,
         [PsCustomObject[]] $MenuSpecs
+    ) {
+        return [Qform]::new($Preferences, $MenuSpecs, $false)
+    }
+
+    static [Qform] CmdletGridForm(
+        [PsCustomObject] $Preferences,
+        $CommandInfo,
+        [String] $ParameterSetName,
+        [Boolean] $IncludeCommonParameters,
+        [Boolean] $IgnoreLists
+    ) {
+        return [Qform]::new(
+            $Preferences,
+            $CommandInfo,
+            $ParameterSetName,
+            $IncludeCommonParameters,
+            $IgnoreLists,
+            $false
+        )
+    }
+
+    static [Qform] CmdletTabForm(
+        [PsCustomObject] $Preferences,
+        $CommandInfo,
+        [String] $ParameterSetName,
+        [Boolean] $IncludeCommonParameters,
+        [Boolean] $IgnoreLists
+    ) {
+        return [Qform]::new(
+            $Preferences,
+            $CommandInfo,
+            $ParameterSetName,
+            $IncludeCommonParameters,
+            $IgnoreLists,
+            $true
+        )
+    }
+
+    Qform(
+        [PsCustomObject] $Preferences,
+        [PsCustomObject[]] $MenuSpecs,
+        [Boolean] $IsTabControl
     ) {
         $this.PageLine = $false
         $this.CurrentIndex =
             $this.DefaultIndex = 0
 
-        $myPrefs = $Preferences.PsObject.Copy()
+        $this.Main = New-ControlsMain
+        $this.InitMainFormType($IsTabControl)
 
-        $this.Main = New-ControlsMain `
-            -Preferences $myPrefs
-
-        $this.Pages = @(
-            [Page]::new(
-                $this.Main.Window,
-                $myPrefs,
-                $MenuSpecs
-            )
+        $page = [Page]::new(
+            $this.Main.Window,
+            $Preferences.PsObject.Copy(),
+            $MenuSpecs
         )
 
+        $this.AddPage($page)
         $this.Main.Window.Title = $Preferences.Caption
         $this.InitKeyBindings()
     }
@@ -804,14 +908,13 @@ class Qform {
         $CommandInfo,
         [String] $ParameterSetName,
         [Boolean] $IncludeCommonParameters,
-        [Boolean] $IgnoreLists
+        [Boolean] $IgnoreLists,
+        [Boolean] $IsTabControl
     ) {
         $this.PageLine = $true
         $myPrefs = $Preferences.PsObject.Copy()
         $parameterSets = $CommandInfo.ParameterSets
 
-# # parse command info
-# - start
         if ($ParameterSetName) {
             $parameterSets = $parameterSets | Where-Object {
                 $_.Name -like $ParameterSetName
@@ -834,27 +937,23 @@ class Qform {
             } else {
                 0
             }
-# - end
 
-        $this.Main = New-ControlsMain `
-            -Preferences $myPrefs
+        $this.Main = New-ControlsMain
+        $this.InitMainFormType($IsTabControl)
 
-        $this.Pages = $parameterSets | ForEach-Object {
-            [Page]::new(
+        foreach ($parameterSet in $parameterSets) {
+            $page = [Page]::new(
                 $this.Main.Window,
-                $_,
+                $parameterSet,
                 $myPrefs.PsObject.Copy(),
                 $IncludeCommonParameters,
                 $IgnoreLists
             )
+
+            $this.AddPage($page)
         }
 
         if ($null -ne $this.Pages -and $this.Pages.Count -gt 0) {
-            # issue: Event handler fails to update variable from outer scope
-            # link:
-            # - url: https://stackoverflow.com/questions/55403528/why-wont-variable-update
-            # - retreived: 2022_03_02
-
             $closure = New-Closure `
                 -InputObject $this `
                 -ScriptBlock {
@@ -862,8 +961,6 @@ class Qform {
                     $isKeyCombo = [System.Windows.Input.Keyboard]::Modifiers `
                         -and [System.Windows.Input.ModifierKeys]::Alt
 
-# todo: switch to tab control
-# start
                     if ($isKeyCombo) {
                         if ([System.Windows.Input.Keyboard]::IsKeyDown(
                             'Right'
@@ -883,7 +980,6 @@ class Qform {
                     if ($refresh) {
                         $InputObject.SetPage($InputObject.CurrentIndex)
                     }
-# end
                 }
 
             $this.Main.Window.Add_KeyDown($closure)

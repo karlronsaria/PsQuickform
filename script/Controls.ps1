@@ -3,6 +3,12 @@
 . $PsScriptRoot\Other.ps1
 . $PsScriptRoot\NumberSlider.ps1
 
+<#
+.LINK
+Issue: Event handler fails to update variable from outer scope
+Url: https://stackoverflow.com/questions/55403528/why-wont-variable-update
+Retreived: 2022_03_02
+#>
 function New-Closure {
     Param(
         [ScriptBlock]
@@ -141,8 +147,8 @@ function Add-ControlsTabItem {
         [System.Windows.Controls.TabControl]
         $TabControl,
 
-        [PsCustomObject]
-        $PageControl,
+        [System.Windows.FrameworkElement]
+        $Control,
 
         [String]
         $Header
@@ -150,14 +156,14 @@ function Add-ControlsTabItem {
 
     $tab = New-Control TabItem
     $tab.Header = $Header
-    $tab.AddChild($PageControl.Multilayout)
-    $TabControl.AddChild($tab)
+    $tab.AddChild($Control)
+    $TabControl.Items.Add($tab)
 }
 
 function New-ControlsTabLayout {
     Param(
-        [PsCustomObject[]]
-        $PageControl,
+        [System.Windows.FrameworkElement[]]
+        $Control,
 
         [String[]]
         $Header
@@ -169,7 +175,7 @@ function New-ControlsTabLayout {
 
     while ($index -lt $count) {
         Add-ControlsTabItem `
-            -PageControl @($PageControl)[$index] `
+            -Control @($Control)[$index] `
             -Header @($Header)[$index]
 
         $index = $index + 1
@@ -306,18 +312,7 @@ function Set-ControlsStyleTransparent {
 }
 
 function New-ControlsMain {
-    Param(
-        [PsCustomObject]
-        $Preferences
-    )
-
-    if ($null -eq $Preferences) {
-        $Preferences = Get-Content "$PsScriptRoot/../res/preference.json" `
-            | ConvertFrom-Json
-    }
-
     $form = New-Object System.Windows.Window
-    $form.Title = $Preferences.Caption
     $form.SizeToContent = 'WidthAndHeight'
     $form.WindowStartupLocation = 'CenterScreen'
 
@@ -768,10 +763,10 @@ function Add-ControlsListBox {
             $statusLine = $InputObject.StatusLine
             $myEventArgs = $_
 
-            $isKeyComb = [System.Windows.Input.Keyboard]::Modifiers `
+            $isKeyCombo = [System.Windows.Input.Keyboard]::Modifiers `
                 -and [System.Windows.Input.ModifierKeys]::Alt
 
-            if ($isKeyComb) {
+            if ($isKeyCombo) {
                 if ([System.Windows.Input.Keyboard]::IsKeyDown('C')) {
                     $index = $listBox.SelectedIndex
 
@@ -802,9 +797,7 @@ function Add-ControlsListBox {
                     }
 
                     $listBox.UnselectAll()
-
-                    # # TODO: Remove once new solution is verified
-                    # $myEventArgs.Handled = $true
+                    $myEventArgs.Handled = $true
                 }
             }
 
@@ -906,10 +899,10 @@ function Add-ControlsFieldBox {
             $monthCalendarPrefs = $InputObject
             $myEventArgs = $_
 
-            $isKeyComb = [System.Windows.Input.Keyboard]::Modifiers `
+            $isKeyCombo = [System.Windows.Input.Keyboard]::Modifiers `
                 -and [System.Windows.Input.ModifierKeys]::Control
 
-            if ($isKeyComb) {
+            if ($isKeyCombo) {
                 if ([System.Windows.Input.Keyboard]::IsKeyDown('O')) {
                     . $PsScriptRoot\Controls.ps1
 

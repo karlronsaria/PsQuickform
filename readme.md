@@ -237,6 +237,10 @@ To query for the path to the default preferences file, call the `$QFORM_DEFAULTS
 - [ ] document Table type
 - feat
   - [ ] dark theme
-  - [ ] parameter set tabs
   - [ ] scrollbar version
+  - [x] parameter set tabs
+
+# Issues
+
+[Issues](./doc/issue.md)
 

@@ -565,7 +565,8 @@ function Get-QformMenu {
         $myPreferences = Get-QformPreference `
             -Preferences $Preferences.PsObject.Copy()
 
-        $form = [Qform]::new(
+        # $form = [Qform]::new(
+        $form = [Qform]::SinglePage(
             $myPreferences,
             $myMenuSpecs
         )
@@ -825,7 +826,7 @@ function Show-QformMenuForCommand {
         $preferences = Get-QformPreference `
             -Preferences $preferences
 
-        $form = [Qform]::new(
+        $form = [Qform]::CmdletTabForm(
             $preferences,
             $CommandInfo,
             $ParameterSetName,
