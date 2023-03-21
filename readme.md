@@ -240,7 +240,7 @@ To query for the path to the default preferences file, call the `$QFORM_DEFAULTS
   - [ ] scrollbar version
   - [x] parameter set tabs
 
-# Issues
+---
 
 [Issues](./doc/issue.md)
 
