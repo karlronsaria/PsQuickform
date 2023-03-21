@@ -170,7 +170,7 @@ function New-ControlsTabLayout {
     )
 
     $tabs = New-Control TabControl
-    $count = [Math]::Min($PageControl.Count, $Header.Count)
+    $count = [Math]::Min($Control.Count, $Header.Count)
     $index = 0
 
     while ($index -lt $count) {
@@ -340,35 +340,6 @@ function New-Control {
     return $control
 }
 
-function Add-ControlsCheckBox {
-    Param(
-        [PsCustomObject]
-        $PageControl,
-
-        [String]
-        $Text,
-
-        $Default,
-
-        [PsCustomObject]
-        $Preferences
-    )
-
-    $checkBox = New-Control CheckBox
-    $checkBox.Content = $Text
-
-    if ($null -ne $Default) {
-        $checkBox.IsChecked = $Default
-    }
-
-    $PageControl = Add-ControlToMultilayout `
-        -PageControl $PageControl `
-        -Control $checkBox `
-        -Preferences $Preferences
-
-    return $checkBox
-}
-
 function Get-ControlsAsterized {
     Param(
         $Control
@@ -455,6 +426,38 @@ function Get-ControlsTextDialog {
     return $textBox.Text
 }
 
+function Add-ControlsCheckBox {
+    Param(
+        [PsCustomObject]
+        $PageControl,
+
+        [String]
+        $Text,
+
+        $Default,
+
+        [PsCustomObject]
+        $Preferences
+    )
+
+# new
+    $checkBox = New-Control CheckBox
+    $checkBox.Content = $Text
+
+    if ($null -ne $Default) {
+        $checkBox.IsChecked = $Default
+    }
+
+# add
+    $PageControl = Add-ControlToMultilayout `
+        -PageControl $PageControl `
+        -Control $checkBox `
+        -Preferences $Preferences
+
+# return
+    return $checkBox
+}
+
 function Add-ControlsTable {
     Param(
         [PsCustomObject]
@@ -473,12 +476,14 @@ function Add-ControlsTable {
         $Preferences
     )
 
+# new
     $tableControl = New-ControlsTable `
         -Text $Text `
         -Rows $Rows `
         -Asterized:$Mandatory `
         -Margin $Preferences.Margin
 
+# add
     $PageControl = Add-ControlToMultilayout `
         -PageControl $PageControl `
         -Control $tableControl.GroupBox `
@@ -492,6 +497,7 @@ function Add-ControlsTable {
         $this.Width = [double]::NaN
     })
 
+# return
     return $tableControl.ListView
 }
 
@@ -517,6 +523,7 @@ function Add-ControlsListBox {
         $Preferences
     )
 
+# new
     $outerPanel = New-Control StackPanel
     $mainPanel = New-Control DockPanel
     $buttonPanel = New-Control StackPanel
@@ -553,7 +560,6 @@ function Add-ControlsListBox {
         ListBox = $listBox
         MaxCount = $MaxCount
         MaxLength = $MaxLength
-        PageControl = $PageControl
         StatusLine = $StatusLine
         Preferences = $Preferences
     }
@@ -564,7 +570,6 @@ function Add-ControlsListBox {
             $listBox = $InputObject.ListBox
             $maxCount = $InputObject.MaxCount
             $maxLength = $InputObject.MaxLength
-            $pageControl = $InputObject.PageControl
             $statusLine = $InputObject.StatusLine
             $prefs = $InputObject.Preferences
             $index = $listBox.SelectedIndex
@@ -745,7 +750,6 @@ function Add-ControlsListBox {
 
     $parameters = [PsCustomObject]@{
         ListBox = $listBox
-        PageControl = $PageControl
         NewAction = $newAction
         EditAction = $editAction
         DeleteAction = $deleteAction
@@ -756,7 +760,6 @@ function Add-ControlsListBox {
         -InputObject $parameters `
         -ScriptBlock {
             $listBox = $InputObject.ListBox
-            $pageControl = $InputObject.PageControl
             $newAction = $InputObject.NewAction
             $editAction = $InputObject.EditAction
             $deleteAction = $InputObject.DeleteAction
@@ -845,11 +848,13 @@ function Add-ControlsListBox {
     $outerPanel.AddChild($asterism)
     $outerPanel.AddChild($mainPanel)
 
+# add
     $PageControl = Add-ControlToMultilayout `
         -PageControl $PageControl `
         -Control $outerPanel `
         -Preferences $Preferences
 
+# return
     return $listBox
 }
 
@@ -877,6 +882,7 @@ function Add-ControlsFieldBox {
         $Preferences
     )
 
+# new
     $stackPanel = New-Control StackPanel
     $label = New-Control Label
     $label.Content = $Text
@@ -946,11 +952,13 @@ function Add-ControlsFieldBox {
     $stackPanel.AddChild($label)
     $stackPanel.AddChild($row2)
 
+# add
     $PageControl = Add-ControlToMultilayout `
         -PageControl $PageControl `
         -Control $stackPanel `
         -Preferences $Preferences
 
+# return
     return $textBox
 }
 
@@ -998,6 +1006,7 @@ function Add-ControlsSlider {
         $Preferences
     )
 
+# new
     if ($null -eq $Minimum) {
         $Minimum = $Preferences.NumericMinimum
     }
@@ -1071,11 +1080,13 @@ function Add-ControlsSlider {
     $dockPanel.AddChild($label)
     $dockPanel.AddChild($row2)
 
+# add
     $PageControl = Add-ControlToMultilayout `
         -PageControl $PageControl `
         -Control $dockPanel `
         -Preferences $Preferences
 
+# retrun
     return $slider
 }
 
@@ -1105,6 +1116,7 @@ function Add-ControlsRadioBox {
         $Preferences
     )
 
+# new
     $groupBox = New-Control GroupBox
     $groupBox.Header = $Text
 
@@ -1146,11 +1158,13 @@ function Add-ControlsRadioBox {
         $buttons[$key].IsChecked = $true
     }
 
+# add
     $PageControl = Add-ControlToMultilayout `
         -PageControl $PageControl `
         -Control $groupBox `
         -Preferences $Preferences
 
+# return
     return $buttons
 }
 
@@ -1334,14 +1348,17 @@ function Add-ControlsOkCancelButtons {
         $Preferences
     )
 
+# new
     $endButtons = New-ControlsOkCancelButtons `
         -Preferences $Preferences
 
+# add
     $PageControl = Add-ControlToMultilayout `
         -PageControl $PageControl `
         -Control $endButtons.Panel `
         -Preferences $Preferences
 
+# return
     return [PsCustomObject]@{
         OkButton = $endButtons.OkButton
         CancelButton = $endButtons.CancelButton
