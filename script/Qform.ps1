@@ -361,16 +361,13 @@ class Page {
     }
 }
 
-function Set-QformLayout {
+function Get-QformLayout {
     [OutputType([Hashtable])]
     [CmdletBinding()]
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [PsCustomObject[]]
         $MenuSpecs,
-
-        [PsCustomObject]
-        $PageControl,
 
         [System.Windows.Window]
         $Window,
@@ -383,8 +380,8 @@ function Set-QformLayout {
     )
 
     Begin {
-        $controlTable = @{}
         $mandates = @()
+        $list = @()
     }
 
     Process {
@@ -500,19 +497,18 @@ function Set-QformLayout {
                 }
             }
 
-            $PageControl = Add-ControlToMultilayout `
-                -PageControl $PageControl `
-                -Control $what.Container `
-                -Preferences $Preferences
-
-            $controlTable.Add($item.Name, $what.Object)
-
             if ($mandatory) {
                 $mandates += @([PsCustomObject]@{
                     Type = $item.Type
                     Control = $what.Object
                 })
             }
+
+            $list += @([PsCustomObject]@{
+                Name = $item.Name
+                Container = $what.Container
+                Object = $what.Object
+            })
         }
     }
 
@@ -520,10 +516,11 @@ function Set-QformLayout {
         $what = New-ControlsOkCancelButtons `
             -Preferences $Preferences
 
-        $PageControl = Add-ControlToMultilayout `
-            -PageControl $PageControl `
-            -Control $what.Container `
-            -Preferences $Preferences
+        $list += @([PsCustomObject]@{
+            Name = '__EndButtons__'
+            Container = $what.Container
+            Object = $what.Object
+        })
 
         $endButtons = $what.Object
 
@@ -596,13 +593,7 @@ function Set-QformLayout {
         }
 
         $endButtons.OkButton.Add_Click($action)
-        $controlTable.Add('__EndButtons__', $endButtons)
-
-        foreach ($key in $controlTable.Keys) {
-            $PageControl.Controls.Add($key, $controlTable[$key])
-        }
-
-        return $PageControl
+        return $list
     }
 }
 
@@ -643,11 +634,19 @@ function Set-QformMainLayout {
         $pageControl.Controls.Add("__$($lineName)__", $line)
     }
 
-    $pageControl = $MenuSpecs | Set-QformLayout `
-        -Window $Window `
-        -PageControl $pageControl `
-        -StatusLine $statusLine `
-        -Preferences $Preferences
+    $MenuSpecs `
+        | Get-QformLayout `
+            -Window $Window `
+            -StatusLine $statusLine `
+            -Preferences $Preferences `
+        | foreach {
+            $pageControl.Controls.Add($_.Name, $_.Object)
+
+            $pageControl = Add-ControlToMultilayout `
+                -PageControl $pageControl `
+                -Control $_.Container `
+                -Preferences $Preferences
+        }
 
     # Resolve a possible race condition
     while ($null -eq $pageControl.Multilayout) { }
