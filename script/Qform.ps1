@@ -400,7 +400,7 @@ function Set-QformLayout {
 
             $mandatory = $false
 
-            $value = switch ($item.Type) {
+            $what = switch ($item.Type) {
                 'Check' {
                     Add-ControlsCheckBox `
                         -PageControl $PageControl `
@@ -495,7 +495,7 @@ function Set-QformLayout {
                         -Default $false;
                     $rows = $item | Get-PropertyOrDefault `
                         -Name Rows `
-                        -Default @()
+                        -Default @();
 
                     Add-ControlsTable `
                         -PageControl $PageControl `
@@ -506,21 +506,33 @@ function Set-QformLayout {
                 }
             }
 
-            $controlTable.Add($item.Name, $value)
+            $PageControl = Add-ControlToMultilayout `
+                -PageControl $PageControl `
+                -Control $what.Add `
+                -Preferences $Preferences
+
+            $controlTable.Add($item.Name, $what.Query)
 
             if ($mandatory) {
                 $mandates += @([PsCustomObject]@{
                     Type = $item.Type
-                    Control = $value
+                    Control = $what.Query
                 })
             }
         }
     }
 
     End {
-        $endButtons = Add-ControlsOkCancelButtons `
+        $what = Add-ControlsOkCancelButtons `
             -PageControl $PageControl `
             -Preferences $Preferences
+
+        $PageControl = Add-ControlToMultilayout `
+            -PageControl $PageControl `
+            -Control $what.Add `
+            -Preferences $Preferences
+
+        $endButtons = $what.Query
 
         $endButtons.CancelButton.Add_Click(( `
             New-Closure `

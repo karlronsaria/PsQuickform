@@ -109,14 +109,19 @@ function New-ControlsLayout {
 
     $layout = New-Control StackPanel
     $layout.Width = $Preferences.Width
+    $layout.MinWidth = $Preferences.Width
 
-    $layout.Add_Loaded({
-        if ([double]::IsNaN($this.Width)) {
-            $this.Width = $this.ActualWidth
-        }
+    $layout.Add_Loaded((
+        New-Closure `
+            -InputObject $Preferences.Width `
+            -ScriptBlock {
+                if ([double]::IsNaN($this.Width)) {
+                    $this.Width = $this.ActualWidth
+                }
 
-        $this.Width = [double]::NaN
-    })
+                $this.Width = [double]::NaN
+            } `
+    ))
 
     return $layout
 }
@@ -458,14 +463,10 @@ function Add-ControlsCheckBox {
     $add = $checkBox
     $query = $checkBox
 
-# add
-    $PageControl = Add-ControlToMultilayout `
-        -PageControl $PageControl `
-        -Control $add `
-        -Preferences $Preferences
-
-# return
-    return $query
+    return [PsCustomObject]@{
+        Add = $add
+        Query = $query
+    }
 }
 
 function Add-ControlsTable {
@@ -496,14 +497,10 @@ function Add-ControlsTable {
     $add = $tableControl.GroupBox
     $query = $tableControl.ListView
 
-# add
-    $PageControl = Add-ControlToMultilayout `
-        -PageControl $PageControl `
-        -Control $add `
-        -Preferences $Preferences
-
-# return
-    return $query
+    return [PsCustomObject]@{
+        Add = $add
+        Query = $query
+    }
 }
 
 function Add-ControlsListBox {
@@ -856,14 +853,10 @@ function Add-ControlsListBox {
     $add = $outerPanel
     $query = $listBox
 
-# add
-    $PageControl = Add-ControlToMultilayout `
-        -PageControl $PageControl `
-        -Control $add `
-        -Preferences $Preferences
-
-# return
-    return $query
+    return [PsCustomObject]@{
+        Add = $add
+        Query = $query
+    }
 }
 
 <#
@@ -963,14 +956,10 @@ function Add-ControlsFieldBox {
     $add = $stackPanel
     $query = $textBox
 
-# add
-    $PageControl = Add-ControlToMultilayout `
-        -PageControl $PageControl `
-        -Control $add `
-        -Preferences $Preferences
-
-# return
-    return $query
+    return [PsCustomObject]@{
+        Add = $add
+        Query = $query
+    }
 }
 
 function New-ControlsSlider {
@@ -1094,14 +1083,10 @@ function Add-ControlsSlider {
     $add = $dockPanel
     $query = $slider
 
-# add
-    $PageControl = Add-ControlToMultilayout `
-        -PageControl $PageControl `
-        -Control $add `
-        -Preferences $Preferences
-
-# retrun
-    return $query
+    return [PsCustomObject]@{
+        Add = $add
+        Query = $query
+    }
 }
 
 <#
@@ -1175,14 +1160,10 @@ function Add-ControlsRadioBox {
     $add = $groupBox
     $query = $buttons
 
-# add
-    $PageControl = Add-ControlToMultilayout `
-        -PageControl $PageControl `
-        -Control $add `
-        -Preferences $Preferences
-
-# return
-    return $query
+    return [PsCustomObject]@{
+        Add = $add
+        Query = $query
+    }
 }
 
 function New-ControlsTable {
@@ -1375,14 +1356,10 @@ function Add-ControlsOkCancelButtons {
         CancelButton = $endButtons.CancelButton
     }
 
-# add
-    $PageControl = Add-ControlToMultilayout `
-        -PageControl $PageControl `
-        -Control $add `
-        -Preferences $Preferences
-
-# return
-    return $query
+    return [PsCustomObject]@{
+        Add = $add
+        Query = $query
+    }
 }
 
 function Open-ControlsTable {
