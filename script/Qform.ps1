@@ -1,7 +1,7 @@
 #Requires -Assembly PresentationFramework
 
 . $PsScriptRoot\Controls.ps1
-. $PsScriptRoot\Multipanel.ps1
+. $PsScriptRoot\OverflowLayout.ps1
 
 <#
     .SYNOPSIS
@@ -308,21 +308,50 @@ class Page {
     $FillLayout = $null
     $StatusLine = $null
 
+    hidden static [ScriptBlock] $BuildMultipanelPage = {
+        Param($MainPanel, $Control, $Preferences)
+
+        return Add-ControlToMultipanel `
+            -Multipanel $MainPanel `
+            -Control $Control `
+            -Preferences $Preferences
+    }
+
+    hidden static [ScriptBlock] $BuildScrollPanelPage = {
+        Param($MainPanel, $Control, $Preferences)
+
+        return Add-ControlToScrollPanel `
+            -ScrollPanel $MainPanel `
+            -Control $Control `
+            -Preferences $Preferences
+    }
+
     Page(
         [System.Windows.Window] $Window,
         [PsCustomObject] $Preferences,
-        [PsCustomObject[]] $MenuSpecs
+        [PsCustomObject[]] $MenuSpecs,
+        [String] $Type
     ) {
         $this.MenuSpecs = $MenuSpecs
 
         $Preferences = Get-QformPreference `
             -Preferences $Preferences.PsObject.Copy()
 
+        $buildPage = switch ($Type) {
+            'Multipanel' {
+                [Page]::BuildMultipanelPage
+            }
+            'ScrollPanel' {
+                [Page]::BuildScrollPanelPage
+            }
+        }
+
         $what = Get-QformMainLayout `
             -Window $Window `
             -MenuSpecs $MenuSpecs `
             -Preferences $Preferences `
-            -AddLines @('StatusLine')
+            -AddLines @('StatusLine') `
+            -AddToMainPanel $buildPage
 
         $this.Controls = $what.Controls
         $this.FillLayout = $what.FillLayout
@@ -334,7 +363,8 @@ class Page {
         $ParameterSet,
         $Preferences,
         [Switch] $IncludeCommonParameters,
-        [Switch] $IgnoreLists
+        [Switch] $IgnoreLists,
+        [String] $Type
     ) {
         $this.Name = $ParameterSet.Name
 
@@ -350,11 +380,21 @@ class Page {
         $Preferences = Get-QformPreference `
             -Preferences $Preferences.PsObject.Copy()
 
+        $buildPage = switch ($Type) {
+            'Multipanel' {
+                [Page]::BuildMultipanelPage
+            }
+            'ScrollPanel' {
+                [Page]::BuildScrollPanelPage
+            }
+        }
+
         $what = Get-QformMainLayout `
             -Window $Window `
             -MenuSpecs $this.MenuSpecs `
             -Preferences $Preferences `
-            -AddLines @('StatusLine', 'PageLine')
+            -AddLines @('StatusLine', 'PageLine') `
+            -AddToMainPanel $buildPage
 
         $this.Controls = $what.Controls
         $this.FillLayout = $what.FillLayout
@@ -611,7 +651,10 @@ function Get-QformMainLayout {
 
         [ValidateSet('StatusLine', 'PageLine')]
         [String[]]
-        $AddLines = @('StatusLine')
+        $AddLines = @('StatusLine'),
+
+        [ScriptBlock]
+        $AddToMainPanel
     )
 
     $controls = @{}
@@ -645,10 +688,18 @@ function Get-QformMainLayout {
             -StatusLine $statusLine `
             -Preferences $Preferences `
         | foreach {
+            $mainPanel = & $AddToMainPanel `
+                -MainPanel $mainPanel `
+                -Control $_.Container `
+                -Preferences $Preferences
+
+<#
+# todo
             $mainPanel = Add-ControlToMultipanel `
                 -Multipanel $mainPanel `
                 -Control $_.Container `
                 -Preferences $Preferences
+#>
 
             $controls.Add($_.Name, $_.Object)
         }
@@ -711,19 +762,18 @@ class Qform {
     hidden [ScriptBlock] $MyUpdate
     hidden [ScriptBlock] $MyAddPage
 
-    [void] InitMainFormType([Boolean] $IsTabControl) {
-        $this.PageLine = $this.PageLine -and -not $IsTabControl
+    hidden [void] InitTabControl() {
+        $this.PageLine = $false
+        $this.TabControl = New-Control TabControl
+        $this.AddToMainGrid($this.TabControl)
+        $this.MyUpdate = [Qform]::UpdateTabControl
+        $this.MyAddPage = [Qform]::AddPageToTabControl
+    }
 
-        if ($IsTabControl) {
-            $this.TabControl = New-Control TabControl
-            $this.AddToMainGrid($this.TabControl)
-            $this.MyUpdate = [Qform]::UpdateTabControl
-            $this.MyAddPage = [Qform]::AddPageToTabControl
-        }
-        else {
-            $this.MyUpdate = [Qform]::UpdateGrid
-            $this.MyAddPage = [Qform]::AddPageToGrid
-        }
+    hidden [void] InitRefreshControl() {
+        $this.PageLine = $this.PageLine
+        $this.MyUpdate = [Qform]::UpdateGrid
+        $this.MyAddPage = [Qform]::AddPageToGrid
     }
 
     static [Int] FindDefaultParameterSet($CommandInfo) {
@@ -861,12 +911,19 @@ class Qform {
             $this.DefaultIndex = 0
 
         $this.Main = New-ControlsMain
-        $this.InitMainFormType($IsTabControl)
+
+        if ($IsTabControl) {
+            $this.InitTabControl()
+        }
+        else {
+            $this.InitRefreshControl()
+        }
 
         $page = [Page]::new(
             $this.Main.Window,
             $Preferences.PsObject.Copy(),
-            $MenuSpecs
+            $MenuSpecs,
+            'ScrollPanel'
         )
 
         $this.AddPage($page)
@@ -909,7 +966,13 @@ class Qform {
             }
 
         $this.Main = New-ControlsMain
-        $this.InitMainFormType($IsTabControl)
+
+        if ($IsTabControl) {
+            $this.InitTabControl()
+        }
+        else {
+            $this.InitRefreshControl()
+        }
 
         foreach ($parameterSet in $parameterSets) {
             $page = [Page]::new(
@@ -917,7 +980,8 @@ class Qform {
                 $parameterSet,
                 $Preferences,
                 $IncludeCommonParameters,
-                $IgnoreLists
+                $IgnoreLists,
+                'ScrollPanel'
             )
 
             $this.AddPage($page)
@@ -959,7 +1023,7 @@ class Qform {
         $this.InitKeyBindings()
     }
 
-    [void] InitKeyBindings() {
+    hidden [void] InitKeyBindings() {
         $prefs = $this.Pages[$this.CurrentIndex].Preferences
 
         if ($prefs.EnterToConfirm) {
