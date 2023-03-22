@@ -613,9 +613,7 @@ function Set-QformMainLayout {
         $AddLines = @('StatusLine')
     )
 
-    $pageControl = New-ControlsMultilayout `
-        -Preferences $Preferences
-
+    $controls = @()
     $lineNames = @()
     $statusLine = $null
 
@@ -628,11 +626,22 @@ function Set-QformMainLayout {
 
         if ($lineName -eq 'StatusLine') {
             $statusLine = $line
+
+            Set-ControlsStatus `
+                -StatusLine $statusLine `
+                -LineName 'Idle'
         }
 
         $lineNames += @($lineName)
-        $pageControl.Controls.Add("__$($lineName)__", $line)
+
+        $controls += @([PsCustomObject]@{
+            Name = "__$($lineName)__"
+            Object = $line
+        })
     }
+
+    $pageControl = New-ControlsMultilayout `
+        -Preferences $Preferences
 
     $MenuSpecs `
         | Get-QformLayout `
@@ -640,13 +649,17 @@ function Set-QformMainLayout {
             -StatusLine $statusLine `
             -Preferences $Preferences `
         | foreach {
-            $pageControl.Controls.Add($_.Name, $_.Object)
-
             $pageControl = Add-ControlToMultilayout `
                 -PageControl $pageControl `
                 -Control $_.Container `
                 -Preferences $Preferences
+
+            $controls += @($_)
         }
+
+    foreach ($control in $controls) {
+        $pageControl.Controls.Add($control.Name, $control.Object)
+    }
 
     # Resolve a possible race condition
     while ($null -eq $pageControl.Multilayout) { }
@@ -656,12 +669,6 @@ function Set-QformMainLayout {
 
     foreach ($lineName in $lineNames) {
         $fillLayout.AddChild($pageControl.Controls["__$($lineName)__"])
-    }
-
-    if ('StatusLine' -in $lineNames) {
-        Set-ControlsStatus `
-            -StatusLine $statusLine `
-            -LineName 'Idle'
     }
 
     return [PsCustomObject]@{
