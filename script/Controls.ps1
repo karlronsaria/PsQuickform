@@ -450,7 +450,6 @@ function New-ControlsCheckBox {
         $Preferences
     )
 
-# new
     $checkBox = New-Control CheckBox
     $checkBox.Content = $Text
 
@@ -458,12 +457,9 @@ function New-ControlsCheckBox {
         $checkBox.IsChecked = $Default
     }
 
-    $add = $checkBox
-    $query = $checkBox
-
     return [PsCustomObject]@{
-        Child = $add
-        Query = $query
+        Container = $checkBox
+        Object = $checkBox
     }
 }
 
@@ -486,7 +482,6 @@ function New-ControlsListBox {
         $Preferences
     )
 
-# new
     $outerPanel = New-Control StackPanel
     $mainPanel = New-Control DockPanel
     $buttonPanel = New-Control StackPanel
@@ -811,21 +806,12 @@ function New-ControlsListBox {
     $outerPanel.AddChild($asterism)
     $outerPanel.AddChild($mainPanel)
 
-    $add = $outerPanel
-    $query = $listBox
-
     return [PsCustomObject]@{
-        Child = $add
-        Query = $query
+        Container = $outerPanel
+        Object = $listBox
     }
 }
 
-<#
-    .NOTE
-    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
-    operative control, to a target container. 'Add-' rather than 'New-'
-    helps encapsulate inoperative controls.
-#>
 function New-ControlsFieldBox {
     Param(
         [String]
@@ -841,7 +827,6 @@ function New-ControlsFieldBox {
         $Preferences
     )
 
-# new
     $stackPanel = New-Control StackPanel
     $label = New-Control Label
     $label.Content = $Text
@@ -911,21 +896,12 @@ function New-ControlsFieldBox {
     $stackPanel.AddChild($label)
     $stackPanel.AddChild($row2)
 
-    $add = $stackPanel
-    $query = $textBox
-
     return [PsCustomObject]@{
-        Child = $add
-        Query = $query
+        Container = $stackPanel
+        Object = $textBox
     }
 }
 
-<#
-    .NOTE
-    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
-    operative control, to a target container. 'Add-' rather than 'New-'
-    helps encapsulate inoperative controls.
-#>
 function New-ControlsSlider {
     Param(
         [String]
@@ -946,7 +922,6 @@ function New-ControlsSlider {
         $Preferences
     )
 
-# new
     if ($null -eq $Minimum) {
         $Minimum = $Preferences.NumericMinimum
     }
@@ -1017,21 +992,12 @@ function New-ControlsSlider {
     $dockPanel.AddChild($label)
     $dockPanel.AddChild($row2)
 
-    $add = $dockPanel
-    $query = $slider
-
     return [PsCustomObject]@{
-        Child = $add
-        Query = $query
+        Container = $dockPanel
+        Object = $slider
     }
 }
 
-<#
-    .NOTE
-    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
-    operative control, to a target container. 'Add-' rather than 'New-'
-    helps encapsulate inoperative controls.
-#>
 function New-ControlsRadioBox {
     Param(
         [String]
@@ -1049,7 +1015,6 @@ function New-ControlsRadioBox {
         $Preferences
     )
 
-# new
     $groupBox = New-Control GroupBox
     $groupBox.Header = $Text
 
@@ -1091,12 +1056,9 @@ function New-ControlsRadioBox {
         $buttons[$key].IsChecked = $true
     }
 
-    $add = $groupBox
-    $query = $buttons
-
     return [PsCustomObject]@{
-        Child = $add
-        Query = $query
+        Container = $groupBox
+        Object = $buttons
     }
 }
 
@@ -1229,12 +1191,9 @@ function New-ControlsTable {
             }
     ))
 
-    $add = $groupBox
-    $query = $listView
-
     return [PsCustomObject]@{
-        Child = $add
-        Query = $query
+        Container = $groupBox
+        Object = $listView
     }
 }
 
@@ -1262,8 +1221,8 @@ function New-ControlsOkCancelButtons {
     $endButtons.HorizontalAlignment = 'Center'
 
     return [PsCustomObject]@{
-        Child = $endButtons
-        Query = [PsCustomObject]@{
+        Container = $endButtons
+        Object = [PsCustomObject]@{
             OkButton = $okButton
             CancelButton = $cancelButton
         }
@@ -1312,11 +1271,11 @@ function Open-ControlsTable {
             $InputObject.Close()
         }
 
-    $endButtons.Query.OkButton.Add_Click($okAction)
-    $endButtons.Query.CancelButton.Add_Click($cancelAction)
+    $endButtons.Object.OkButton.Add_Click($okAction)
+    $endButtons.Object.CancelButton.Add_Click($cancelAction)
 
-    $main.Grid.AddChild($tableControl.Child)
-    $main.Grid.AddChild($endButtons.Child)
+    $main.Grid.AddChild($tableControl.Container)
+    $main.Grid.AddChild($endButtons.Container)
 
     $parameters = [PsCustomObject]@{
         OkAction = $okAction
@@ -1345,7 +1304,7 @@ function Open-ControlsTable {
         return
     }
 
-    return $tableControl.Query.SelectedItems
+    return $tableControl.Object.SelectedItems
 }
 
 function Open-ControlsFileDialog {
@@ -1449,7 +1408,7 @@ function Open-ControlsMonthCalendar {
     $main.Grid.AddChild($calendar)
     $main.Grid.AddChild($label)
     $main.Grid.AddChild($textBox)
-    $main.Grid.AddChild($endButtons.Child)
+    $main.Grid.AddChild($endButtons.Container)
 
     $parameters = [PsCustomObject]@{
         OkAction = $okAction

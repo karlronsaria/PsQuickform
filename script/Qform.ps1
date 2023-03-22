@@ -502,15 +502,15 @@ function Set-QformLayout {
 
             $PageControl = Add-ControlToMultilayout `
                 -PageControl $PageControl `
-                -Control $what.Child `
+                -Control $what.Container `
                 -Preferences $Preferences
 
-            $controlTable.Add($item.Name, $what.Query)
+            $controlTable.Add($item.Name, $what.Object)
 
             if ($mandatory) {
                 $mandates += @([PsCustomObject]@{
                     Type = $item.Type
-                    Control = $what.Query
+                    Control = $what.Object
                 })
             }
         }
@@ -522,10 +522,10 @@ function Set-QformLayout {
 
         $PageControl = Add-ControlToMultilayout `
             -PageControl $PageControl `
-            -Control $what.Child `
+            -Control $what.Container `
             -Preferences $Preferences
 
-        $endButtons = $what.Query
+        $endButtons = $what.Object
 
         $endButtons.CancelButton.Add_Click(( `
             New-Closure `
