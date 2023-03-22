@@ -2,16 +2,16 @@
 
 . $PsScriptRoot\Controls.ps1
 
-function New-ControlsMultilayout {
+function New-ControlsMultipanel {
     Param(
         [PsCustomObject]
         $Preferences
     )
 
-    $multilayout = New-Control StackPanel
-    $multilayout.MaxWidth = [Double]::PositiveInfinity
-    $multilayout.Orientation = 'Horizontal'
-    $multilayout.Margin = $Preferences.Margin
+    $container = New-Control StackPanel
+    $container.MaxWidth = [Double]::PositiveInfinity
+    $container.Orientation = 'Horizontal'
+    $container.Margin = $Preferences.Margin
 
     # link
     # - url: https://stackoverflow.com/questions/1927540/how-to-get-the-size-of-the-current-screen-in-wpf
@@ -19,23 +19,18 @@ function New-ControlsMultilayout {
     $maxHeight =
         [System.Windows.SystemParameters]::WorkArea.Height - 200
 
-    $pageControl = [PsCustomObject]@{
-        Multilayout = $multilayout
+    return [PsCustomObject]@{
+        Container = $container
         Sublayouts = @()
-        Controls = @{}
         MaxHeight = $maxHeight
         CurrentHeight = 0
     }
-
-    return Add-ControlToMultiLayout `
-        -PageControl $pageControl `
-        -Preferences $Preferences
 }
 
-function Add-ControlToMultilayout {
+function Add-ControlToMultipanel {
     Param(
         [PsCustomObject]
-        $PageControl,
+        $Multipanel,
 
         [System.Windows.FrameworkElement]
         $Control,
@@ -43,6 +38,11 @@ function Add-ControlToMultilayout {
         [PsCustomObject]
         $Preferences
     )
+
+    if ($null -eq $Multipanel) {
+        $Multipanel = New-ControlsMultipanel `
+            -Preferences $Preferences
+    }
 
     $nextHeight = if ($null -ne $Control) {
         # link
@@ -56,32 +56,32 @@ function Add-ControlToMultilayout {
         $Control.Height = $Control.DesiredSize.Height
         $Control.Margin = $Preferences.Margin
 
-        $PageControl.CurrentHeight `
+        $Multipanel.CurrentHeight `
             + $Control.DesiredSize.Height `
             + (2 * $Preferences.Margin)
     }
 
     $needNewSublayout =
         $null -eq $Control `
-        -or $PageControl.Multilayout.Children.Count -eq 0 `
+        -or $Multipanel.Container.Children.Count -eq 0 `
         -or $nextHeight -gt $Preferences.Height `
-        -or $nextHeight -gt $PageControl.MaxHeight
+        -or $nextHeight -gt $Multipanel.MaxHeight
 
     if ($needNewSublayout) {
         $layout = New-ControlsLayout `
             -Preferences $Preferences
 
-        $PageControl.Multilayout.AddChild($layout)
-        $PageControl.Sublayouts += @($layout)
-        $PageControl.CurrentHeight = 0
+        $Multipanel.Container.AddChild($layout)
+        $Multipanel.Sublayouts += @($layout)
+        $Multipanel.CurrentHeight = 0
     }
 
     if ($null -ne $Control) {
-        $PageControl.Sublayouts[-1].AddChild($Control)
-        $PageControl.CurrentHeight +=
+        $Multipanel.Sublayouts[-1].AddChild($Control)
+        $Multipanel.CurrentHeight +=
             $Control.Height + (2 * $Control.Margin.Top)
     }
 
-    return $PageControl
+    return $Multipanel
 }
 

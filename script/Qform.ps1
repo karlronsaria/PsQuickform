@@ -1,7 +1,7 @@
 #Requires -Assembly PresentationFramework
 
 . $PsScriptRoot\Controls.ps1
-. $PsScriptRoot\Multilayout.ps1
+. $PsScriptRoot\Multipanel.ps1
 
 <#
     .SYNOPSIS
@@ -315,13 +315,13 @@ class Page {
     ) {
         $this.MenuSpecs = $MenuSpecs
 
-        $myPrefs = Get-QformPreference `
+        $Preferences = Get-QformPreference `
             -Preferences $Preferences.PsObject.Copy()
 
-        $what = Set-QformMainLayout `
+        $what = Get-QformMainLayout `
             -Window $Window `
             -MenuSpecs $MenuSpecs `
-            -Preferences $myPrefs `
+            -Preferences $Preferences `
             -AddLines @('StatusLine')
 
         $this.Controls = $what.Controls
@@ -347,13 +347,13 @@ class Page {
                 -IgnoreLists:$IgnoreLists
         }
 
-        $myPrefs = Get-QformPreference `
+        $Preferences = Get-QformPreference `
             -Preferences $Preferences.PsObject.Copy()
 
-        $what = Set-QformMainLayout `
+        $what = Get-QformMainLayout `
             -Window $Window `
             -MenuSpecs $this.MenuSpecs `
-            -Preferences $myPrefs `
+            -Preferences $Preferences `
             -AddLines @('StatusLine', 'PageLine')
 
         $this.Controls = $what.Controls
@@ -598,7 +598,7 @@ function Get-QformLayout {
     }
 }
 
-function Set-QformMainLayout {
+function Get-QformMainLayout {
     Param(
         [System.Windows.Window]
         $Window,
@@ -637,8 +637,7 @@ function Set-QformMainLayout {
         $controls.Add("__$($lineName)__", $line)
     }
 
-    $pageControl = New-ControlsMultilayout `
-        -Preferences $Preferences
+    $mainPanel = $null
 
     $MenuSpecs `
         | Get-QformLayout `
@@ -646,19 +645,21 @@ function Set-QformMainLayout {
             -StatusLine $statusLine `
             -Preferences $Preferences `
         | foreach {
-            $pageControl = Add-ControlToMultilayout `
-                -PageControl $pageControl `
+            $mainPanel = Add-ControlToMultipanel `
+                -Multipanel $mainPanel `
                 -Control $_.Container `
                 -Preferences $Preferences
 
             $controls.Add($_.Name, $_.Object)
         }
 
+    $container = $mainPanel.Container
+
     # Resolve a possible race condition
-    while ($null -eq $pageControl.Multilayout) { }
+    while ($null -eq $container) { }
 
     $fillLayout = New-Control StackPanel
-    $fillLayout.AddChild($pageControl.Multilayout)
+    $fillLayout.AddChild($container)
 
     foreach ($lineName in $lineNames) {
         $fillLayout.AddChild($controls["__$($lineName)__"])
@@ -882,7 +883,6 @@ class Qform {
         [Boolean] $IsTabControl
     ) {
         $this.PageLine = $true
-        $myPrefs = $Preferences.PsObject.Copy()
         $parameterSets = $CommandInfo.ParameterSets
 
         if ($ParameterSetName) {
@@ -915,7 +915,7 @@ class Qform {
             $page = [Page]::new(
                 $this.Main.Window,
                 $parameterSet,
-                $myPrefs.PsObject.Copy(),
+                $Preferences,
                 $IncludeCommonParameters,
                 $IgnoreLists
             )
@@ -960,9 +960,9 @@ class Qform {
     }
 
     [void] InitKeyBindings() {
-        $myPrefs = $this.Pages[$this.CurrentIndex].Preferences
+        $prefs = $this.Pages[$this.CurrentIndex].Preferences
 
-        if ($myPrefs.EnterToConfirm) {
+        if ($prefs.EnterToConfirm) {
             $this.Main.Window.Add_KeyDown({
                 if ($_.Key -eq 'Enter') {
                     $this.DialogResult = $true
@@ -971,7 +971,7 @@ class Qform {
             })
         }
 
-        if ($myPrefs.EscapeToCancel) {
+        if ($prefs.EscapeToCancel) {
             $this.Main.Window.Add_KeyDown({
                 if ($_.Key -eq 'Escape') {
                     $this.DialogResult = $false
