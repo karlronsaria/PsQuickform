@@ -27,34 +27,6 @@ function Add-ControlsTypes {
     Add-Type -AssemblyName PresentationFramework
 }
 
-function Show-ControlRectangle {
-    Param(
-        [System.Windows.Controls.Control]
-        $Control
-    )
-
-    Add-Type -AssemblyName System.Drawing
-    $Control.BackColor =
-        [System.Drawing.Color]::Red
-}
-
-<#
-    .LINK
-    Url: https://stackoverflow.com/questions/34552311/wpf-systemparameters-windowcaptionbuttonheight-returns-smaller-number-than-expe
-    Url: https://stackoverflow.com/users/3137337/emoacht
-    Retrieved: 2022_03_07
-#>
-function Get-WindowsCaptionHeight {
-    Add-Type -AssemblyName PresentationFramework
-
-    $sysInfo = [System.Windows.Forms.SystemInformation]
-    $sysParams = [System.Windows.SystemParameters]
-
-    return $sysInfo::CaptionHeight `
-        + $sysParams::WindowResizeBorderThickness.Bottom `
-        + $sysParams::WindowNonClientFrameThickness.Bottom
-}
-
 <#
     .LINK
     Url: https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox
@@ -101,6 +73,35 @@ function Set-ControlsStatus {
     $StatusLine.Foreground = $foreColor
 }
 
+function New-Control {
+    Param(
+        [Parameter(Position = 0)]
+        [String]
+        $Type
+    )
+
+    $control = New-Object "System.Windows.Controls.$Type"
+    return $control
+}
+
+function New-ControlsMain {
+    $form = New-Object System.Windows.Window
+    $form.SizeToContent = 'WidthAndHeight'
+    $form.WindowStartupLocation = 'CenterScreen'
+
+    $form.Add_ContentRendered({
+        $this.Activate()
+    })
+
+    $grid = New-Control StackPanel
+    $form.AddChild($grid)
+
+    return [PsCustomObject]@{
+        Window = $form
+        Grid = $grid
+    }
+}
+
 function New-ControlsLayout {
     Param(
         [PsCustomObject]
@@ -124,36 +125,6 @@ function New-ControlsLayout {
     ))
 
     return $layout
-}
-
-function New-ControlsMultilayout {
-    Param(
-        [PsCustomObject]
-        $Preferences
-    )
-
-    $multilayout = New-Control StackPanel
-    $multilayout.MaxWidth = [Double]::PositiveInfinity
-    $multilayout.Orientation = 'Horizontal'
-    $multilayout.Margin = $Preferences.Margin
-
-    # link
-    # - url: https://stackoverflow.com/questions/1927540/how-to-get-the-size-of-the-current-screen-in-wpf
-    # - retrieved: 2022_08_28
-    $maxHeight =
-        [System.Windows.SystemParameters]::WorkArea.Height - 200
-
-    $pageControl = [PsCustomObject]@{
-        Multilayout = $multilayout
-        Sublayouts = @()
-        Controls = @{}
-        MaxHeight = $maxHeight
-        CurrentHeight = 0
-    }
-
-    return Add-ControlToMultiLayout `
-        -PageControl $pageControl `
-        -Preferences $Preferences
 }
 
 function Add-ControlsTabItem {
@@ -196,163 +167,6 @@ function New-ControlsTabLayout {
     }
 
     return $tabs
-}
-
-function Add-ControlsFormKeyBindings {
-    Param(
-        [System.Windows.Controls.Control]
-        $Control,
-
-        [PsCustomObject]
-        $PageControl,
-
-        [PsCustomObject]
-        $Preferences
-    )
-
-    if ($Preferences.EnterToConfirm) {
-        $Control.Add_KeyDown(( `
-            New-Closure `
-                -InputObject `
-                    $PageControl.Controls['__EndButtons__'].OkButton `
-                -ScriptBlock {
-                    if ($_.Key -eq 'Enter') {
-                        $InputObject.PerformClick()
-                    }
-                } `
-        ))
-    }
-
-    if ($Preferences.EscapeToCancel) {
-        $Control.Add_KeyDown(( `
-            New-Closure `
-                -InputObject `
-                    $PageControl.Controls['__EndButtons__'].CancelButton `
-                -ScriptBlock {
-                    if ($_.Key -eq 'Escape') {
-                        $InputObject.PerformClick()
-                    }
-                } `
-        ))
-    }
-
-    $helpMessage = ( `
-        Get-Content `
-            "$PsScriptRoot/../res/text.json" `
-            | ConvertFrom-Json `
-    ).Help
-
-    $Control.Add_KeyDown(( `
-        New-Closure `
-            -InputObject $helpMessage `
-            -ScriptBlock {
-                if ($_.Key -eq [System.Windows.Input.Key]::OemQuestion `
-                    -and $_.Control)
-                {
-                    $message = $InputObject -join "`r`n"
-                    $caption = 'Help'
-                    [System.Windows.MessageBox]::Show($message, $caption)
-                }
-            } `
-    ))
-}
-
-function Add-ControlToMultilayout {
-    Param(
-        [PsCustomObject]
-        $PageControl,
-
-        [System.Windows.FrameworkElement]
-        $Control,
-
-        [PsCustomObject]
-        $Preferences
-    )
-
-    $nextHeight = if ($null -ne $Control) {
-        # link
-        # - url: https://stackoverflow.com/questions/3401636/measuring-controls-created-at-runtime-in-wpf
-        # - retrieved: 2022_08_28
-        $Control.Measure([System.Windows.Size]::new(
-            [Double]::PositiveInfinity,
-            [Double]::PositiveInfinity
-        ))
-
-        $Control.Height = $Control.DesiredSize.Height
-        $Control.Margin = $Preferences.Margin
-
-        $PageControl.CurrentHeight `
-            + $Control.DesiredSize.Height `
-            + (2 * $Preferences.Margin)
-    }
-
-    $needNewSublayout =
-        $null -eq $Control `
-        -or $PageControl.Multilayout.Children.Count -eq 0 `
-        -or $nextHeight -gt $Preferences.Height `
-        -or $nextHeight -gt $PageControl.MaxHeight
-
-    if ($needNewSublayout) {
-        $layout = New-ControlsLayout `
-            -Preferences $Preferences
-
-        $PageControl.Multilayout.AddChild($layout)
-        $PageControl.Sublayouts += @($layout)
-        $PageControl.CurrentHeight = 0
-    }
-
-    if ($null -ne $Control) {
-        $PageControl.Sublayouts[-1].AddChild($Control)
-        $PageControl.CurrentHeight +=
-            $Control.Height + (2 * $Control.Margin.Top)
-    }
-
-    return $PageControl
-}
-
-<#
-    .LINK
-    Url: https://wpf.2000things.com/2014/11/05/1195-making-a-window-partially-transparent/
-    Url: https://wpf.2000things.com/2011/02/05/208-color-values-are-stored-as-rgb-values/
-    Retrieved: 2022_09_14
-#>
-function Set-ControlsStyleTransparent {
-    Param(
-        $Window
-    )
-
-    $Window.AllowsTransparency = $true
-    $Window.WindowStyle = [System.Windows.WindowStyle]::None
-    $Window.Background = '#D5F0F0FF'
-}
-
-function New-ControlsMain {
-    $form = New-Object System.Windows.Window
-    $form.SizeToContent = 'WidthAndHeight'
-    $form.WindowStartupLocation = 'CenterScreen'
-
-    $form.Add_ContentRendered({
-        $this.Activate()
-    })
-
-    $grid = New-Control StackPanel
-    $form.AddChild($grid)
-
-    return [PsCustomObject]@{
-        Window = $form
-        Grid = $grid
-    }
-}
-
-function New-Control {
-    Param(
-        [Parameter(Position = 0)]
-        [String]
-        $Type
-    )
-
-    $control = New-Object "System.Windows.Controls.$Type"
-    return $control
 }
 
 function Get-ControlsAsterized {

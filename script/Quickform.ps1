@@ -565,7 +565,6 @@ function Get-QformMenu {
         $myPreferences = Get-QformPreference `
             -Preferences $Preferences.PsObject.Copy()
 
-        # $form = [Qform]::new(
         $form = [Qform]::SinglePage(
             $myPreferences,
             $myMenuSpecs
@@ -575,7 +574,7 @@ function Get-QformMenu {
 
         $answers = $myMenuSpecs `
             | Start-QformEvaluate `
-                -PageControl $form.PageControl() `
+                -Controls $form.Controls() `
             | Get-NonEmptyObject `
                 -RemoveEmptyString
 
@@ -597,28 +596,27 @@ function Start-QformEvaluate {
         [PsCustomObject[]]
         $MenuSpecs,
 
-        [PsCustomObject]
-        $PageControl
+        [Hashtable]
+        $Controls
     )
 
     Begin {
         $out = [PsCustomObject]@{}
-        $controlTable = $PageControl.Controls
     }
 
     Process {
         foreach ($item in $MenuSpecs) {
             $value = switch ($item.Type) {
                 'Check' {
-                    $controlTable[$item.Name].IsChecked
+                    $Controls[$item.Name].IsChecked
                 }
 
                 'Field' {
-                    $controlTable[$item.Name].Text
+                    $Controls[$item.Name].Text
                 }
 
                 'Enum' {
-                    $buttons = $controlTable[$item.Name]
+                    $buttons = $Controls[$item.Name]
 
                     $temp = if ($buttons) {
                         $buttons.Keys | Where-Object {
@@ -637,15 +635,15 @@ function Start-QformEvaluate {
                 }
 
                 'Numeric' {
-                    $controlTable[$item.Name].Value
+                    $Controls[$item.Name].Value
                 }
 
                 'List' {
-                    $controlTable[$item.Name].Items
+                    $Controls[$item.Name].Items
                 }
 
                 'Table' {
-                    $controlTable[$item.Name].SelectedItems
+                    $Controls[$item.Name].SelectedItems
                 }
             }
 
@@ -839,7 +837,7 @@ function Show-QformMenuForCommand {
 
         $formResult = $menuSpecs `
             | Start-QformEvaluate `
-                -PageControl $form.PageControl() `
+                -Controls $form.Controls() `
             | Get-NonEmptyObject `
                 -RemoveEmptyString
 

@@ -1,6 +1,7 @@
 #Requires -Assembly PresentationFramework
 
 . $PsScriptRoot\Controls.ps1
+. $PsScriptRoot\Multilayout.ps1
 
 <#
     .SYNOPSIS
@@ -302,7 +303,7 @@ function Get-QformPreference {
 
 class Page {
     [String] $Name = ''
-    [PsCustomObject] $PageControl = @{}
+    [Hashtable] $Controls = @{}
     [PsCustomObject[]] $MenuSpecs = @()
     $FillLayout = $null
     $StatusLine = $null
@@ -323,7 +324,7 @@ class Page {
             -Preferences $myPrefs `
             -AddLines @('StatusLine')
 
-        $this.PageControl = $what.PageControl
+        $this.Controls = $what.Controls
         $this.FillLayout = $what.FillLayout
         $this.StatusLine = $what.StatusLine
     }
@@ -355,7 +356,7 @@ class Page {
             -Preferences $myPrefs `
             -AddLines @('StatusLine', 'PageLine')
 
-        $this.PageControl = $what.PageControl
+        $this.Controls = $what.Controls
         $this.FillLayout = $what.FillLayout
         $this.StatusLine = $what.StatusLine
     }
@@ -613,7 +614,7 @@ function Set-QformMainLayout {
         $AddLines = @('StatusLine')
     )
 
-    $controls = @()
+    $controls = @{}
     $lineNames = @()
     $statusLine = $null
 
@@ -633,11 +634,7 @@ function Set-QformMainLayout {
         }
 
         $lineNames += @($lineName)
-
-        $controls += @([PsCustomObject]@{
-            Name = "__$($lineName)__"
-            Object = $line
-        })
+        $controls.Add("__$($lineName)__", $line)
     }
 
     $pageControl = New-ControlsMultilayout `
@@ -654,12 +651,8 @@ function Set-QformMainLayout {
                 -Control $_.Container `
                 -Preferences $Preferences
 
-            $controls += @($_)
+            $controls.Add($_.Name, $_.Object)
         }
-
-    foreach ($control in $controls) {
-        $pageControl.Controls.Add($control.Name, $control.Object)
-    }
 
     # Resolve a possible race condition
     while ($null -eq $pageControl.Multilayout) { }
@@ -668,47 +661,13 @@ function Set-QformMainLayout {
     $fillLayout.AddChild($pageControl.Multilayout)
 
     foreach ($lineName in $lineNames) {
-        $fillLayout.AddChild($pageControl.Controls["__$($lineName)__"])
+        $fillLayout.AddChild($controls["__$($lineName)__"])
     }
 
     return [PsCustomObject]@{
         FillLayout = $fillLayout
-        PageControl = $pageControl
+        Controls = $controls
         StatusLine = $statusLine
-    }
-}
-
-function Set-QformMainWindow {
-    Param(
-        [PsCustomObject]
-        $MainForm,
-
-        [PsCustomObject[]]
-        $MenuSpecs,
-
-        [PsCustomObject]
-        $Preferences,
-
-        [ValidateSet('StatusLine', 'PageLine')]
-        [String[]]
-        $AddLines = @('StatusLine')
-    )
-
-    $MainForm.Window.Title = $Preferences.Caption
-    $MainForm.Grid.Children.Clear()
-
-    $what = Set-QformMainLayout `
-        -Window $MainForm.Window `
-        -MenuSpecs $MenuSpecs `
-        -Preferences $Preferences `
-        -AddLines $AddLines
-
-    $MainForm.Grid.AddChild($what.FillLayout)
-
-    return [PsCustomObject]@{
-        MainForm = $MainForm
-        PageControl = $what.PageControl
-        StatusLine = $what.StatusLine
     }
 }
 
@@ -789,8 +748,8 @@ class Qform {
         return "ParameterSet $($Index + 1) of $Count`: $Name"
     }
 
-    [PsCustomObject] PageControl() {
-        return $this.Pages[$this.CurrentIndex].PageControl
+    [Hashtable] Controls() {
+        return $this.Pages[$this.CurrentIndex].Controls
     }
 
     [PsCustomObject[]] MenuSpecs() {
@@ -829,7 +788,7 @@ class Qform {
 
     hidden [void] SetPageLine() {
         $page = $this.Pages[$this.CurrentIndex]
-        $control = $page.PageControl.Controls['__PageLine__']
+        $control = $page.Controls['__PageLine__']
         $control.HorizontalAlignment = 'Center'
 
         $control.Content =
