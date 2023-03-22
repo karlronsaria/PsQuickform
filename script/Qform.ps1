@@ -402,8 +402,7 @@ function Set-QformLayout {
 
             $what = switch ($item.Type) {
                 'Check' {
-                    Add-ControlsCheckBox `
-                        -PageControl $PageControl `
+                    New-ControlsCheckBox `
                         -Text $text `
                         -Default $default `
                         -Preferences $Preferences
@@ -416,8 +415,7 @@ function Set-QformLayout {
                         -Name Mandatory `
                         -Default $false;
 
-                    Add-ControlsFieldBox `
-                        -PageControl $PageControl `
+                    New-ControlsFieldBox `
                         -Text $text `
                         -Mandatory:$mandatory `
                         -MaxLength $maxLength `
@@ -430,8 +428,7 @@ function Set-QformLayout {
                         -Name Mandatory `
                         -Default $false;
 
-                    Add-ControlsRadioBox `
-                        -PageControl $PageControl `
+                    New-ControlsRadioBox `
                         -Text $text `
                         -Mandatory:$mandatory `
                         -Symbols $item.Symbols `
@@ -457,8 +454,7 @@ function Set-QformLayout {
                         -Name Mandatory `
                         -Default $false;
 
-                    Add-ControlsSlider `
-                        -PageControl $PageControl `
+                    New-ControlsSlider `
                         -Text $text `
                         -Mandatory:$mandatory `
                         -DecimalPlaces $places `
@@ -478,8 +474,7 @@ function Set-QformLayout {
                         -Name Mandatory `
                         -Default $false;
 
-                    Add-ControlsListBox `
-                        -PageControl $PageControl `
+                    New-ControlsListBox `
                         -Text $text `
                         -Mandatory:$mandatory `
                         -MaxCount $maxCount `
@@ -497,8 +492,7 @@ function Set-QformLayout {
                         -Name Rows `
                         -Default @();
 
-                    Add-ControlsTable `
-                        -PageControl $PageControl `
+                    New-ControlsTable `
                         -Text $text `
                         -Mandatory:$mandatory `
                         -Rows $rows `
@@ -508,7 +502,7 @@ function Set-QformLayout {
 
             $PageControl = Add-ControlToMultilayout `
                 -PageControl $PageControl `
-                -Control $what.Add `
+                -Control $what.Child `
                 -Preferences $Preferences
 
             $controlTable.Add($item.Name, $what.Query)
@@ -523,13 +517,12 @@ function Set-QformLayout {
     }
 
     End {
-        $what = Add-ControlsOkCancelButtons `
-            -PageControl $PageControl `
+        $what = New-ControlsOkCancelButtons `
             -Preferences $Preferences
 
         $PageControl = Add-ControlToMultilayout `
             -PageControl $PageControl `
-            -Control $what.Add `
+            -Control $what.Child `
             -Preferences $Preferences
 
         $endButtons = $what.Query
@@ -565,7 +558,7 @@ function Set-QformLayout {
                     foreach ($object in $InputObject.Mandates) {
                         $itemIsSet = switch -Regex ($object.Type) {
                             'List' {
-                                $object.Items.Count -gt 0
+                                $object.Control.Items.Count -gt 0
                             }
 
                             'Table' {

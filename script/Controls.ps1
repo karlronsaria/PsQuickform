@@ -262,6 +262,7 @@ function Add-ControlToMultilayout {
         [PsCustomObject]
         $PageControl,
 
+        [System.Windows.FrameworkElement]
         $Control,
 
         [PsCustomObject]
@@ -438,11 +439,8 @@ function Get-ControlsTextDialog {
     return $textBox.Text
 }
 
-function Add-ControlsCheckBox {
+function New-ControlsCheckBox {
     Param(
-        [PsCustomObject]
-        $PageControl,
-
         [String]
         $Text,
 
@@ -464,50 +462,13 @@ function Add-ControlsCheckBox {
     $query = $checkBox
 
     return [PsCustomObject]@{
-        Add = $add
+        Child = $add
         Query = $query
     }
 }
 
-function Add-ControlsTable {
+function New-ControlsListBox {
     Param(
-        [PsCustomObject]
-        $PageControl,
-
-        [String]
-        $Text,
-
-        [PsCustomObject[]]
-        $Rows,
-
-        [Switch]
-        $Mandatory,
-
-        [PsCustomObject]
-        $Preferences
-    )
-
-# new
-    $tableControl = New-ControlsTable `
-        -Text $Text `
-        -Rows $Rows `
-        -Asterized:$Mandatory `
-        -Margin $Preferences.Margin
-
-    $add = $tableControl.GroupBox
-    $query = $tableControl.ListView
-
-    return [PsCustomObject]@{
-        Add = $add
-        Query = $query
-    }
-}
-
-function Add-ControlsListBox {
-    Param(
-        [PsCustomObject]
-        $PageControl,
-
         [String]
         $Text,
 
@@ -854,7 +815,7 @@ function Add-ControlsListBox {
     $query = $listBox
 
     return [PsCustomObject]@{
-        Add = $add
+        Child = $add
         Query = $query
     }
 }
@@ -865,11 +826,8 @@ function Add-ControlsListBox {
     operative control, to a target container. 'Add-' rather than 'New-'
     helps encapsulate inoperative controls.
 #>
-function Add-ControlsFieldBox {
+function New-ControlsFieldBox {
     Param(
-        [PsCustomObject]
-        $PageControl,
-
         [String]
         $Text,
 
@@ -957,24 +915,9 @@ function Add-ControlsFieldBox {
     $query = $textBox
 
     return [PsCustomObject]@{
-        Add = $add
+        Child = $add
         Query = $query
     }
-}
-
-function New-ControlsSlider {
-    Param(
-        [Int]
-        $InitialValue,
-
-        [Int]
-        $Minimum,
-
-        [Int]
-        $Maximum
-    )
-
-    return [NumberSlider]::new($InitialValue, $Minimum, $Maximum, 1)
 }
 
 <#
@@ -983,11 +926,8 @@ function New-ControlsSlider {
     operative control, to a target container. 'Add-' rather than 'New-'
     helps encapsulate inoperative controls.
 #>
-function Add-ControlsSlider {
+function New-ControlsSlider {
     Param(
-        [PsCustomObject]
-        $PageControl,
-
         [String]
         $Text,
 
@@ -1023,10 +963,7 @@ function Add-ControlsSlider {
     $label = New-Control Label
     $label.Content = $Text
 
-    $slider = New-ControlsSlider `
-        -InitialValue:$Default `
-        -Minimum:$Minimum `
-        -Maximum:$Maximum
+    $slider = [NumberSlider]::new($Default, $Minimum, $Maximum, 1)
 
     $row2 = if ($Mandatory) {
         Get-ControlsAsterized `
@@ -1084,7 +1021,7 @@ function Add-ControlsSlider {
     $query = $slider
 
     return [PsCustomObject]@{
-        Add = $add
+        Child = $add
         Query = $query
     }
 }
@@ -1095,11 +1032,8 @@ function Add-ControlsSlider {
     operative control, to a target container. 'Add-' rather than 'New-'
     helps encapsulate inoperative controls.
 #>
-function Add-ControlsRadioBox {
+function New-ControlsRadioBox {
     Param(
-        [PsCustomObject]
-        $PageControl,
-
         [String]
         $Text,
 
@@ -1161,7 +1095,7 @@ function Add-ControlsRadioBox {
     $query = $buttons
 
     return [PsCustomObject]@{
-        Add = $add
+        Child = $add
         Query = $query
     }
 }
@@ -1295,9 +1229,12 @@ function New-ControlsTable {
             }
     ))
 
+    $add = $groupBox
+    $query = $listView
+
     return [PsCustomObject]@{
-        GroupBox = $groupBox
-        ListView = $listView
+        Child = $add
+        Query = $query
     }
 }
 
@@ -1307,58 +1244,29 @@ function New-ControlsOkCancelButtons {
         $Preferences
     )
 
-    $endButtons = New-Control WrapPanel
+    $BUTTON_WIDTH = 50
 
     $okButton = New-Control Button
-    $okButton.Width = 50
+    $okButton.Width = $BUTTON_WIDTH
     $okButton.Margin = $Preferences.Margin
     $okButton.Content = 'OK'
 
     $cancelButton = New-Control Button
-    $cancelButton.Width = 50
+    $cancelButton.Width = $BUTTON_WIDTH
     $cancelButton.Margin = $Preferences.Margin
     $cancelButton.Content = 'Cancel'
 
+    $endButtons = New-Control WrapPanel
     $endButtons.AddChild($okButton)
     $endButtons.AddChild($cancelButton)
-
     $endButtons.HorizontalAlignment = 'Center'
 
     return [PsCustomObject]@{
-        Panel = $endButtons
-        OkButton = $okButton
-        CancelButton = $cancelButton
-    }
-}
-
-<#
-    .NOTE
-    Needs to be an 'Add-' cmdlet. Adds multiple controls other than the
-    operative control, to a target container. 'Add-' rather than 'New-'
-    helps encapsulate inoperative controls.
-#>
-function Add-ControlsOkCancelButtons {
-    Param(
-        [PsCustomObject]
-        $PageControl,
-
-        [PsCustomObject]
-        $Preferences
-    )
-
-# new
-    $endButtons = New-ControlsOkCancelButtons `
-        -Preferences $Preferences
-
-    $add = $endButtons.Panel
-    $query = [PsCustomObject]@{
-        OkButton = $endButtons.OkButton
-        CancelButton = $endButtons.CancelButton
-    }
-
-    return [PsCustomObject]@{
-        Add = $add
-        Query = $query
+        Child = $endButtons
+        Query = [PsCustomObject]@{
+            OkButton = $okButton
+            CancelButton = $cancelButton
+        }
     }
 }
 
@@ -1404,11 +1312,11 @@ function Open-ControlsTable {
             $InputObject.Close()
         }
 
-    $endButtons.OkButton.Add_Click($okAction)
-    $endButtons.CancelButton.Add_Click($cancelAction)
+    $endButtons.Query.OkButton.Add_Click($okAction)
+    $endButtons.Query.CancelButton.Add_Click($cancelAction)
 
-    $main.Grid.AddChild($tableControl.GroupBox)
-    $main.Grid.AddChild($endButtons.Panel)
+    $main.Grid.AddChild($tableControl.Child)
+    $main.Grid.AddChild($endButtons.Child)
 
     $parameters = [PsCustomObject]@{
         OkAction = $okAction
@@ -1437,7 +1345,7 @@ function Open-ControlsTable {
         return
     }
 
-    return $tableControl.ListView.SelectedItems
+    return $tableControl.Query.SelectedItems
 }
 
 function Open-ControlsFileDialog {
@@ -1541,7 +1449,7 @@ function Open-ControlsMonthCalendar {
     $main.Grid.AddChild($calendar)
     $main.Grid.AddChild($label)
     $main.Grid.AddChild($textBox)
-    $main.Grid.AddChild($endButtons.Panel)
+    $main.Grid.AddChild($endButtons.Child)
 
     $parameters = [PsCustomObject]@{
         OkAction = $okAction
