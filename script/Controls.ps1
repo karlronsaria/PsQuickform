@@ -109,6 +109,15 @@ function New-ControlsLayout {
 
     $layout = New-Control StackPanel
     $layout.Width = $Preferences.Width
+
+    $layout.Add_Loaded({
+        if ([double]::IsNaN($this.Width)) {
+            $this.Width = $this.ActualWidth
+        }
+
+        $this.Width = [double]::NaN
+    })
+
     return $layout
 }
 
@@ -402,9 +411,7 @@ function Get-ControlsTextDialog {
             $this.DialogResult = $true
             $this.Close()
         }
-    })
 
-    $main.Window.Add_KeyDown({
         if ($_.Key -eq 'Escape') {
             $this.DialogResult = $false
             $this.Close()
@@ -488,14 +495,6 @@ function Add-ControlsTable {
         -PageControl $PageControl `
         -Control $tableControl.GroupBox `
         -Preferences $Preferences
-
-    $PageControl.Sublayouts[-1].Add_Loaded({
-        if ([double]::IsNaN($this.Width)) {
-            $this.Width = $this.ActualWidth
-        }
-
-        $this.Width = [double]::NaN
-    })
 
 # return
     return $tableControl.ListView
