@@ -19,6 +19,7 @@ function New-ControlsScrollPanel {
         [System.Windows.SystemParameters]::WorkArea.Height - 200
 
     $childPanel = New-Control StackPanel
+    $childPanel.Width = $Preferences.Width
     $childPanel.MaxWidth = [Double]::PositiveInfinity
     $childPanel.Orientation = 'Vertical'
     $childPanel.Margin = $Preferences.Margin

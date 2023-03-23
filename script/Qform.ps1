@@ -693,14 +693,6 @@ function Get-QformMainLayout {
                 -Control $_.Container `
                 -Preferences $Preferences
 
-<#
-# todo
-            $mainPanel = Add-ControlToMultipanel `
-                -Multipanel $mainPanel `
-                -Control $_.Container `
-                -Preferences $Preferences
-#>
-
             $controls.Add($_.Name, $_.Object)
         }
 
