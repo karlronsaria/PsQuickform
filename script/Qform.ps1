@@ -915,7 +915,7 @@ class Qform {
             $this.Main.Window,
             $Preferences.PsObject.Copy(),
             $MenuSpecs,
-            'ScrollPanel'
+            'Multipanel'
         )
 
         $this.AddPage($page)

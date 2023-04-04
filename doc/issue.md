@@ -1,5 +1,18 @@
 # issue
 
+- [ ] 2023_04_04_004414
+  - when: calling ``Show-QformMenu`` with a set of specs containing a table
+  - actual: truncated table
+  - expected: all elements resize to fit table
+  - cause
+    - ``OverflowLayout#ScrollView`` type does not feature auto-resize
+      - whereas ``OverflowLayout#Multilayout`` does
+  - solution
+    - temporary
+      - use ``'Multilayout'`` setting in ``Page`` constructor for non-cmdlet-based menus
+  - todo
+    - [ ] permanent solution for all overflow layout types
+
 - [x] 2023_03_20_234805
   - where: ``Controls#Add-ControlsListBox``
     - no multiselect
