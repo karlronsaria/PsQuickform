@@ -6,10 +6,10 @@
   - expected: all elements resize to fit table
   - cause
     - ``OverflowLayout#ScrollView`` type does not feature auto-resize
-      - whereas ``OverflowLayout#Multilayout`` does
+      - whereas ``OverflowLayout#Multipanel`` does
   - solution
     - temporary
-      - use ``'Multilayout'`` setting in ``Page`` constructor for non-cmdlet-based menus
+      - use ``'Multipanel'`` setting in ``Page`` constructor for non-cmdlet-based menus
   - todo
     - [ ] permanent solution for all overflow layout types
 
