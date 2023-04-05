@@ -305,7 +305,7 @@ class Qform {
             $this.InitRefreshControl()
         }
 
-        if ($StartingIndex -lt 0) {
+        if ($null -eq $StartingIndex) {
             $this.CurrentIndex =
                 $this.DefaultIndex = 0
 

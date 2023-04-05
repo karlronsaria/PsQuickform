@@ -27,8 +27,8 @@
         }
 
     .PARAMETER Preferences
-    An object containing the specifications for customizing the look and default
-    behavior of a Quickform menu.
+    An object containing the specifications for customizing the look and
+    default behavior of a Quickform menu.
 
     .PARAMETER CommandName
     The name of a PowerShell function or cmdlet.
@@ -51,7 +51,8 @@
             -ParameterSetName $cmdInfo.DefaultParameterSet
 
     .PARAMETER IncludeCommonParameters
-    Indicates that the CommonParameters should be included in the Quickform menu.
+    Indicates that the CommonParameters should be included in the Quickform
+    menu.
 
     See about_CommonParameters
 
@@ -60,7 +61,11 @@
     such as Fields, rather than using a ListBox.
 
     .PARAMETER AnswersAsHashtable
-    Indicates that the menu answers returned should be given in hashtable form.
+    Indicates that the menu answers returned should be given in hashtable
+    form.
+
+    .PARAMETER StartingIndex
+    The index for the starting page, if the form has multiple pages.
 
     .OUTPUTS
         PsCustomObject
@@ -128,8 +133,40 @@ function Show-QformMenu {
         $IgnoreLists,
 
         [Switch]
-        $AnswersAsHashtable
+        $AnswersAsHashtable,
+
+        [Int]
+        $StartingIndex
     )
+
+    Begin {
+        function Convert-MsExcelInfoToPageInfo {
+            Param(
+                [PsCustomObject]
+                $InputObject,
+
+                [PsCustomObject]
+                $Preferences
+            )
+
+            $pageInfo = foreach ($sheet in $InputObject.Sheets) {
+                [PsCustomObject]@{
+                    Name = $sheet.Name
+                    MenuSpecs = @([PsCustomObject]@{
+                        Name = 'Table'
+                        Rows = $sheet.Rows
+                    })
+                }
+            }
+
+            $Preferences.Caption = $InputObject.FileName
+
+            return [PsCustomObject]@{
+                Preferences = $Preferences
+                PageInfo = $pageInfo
+            }
+        }
+    }
 
     Process {
         switch ($PsCmdlet.ParameterSetName) {
@@ -144,25 +181,22 @@ function Show-QformMenu {
                 $pageInfo = $InputObject.MenuSpecs
                 $properties = $InputObject.PsObject.Properties.Name
                 $isTabControl = $false
-                $startingIndex = -1
 
                 if ($null -eq $pageInfo `
                     -and $properties -contains 'FileName' `
                     -and $properties -contains 'Sheets')
                 {
-                    $pageInfo = foreach ($sheet in $InputObject.Sheets) {
-                        [PsCustomObject]@{
-                            Name = $sheet.Name
-                            MenuSpecs = @([PsCustomObject]@{
-                                Name = 'Table'
-                                Rows = $sheet.Rows
-                            })
-                        }
-                    }
+                    $info = Convert-MsExcelInfoToPageInfo `
+                        -InputObject $InputObject `
+                        -Preferences $Preferences
 
-                    $Preferences.Caption = $pageInfo.FileName
+                    $Preferences = $info.Preferences
+                    $pageInfo = $info.PageInfo
                     $isTabControl = $true
-                    $startingIndex = 0
+                }
+
+                if ($null -eq $pageInfo) {
+                    return Get-QformMenu
                 }
 
                 return Get-QformMenu `
@@ -170,7 +204,7 @@ function Show-QformMenu {
                     -Preferences $Preferences `
                     -AnswersAsHashtable:$AnswersAsHashtable `
                     -IsTabControl:$isTabControl `
-                    -StartingIndex $startingIndex
+                    -StartingIndex $StartingIndex
             }
 
             'BySeparateObjects' {
@@ -188,8 +222,9 @@ function Show-QformMenu {
                     -CommandName $CommandName `
                     -ParameterSetName $ParameterSetName `
                     -IncludeCommonParameters:$IncludeCommonParameters `
-                    -IgnoreLists:$IgnoreLists
+                    -IgnoreLists:$IgnoreLists `
                     -AnswersAsHashtable:$AnswersAsHashtable `
+                    -StartingIndex $StartingIndex
             }
         }
     }
@@ -584,7 +619,7 @@ function Get-QformMenu {
         $AnswersAsHashtable,
 
         [Int]
-        $StartingIndex = -1
+        $StartingIndex
     )
 
     Begin {
@@ -782,7 +817,8 @@ function ConvertTo-QformString {
         Show-QformMenuForCommand -ParameterSetName $cmdInfo.DefaultParameterSet
 
     .PARAMETER IncludeCommonParameters
-    Indicates that the CommonParameters should be included in the Quickform menu.
+    Indicates that the CommonParameters should be included in the Quickform
+    menu.
 
     See about_CommonParameters
 
@@ -791,7 +827,11 @@ function ConvertTo-QformString {
     such as Fields, rather than using a ListBox.
 
     .PARAMETER AnswersAsHashtable
-    Indicates that the menu answers returned should be given in hashtable form.
+    Indicates that the menu answers returned should be given in hashtable
+    form.
+
+    .PARAMETER StartingIndex
+    The index for the starting page, if the form has multiple pages.
 
     .INPUTS
         PsCustomObject
@@ -835,7 +875,10 @@ function Show-QformMenuForCommand {
         $IgnoreLists,
 
         [Switch]
-        $AnswersAsHashtable
+        $AnswersAsHashtable,
+
+        [Int]
+        $StartingIndex
     )
 
     Process {
@@ -862,7 +905,8 @@ function Show-QformMenuForCommand {
             -CommandInfo $CommandInfo `
             -ParameterSetName $ParameterSetName `
             -IncludeCommonParameters:$IncludeCommonParameters `
-            -IgnoreLists:$IgnoreLists
+            -IgnoreLists:$IgnoreLists `
+            -StartingIndex $StartingIndex
 
         $formResult = Get-QformMenu `
             -PageInfo $info.PageInfo `

@@ -555,7 +555,10 @@ function Convert-CommandInfoToPageInfo {
         $IncludeCommonParameters,
 
         [Switch]
-        $IgnoreLists
+        $IgnoreLists,
+
+        [Int]
+        $StartingIndex
     )
 
     $parameterSets = $CommandInfo.ParameterSets
@@ -573,7 +576,9 @@ function Convert-CommandInfoToPageInfo {
         )for command name '$($CommandInfo.Name)'"
     }
 
-    $index = [Qform]::FindDefaultParameterSet($CommandInfo)
+    if ($null -eq $StartingIndex) {
+        $StartingIndex = [Qform]::FindDefaultParameterSet($CommandInfo)
+    }
 
     $pageInfo = foreach ($parameterSet in $parameterSets) {
         [PsCustomObject]@{
@@ -590,7 +595,7 @@ function Convert-CommandInfoToPageInfo {
     }
 
     return [PsCustomObject]@{
-        StartingIndex = $index
+        StartingIndex = $StartingIndex
         PageInfo = $pageInfo
     }
 }
