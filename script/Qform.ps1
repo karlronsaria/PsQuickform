@@ -34,7 +34,7 @@ function Get-QformControlType {
     $listPattern = '.*\[\]$'
 
     $table = [PsCustomObject]@{
-        '^PsCustomObject\[\]$' = 'Table'
+        '^PsCustomObject(\[\])?$' = 'Table'
         $listPattern = 'List'
         '^String$' = 'Field'
         '^Int.*$' = 'Numeric'
