@@ -438,6 +438,19 @@ function Get-QformLayout {
 
             $mandatory = $false
 
+            if ($null -eq $item.Type) {
+                $rows = Get-PropertyOrDefault `
+                    -InputObject $item `
+                    -Name 'Rows'
+
+                if ($null -ne $rows) {
+                    $item | Add-Member `
+                        -MemberType NoteProperty `
+                        -Name 'Type' `
+                        -Value 'Table'
+                }
+            }
+
             $what = switch ($item.Type) {
                 'Check' {
                     New-ControlsCheckBox `
