@@ -1,6 +1,7 @@
 # issue
 
-- [ ] 2023_04_04_004414
+- [x] 2023_04_04_004414
+  
   - when: calling ``Show-QformMenu`` with a set of specs containing a table
   - actual: truncated table
   - expected: all elements resize to fit table
@@ -11,9 +12,10 @@
     - temporary
       - use ``'Multipanel'`` setting in ``Page`` constructor for non-cmdlet-based menus
   - todo
-    - [ ] permanent solution for all overflow layout types
+    - [x] permanent solution for all overflow layout types
 
 - [x] 2023_03_20_234805
+  
   - where: ``Controls#Add-ControlsListBox``
     - no multiselect
       - comment: I'm not sure if multiselect would be a good idea.
