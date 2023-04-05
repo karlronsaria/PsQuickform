@@ -88,9 +88,9 @@ function Show-QformMenu {
             {
                 $valid = $true
 
-                foreach ($name in $_.PsObject.Properties.Name) {
+                foreach ($type in $_.PsObject.Properties.Type) {
                     $valid = $valid -and ( `
-                        $name -in `
+                        $type -in `
                             (Get-QformResource -Type MenuSpec).Name `
                     )
                 }
@@ -103,19 +103,6 @@ function Show-QformMenu {
 
         [Parameter(
             ParameterSetName = 'BySeparateObjects')]
-        [ValidateScript(
-            {
-                $valid = $true
-
-                foreach ($name in $_.PsObject.Properties.Name) {
-                    $valid = $valid -and ($name -in `
-                        (Get-QformResource `
-                            -Type Preference).Name)
-                }
-
-                return $valid
-            }
-        )]
         [PsCustomObject]
         $Preferences,
 
@@ -158,6 +145,9 @@ function Show-QformMenu {
             }
 
             'BySeparateObjects' {
+                $Preferences = Get-QformPreference `
+                    -Preferences $Preferences
+
                 return Get-QformMenu `
                     -MenuSpecs $MenuSpecs `
                     -Preferences $Preferences.PsObject.Copy() `
