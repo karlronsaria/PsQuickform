@@ -138,10 +138,39 @@ function Show-QformMenu {
                     return Get-QformMenu
                 }
 
+                $Preferences = Get-QformPreference `
+                    -Preferences $InputObject.Preferences
+
+                $pageInfo = $InputObject.MenuSpecs
+                $properties = $InputObject.PsObject.Properties.Name
+                $isTabControl = $false
+                $startingIndex = -1
+
+                if ($null -eq $pageInfo `
+                    -and $properties -contains 'FileName' `
+                    -and $properties -contains 'Sheets')
+                {
+                    $pageInfo = foreach ($sheet in $InputObject.Sheets) {
+                        [PsCustomObject]@{
+                            Name = $sheet.Name
+                            MenuSpecs = @([PsCustomObject]@{
+                                Name = 'Table'
+                                Rows = $sheet.Rows
+                            })
+                        }
+                    }
+
+                    $Preferences.Caption = $pageInfo.FileName
+                    $isTabControl = $true
+                    $startingIndex = 0
+                }
+
                 return Get-QformMenu `
-                    -MenuSpecs $InputObject.MenuSpecs `
-                    -Preferences $InputObject.Preferences.PsObject.Copy() `
-                    -AnswersAsHashtable:$AnswersAsHashtable
+                    -PageInfo $pageInfo `
+                    -Preferences $Preferences `
+                    -AnswersAsHashtable:$AnswersAsHashtable `
+                    -IsTabControl:$isTabControl `
+                    -StartingIndex $startingIndex
             }
 
             'BySeparateObjects' {
@@ -149,8 +178,8 @@ function Show-QformMenu {
                     -Preferences $Preferences
 
                 return Get-QformMenu `
-                    -MenuSpecs $MenuSpecs `
-                    -Preferences $Preferences.PsObject.Copy() `
+                    -PageInfo $MenuSpecs `
+                    -Preferences $Preferences `
                     -AnswersAsHashtable:$AnswersAsHashtable
             }
 
@@ -496,7 +525,7 @@ function Invoke-QformCommand {
     .SYNOPSIS
     Creates a Quickform new menu.
 
-    .PARAMETER MenuSpecs
+    .PARAMETER PageInfo
     Any number of objects containing the specifications for a control in a
     Quickform menu.
     Must match the JSON:
@@ -508,11 +537,20 @@ function Invoke-QformCommand {
         }
 
     .PARAMETER Preferences
-    An object containing the specifications for customizing the look and default
-    behavior of a Quickform menu.
+    An object containing the specifications for customizing the look and
+    default behavior of a Quickform menu.
 
     .PARAMETER AnswersAsHashtable
-    Indicates that the menu answers returned should be given in hashtable form.
+    Indicates that the menu answers returned should be given in hashtable
+    form.
+
+    .PARAMETER IsTabControl
+    Indicates that multiple pages should be handled using a form with tabs
+    rather than a form that resets for each page turn.
+
+    .PARAMETER StartingIndex
+    The index of the default page to show once the form is displayed. A value
+    less than 0 indicates a single-page form.
 
     .INPUTS
         PsCustomObject
@@ -534,35 +572,43 @@ function Get-QformMenu {
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [PsCustomObject[]]
-        $MenuSpecs,
+        $PageInfo,
 
         [PsCustomObject]
         $Preferences,
 
         [Switch]
-        $AnswersAsHashtable
+        $IsTabControl,
+
+        [Switch]
+        $AnswersAsHashtable,
+
+        [Int]
+        $StartingIndex = -1
     )
 
     Begin {
-        $myMenuSpecs = @()
+        $myPageInfo = @()
     }
 
     Process {
-        $myMenuSpecs += @($MenuSpecs)
+        $myPageInfo += @($PageInfo)
     }
 
     End {
         $myPreferences = Get-QformPreference `
-            -Preferences $Preferences.PsObject.Copy()
+            -Preferences $Preferences
 
-        $form = [Qform]::SinglePage(
+        $form = [Qform]::new(
             $myPreferences,
-            $myMenuSpecs
+            $myPageInfo,
+            [Boolean]$IsTabControl,
+            $StartingIndex
         )
 
         $confirm = $form.ShowDialog()
 
-        $answers = $myMenuSpecs `
+        $answers = $form.MenuSpecs() `
             | Start-QformEvaluate `
                 -Controls $form.Controls() `
             | Get-NonEmptyObject `
@@ -807,46 +853,30 @@ function Show-QformMenuForCommand {
             return
         }
 
-        $preferences = [PsCustomObject]@{
-            Caption = "Command: $CommandName"
-        }
-
         $preferences = Get-QformPreference `
-            -Preferences $preferences
+            -Preferences ([PsCustomObject]@{
+                Caption = "Command: $CommandName"
+            })
 
-        $form = [Qform]::CmdletTabForm(
-            $preferences,
-            $CommandInfo,
-            $ParameterSetName,
-            [Boolean]$IncludeCommonParameters,
-            [Boolean]$IgnoreLists
-        )
+        $info = Convert-CommandInfoToPageInfo `
+            -CommandInfo $CommandInfo `
+            -ParameterSetName $ParameterSetName `
+            -IncludeCommonParameters:$IncludeCommonParameters `
+            -IgnoreLists:$IgnoreLists
 
-        $confirm = $form.ShowDialog()
-        $menuSpecs = $form.MenuSpecs()
-
-        $formResult = $menuSpecs `
-            | Start-QformEvaluate `
-                -Controls $form.Controls() `
-            | Get-NonEmptyObject `
-                -RemoveEmptyString
+        $formResult = Get-QformMenu `
+            -PageInfo $info.PageInfo `
+            -Preferences $preferences `
+            -IsTabControl `
+            -AnswersAsHashtable:$AnswersAsHashtable `
+            -StartingIndex $info.StartingIndex
 
         $parameterString = ConvertTo-QformString `
-            -MenuAnswers $formResult
-
-        if ($AnswersAsHashtable) {
-            $table = @{}
-
-            foreach ($property in $formResult.PsObject.Properties.Name) {
-                $table[$property] = $formResult.$property
-            }
-
-            $formResult = $table
-        }
+            -MenuAnswers $formResult.MenuAnswers
 
         return [PsCustomObject]@{
-            Confirm = $confirm
-            MenuAnswers = $formResult
+            Confirm = $formResult.Confirm
+            MenuAnswers = $formResult.Answers
             CommandString = "$CommandName$parameterString"
         }
     }
