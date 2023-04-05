@@ -163,6 +163,11 @@ class Qform {
 
     hidden static [ScriptBlock] $UpdateTabControl = {
         Param([Qform] $Qform, [Int] $Index)
+
+        if ($Index -lt 0) {
+            $Index = $Qform.TabControl.Items.Count + $Index
+        }
+
         $Qform.TabControl.SelectedIndex = $Index
     }
 
@@ -322,8 +327,10 @@ class Qform {
         else {
             $this.CurrentIndex =
             $this.DefaultIndex =
-                if ($StartingIndex -ge 0 `
-                    -and $StartingIndex -lt $PageInfo.Count)
+                if (($StartingIndex -ge 0 `
+                    -and $StartingIndex -lt $PageInfo.Count) `
+                    -or ($StartingIndex -lt 0 `
+                    -and $StartingIndex -gt (-$PageInfo.Count - 1)))
                 {
                     $StartingIndex
                 } else {
