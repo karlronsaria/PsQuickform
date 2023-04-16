@@ -106,8 +106,6 @@ function Show-QformMenu {
         [PsCustomObject[]]
         $MenuSpecs,
 
-        [Parameter(
-            ParameterSetName = 'BySeparateObjects')]
         [PsCustomObject]
         $Preferences,
 
@@ -166,45 +164,76 @@ function Show-QformMenu {
                 PageInfo = $pageInfo
             }
         }
+
+        $list = @()
     }
 
     Process {
         switch ($PsCmdlet.ParameterSetName) {
             'BySingleObject' {
-                if ($null -eq $InputObject) {
-                    return Get-QformMenu
+                $list += @($InputObject)
+            }
+        }
+    }
+
+    End {
+        switch ($PsCmdlet.ParameterSetName) {
+            'BySingleObject' {
+                switch ($list.Count) {
+                    0 {
+                        return Get-QformMenu
+                    }
+
+                    1 {
+                        $obj = $list[0]
+
+                        $prefs = Get-QformPreference `
+                            -Preferences $obj.Preferences
+
+                        $Preferences = Get-QformPreference `
+                            -Preferences $prefs
+
+                        $pageInfo = $obj.MenuSpecs
+                        $properties = $obj.PsObject.Properties.Name
+                        $isTabControl = $false
+
+                        if ($null -eq $pageInfo `
+                            -and $properties -contains 'FileName' `
+                            -and $properties -contains 'Sheets')
+                        {
+                            $info = Convert-MsExcelInfoToPageInfo `
+                                -InputObject $obj `
+                                -Preferences $Preferences
+
+                            $Preferences = $info.Preferences
+                            $pageInfo = $info.PageInfo
+                            $isTabControl = $true
+                        }
+
+                        if ($null -eq $pageInfo) {
+                            $pageInfo = $list
+                        }
+
+                        return Get-QformMenu `
+                            -PageInfo $pageInfo `
+                            -Preferences $Preferences `
+                            -AnswersAsHashtable:$AnswersAsHashtable `
+                            -IsTabControl:$isTabControl `
+                            -StartingIndex $StartingIndex
+                    }
+
+                    default {
+                        $Preferences = Get-QformPreference `
+                            -Preferences $Preferences
+
+                        return Get-QformMenu `
+                            -PageInfo $list `
+                            -Preferences $Preferences `
+                            -AnswersAsHashtable:$AnswersAsHashtable `
+                            -IsTabControl:$isTabControl `
+                            -StartingIndex $StartingIndex
+                    }
                 }
-
-                $Preferences = Get-QformPreference `
-                    -Preferences $InputObject.Preferences
-
-                $pageInfo = $InputObject.MenuSpecs
-                $properties = $InputObject.PsObject.Properties.Name
-                $isTabControl = $false
-
-                if ($null -eq $pageInfo `
-                    -and $properties -contains 'FileName' `
-                    -and $properties -contains 'Sheets')
-                {
-                    $info = Convert-MsExcelInfoToPageInfo `
-                        -InputObject $InputObject `
-                        -Preferences $Preferences
-
-                    $Preferences = $info.Preferences
-                    $pageInfo = $info.PageInfo
-                    $isTabControl = $true
-                }
-
-                if ($null -eq $pageInfo) {
-                    return Get-QformMenu
-                }
-
-                return Get-QformMenu `
-                    -PageInfo $pageInfo `
-                    -Preferences $Preferences `
-                    -AnswersAsHashtable:$AnswersAsHashtable `
-                    -IsTabControl:$isTabControl `
-                    -StartingIndex $StartingIndex
             }
 
             'BySeparateObjects' {
