@@ -298,7 +298,7 @@ class Qform {
         [PsCustomObject] $Preferences,
         [PsCustomObject[]] $PageInfo,
         [Boolean] $IsTabControl,
-        [Int] $StartingIndex
+        [Nullable[Int]] $StartingIndex
     ) {
         $this.Main = New-ControlsMain
         $this.PageLine = $false

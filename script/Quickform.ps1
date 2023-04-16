@@ -135,7 +135,7 @@ function Show-QformMenu {
         [Switch]
         $AnswersAsHashtable,
 
-        [Int]
+        [Nullable[Int]]
         $StartingIndex
     )
 
@@ -618,7 +618,7 @@ function Get-QformMenu {
         [Switch]
         $AnswersAsHashtable,
 
-        [Int]
+        [Nullable[Int]]
         $StartingIndex
     )
 
@@ -877,7 +877,7 @@ function Show-QformMenuForCommand {
         [Switch]
         $AnswersAsHashtable,
 
-        [Int]
+        [Nullable[Int]]
         $StartingIndex
     )
 
