@@ -181,14 +181,19 @@ function Show-QformMenu {
             'BySingleObject' {
                 switch ($list.Count) {
                     0 {
-                        return Get-QformMenu
+                        $Preferences = Get-QformPreference `
+                            -Preferences $Preferences
+
+                        return Get-QformMenu `
+                            -Preferences $Preferences
                     }
 
                     1 {
                         $obj = $list[0]
 
                         $prefs = Get-QformPreference `
-                            -Preferences $obj.Preferences
+                            -Preferences $obj.Preferences `
+                            -Reference $Preferences
 
                         $Preferences = Get-QformPreference `
                             -Preferences $prefs

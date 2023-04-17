@@ -230,6 +230,12 @@ function Get-QformPreference {
         $Preferences,
 
         [Parameter(
+            ParameterSetName = 'BuildNewObject'
+        )]
+        [PsCustomObject]
+        $ReferencePreferences,
+
+        [Parameter(
             ParameterSetName = 'QueryValues'
         )]
         [ArgumentCompleter(
@@ -247,19 +253,21 @@ function Get-QformPreference {
     )
 
     Begin {
-        $defaultPreferences =
-            Get-Content "$PsScriptRoot/../res/preference.json" `
-                | ConvertFrom-Json
+        if ($null -eq $ReferencePreferences) {
+            $ReferencePreferences =
+                Get-Content "$PsScriptRoot/../res/preference.json" `
+                    | ConvertFrom-Json
+        }
     }
 
     Process {
         switch ($PsCmdlet.ParameterSetName) {
             'BuildNewObject' {
                 if (-not $Preferences) {
-                    return $defaultPreferences.PsObject.Copy()
+                    return $ReferencePreferences.PsObject.Copy()
                 }
 
-                $myPreferences = $defaultPreferences.PsObject.Copy()
+                $myPreferences = $ReferencePreferences.PsObject.Copy()
                 $names = $Preferences.PsObject.Properties.Name
 
                 if ($Preferences) {
@@ -289,7 +297,7 @@ function Get-QformPreference {
                 foreach ($item in $Name) {
                     [PsCustomObject]@{
                         Name = $item
-                        Value = $defaultPreferences.$item
+                        Value = $ReferencePreferences.$item
                     }
                 }
             }
