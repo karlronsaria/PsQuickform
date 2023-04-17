@@ -432,6 +432,8 @@ class Qform {
                         $InputObject,
                         'Help'
                     )
+
+                    $_.Handled = $true
                 }
             }
 

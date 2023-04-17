@@ -663,8 +663,9 @@ function New-ControlsFieldBox {
             $monthCalendarPrefs = $InputObject
             $myEventArgs = $_
 
-            $isKeyCombo = [System.Windows.Input.Keyboard]::Modifiers `
-                -and [System.Windows.Input.ModifierKeys]::Control
+            $isKeyCombo =
+                $_.KeyboardDevice.Modifiers -contains `
+                [System.Windows.Input.ModifierKeys]::Control
 
             if ($isKeyCombo) {
                 if ([System.Windows.Input.Keyboard]::IsKeyDown('O')) {
@@ -677,7 +678,7 @@ function New-ControlsFieldBox {
                             + (Open-ControlsFileDialog -Directory) `
                         )
 
-                    $myEventArgs.Handled = $true
+                    $_.Handled = $true
                 }
 
                 if ([System.Windows.Input.Keyboard]::IsKeyDown('D')) {
@@ -690,7 +691,7 @@ function New-ControlsFieldBox {
                         -Control $this `
                         -Text ($this.Text + $text)
 
-                    $myEventArgs.Handled = $true
+                    $_.Handled = $true
                 }
             }
         }
@@ -1141,7 +1142,7 @@ function Open-ControlsFileDialog {
 
     Add-Type -AssemblyName System.Windows.Forms
 
-    $openFile = New-Control OpenFileDialog
+    $openFile = New-Object System.Windows.Forms.OpenFileDialog
     $openFile.Title = $Caption
     $openFile.Filter = $Filter
     $openFile.FilterIndex = 1
@@ -1217,8 +1218,8 @@ function Open-ControlsMonthCalendar {
             $InputObject.Close()
         }
 
-    $endButtons.OkButton.Add_Click($okAction)
-    $endButtons.CancelButton.Add_Click($cancelAction)
+    $endButtons.Object.OkButton.Add_Click($okAction)
+    $endButtons.Object.CancelButton.Add_Click($cancelAction)
     $main.Grid.AddChild($calendar)
     $main.Grid.AddChild($label)
     $main.Grid.AddChild($textBox)
