@@ -664,7 +664,7 @@ function New-ControlsFieldBox {
             $myEventArgs = $_
 
             $isKeyCombo =
-                $_.KeyboardDevice.Modifiers -contains `
+                $myEventArgs.KeyboardDevice.Modifiers -contains `
                 [System.Windows.Input.ModifierKeys]::Control
 
             if ($isKeyCombo) {
@@ -678,7 +678,7 @@ function New-ControlsFieldBox {
                             + (Open-ControlsFileDialog -Directory) `
                         )
 
-                    $_.Handled = $true
+                    $myEventArgs.Handled = $true
                 }
 
                 if ([System.Windows.Input.Keyboard]::IsKeyDown('D')) {
@@ -691,7 +691,7 @@ function New-ControlsFieldBox {
                         -Control $this `
                         -Text ($this.Text + $text)
 
-                    $_.Handled = $true
+                    $myEventArgs.Handled = $true
                 }
             }
         }
