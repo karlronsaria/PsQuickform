@@ -246,3 +246,4 @@ To query for the path to the default preferences file, call the `$QFORM_DEFAULTS
 
 [Issues](./doc/issue.md)
 
+[Progress](./doc/wish.md)
