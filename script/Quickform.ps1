@@ -718,20 +718,22 @@ function Start-QformEvaluate {
                 'Enum' {
                     $buttons = $Controls[$item.Name]
 
-                    $temp = if ($buttons) {
+                    if ($buttons) {
                         $buttons.Keys | Where-Object {
                             $buttons[$_].IsChecked
                         }
                     } else {
                         $null
-                    };
+                    }
 
-                    if ($temp -eq 'None') {
-                        $null
-                    }
-                    else {
-                        $temp
-                    }
+                    # # karlr (2023_04_17)
+                    # # - consider removing
+                    # if ($temp -eq 'None') {
+                    #     $null
+                    # }
+                    # else {
+                    #     $temp
+                    # }
                 }
 
                 'Numeric' {
