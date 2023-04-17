@@ -1,5 +1,17 @@
 # issue
 
+- [ ] 2023_04_17_015015
+
+  - actual
+    ![2023_04_17_015102](./res/2023_04_17_015102.png)
+    ```powershell
+    C:\Users\karlr\Downloads\__POOL> .\MyScript.ps1
+
+    Confirm MenuAnswers
+    ------- -----------
+       True
+    ```
+
 - [x] 2023_04_04_004414
   
   - when: calling ``Show-QformMenu`` with a set of specs containing a table
