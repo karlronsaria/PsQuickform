@@ -711,24 +711,32 @@ function Start-QformEvaluate {
 
     Process {
         foreach ($item in $MenuSpecs) {
+            # todo: attempt cleaner solution
             $value = switch ($item.Type) {
                 'Check' {
-                    $Controls[$item.Name].IsChecked
+                    [PsCustomObject]@{
+                        Items = $Controls[$item.Name].IsChecked
+                    }
                 }
 
                 'Field' {
-                    $Controls[$item.Name].Text
+                    [PsCustomObject]@{
+                        Items = $Controls[$item.Name].Text
+                    }
                 }
 
                 'Enum' {
                     $buttons = $Controls[$item.Name]
 
-                    if ($buttons) {
-                        $buttons.Keys | Where-Object {
-                            $buttons[$_].IsChecked
-                        }
-                    } else {
-                        $null
+                    [PsCustomObject]@{
+                        Items =
+                            if ($buttons) {
+                                $buttons.Keys | Where-Object {
+                                    $buttons[$_].IsChecked
+                                }
+                            } else {
+                                $null
+                            }
                     }
 
                     # # karlr (2023_04_17)
@@ -742,22 +750,28 @@ function Start-QformEvaluate {
                 }
 
                 'Numeric' {
-                    $Controls[$item.Name].Value
+                    [PsCustomObject]@{
+                        Items = $Controls[$item.Name].Value
+                    }
                 }
 
                 'List' {
-                    $Controls[$item.Name].Items
+                    [PsCustomObject]@{
+                        Items = $Controls[$item.Name].Items
+                    }
                 }
 
                 'Table' {
-                    $Controls[$item.Name].SelectedItems
+                    [PsCustomObject]@{
+                        Items = $Controls[$item.Name].SelectedItems
+                    }
                 }
             }
 
             $out | Add-Member `
                 -MemberType NoteProperty `
                 -Name $item.Name `
-                -Value $value
+                -Value $value.Items
         }
     }
 
