@@ -1,11 +1,15 @@
 # wish
 - I wish
+  - Enum answer would
+    - [ ] preserve ordinal information
+    - [ ] but behave differently for cmdlet forms
   - Table had key bindings
     - for
       - if row fields procured from a document
         - [ ] Open or Goto
         - [ ] Preview
   - for
+    - [ ] Drop-down type
     - [ ] Name inference
       - ex
         ```powershell
