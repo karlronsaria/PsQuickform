@@ -813,6 +813,53 @@ function New-ControlsSlider {
     }
 }
 
+function New-ControlsDropDown {
+    Param(
+        [String]
+        $Text,
+
+        [Switch]
+        $Mandatory,
+
+        [PsCustomObject[]]
+        $Symbols,
+
+        $Default
+    )
+
+    $stackPanel = New-Control StackPanel
+    $label = New-Control Label
+    $label.Content = $Text
+    $comboBox = New-Control ComboBox
+    $comboBox.IsReadOnly = $true
+
+    $stackPanel.AddChild($label)
+    $stackPanel.AddChild($comboBox)
+
+    if (-not $Mandatory) {
+        [void] $comboBox.Items.Add('None')
+    }
+
+    foreach ($symbol in $Symbols) {
+        $content = $symbol | Get-PropertyOrDefault `
+            -Name Text `
+            -Default $symbol.Name
+
+        [void] $comboBox.Items.Add($content)
+    }
+
+    $comboBox.SelectedIndex = if ($null -eq $Default) {
+        0
+    } else {
+        $comboBox.Items.IndexOf($Default)
+    }
+
+    return [PsCustomObject]@{
+        Container = $stackPanel
+        Object = $comboBox
+    }
+}
+
 function New-ControlsRadioBox {
     Param(
         [String]
@@ -824,10 +871,7 @@ function New-ControlsRadioBox {
         [PsCustomObject[]]
         $Symbols,
 
-        $Default,
-
-        [PsCustomObject]
-        $Preferences
+        $Default
     )
 
     $groupBox = New-Control GroupBox

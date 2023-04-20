@@ -9,7 +9,7 @@
         - [ ] Open or Goto
         - [ ] Preview
   - for
-    - [ ] Drop-down type
+    - [x] Drop-down type
     - [ ] Name inference
       - ex
         ```powershell

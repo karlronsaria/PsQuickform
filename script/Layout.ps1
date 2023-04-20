@@ -382,16 +382,38 @@ function Get-QformLayout {
                         -Name Mandatory `
                         -Default $false;
 
-                    New-ControlsRadioBox `
-                        -Text $text `
-                        -Mandatory:$mandatory `
-                        -Symbols $item.Symbols `
-                        -Default $default `
-                        -Preferences $Preferences
+                    $as = $item | Get-PropertyOrDefault `
+                        -Name As `
+                        -Default 'RadioPanel';
+
+                    $params = @{
+                        Text = $text
+                        Mandatory = $mandatory
+                        Symbols = $item.Symbols
+                        Default = $default
+                    }
+
+                    $control = switch ($as) {
+                        'RadioPanel' {
+                            New-ControlsRadioBox @params
+                        }
+
+                        'DropDown' {
+                            New-ControlsDropDown @params
+                        }
+                    }
 
                     # Mandatory enumerations are self-managed. They either do
                     # or don't implement 'None'.
                     $mandatory = $false
+
+                    [PsCustomObject]@{
+                        Container = $control.Container
+                        Object = [PsCustomObject]@{
+                            As = $as
+                            Object = $control.Object
+                        }
+                    }
                 }
 
                 'Numeric' {

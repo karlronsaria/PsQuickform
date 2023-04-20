@@ -235,6 +235,7 @@ To query for the path to the default preferences file, call the `$QFORM_DEFAULTS
 # Todo
 
 - [ ] document Table type
+- [ ] document Enum DropDown type
 - feat
   - [ ] dark theme
   - [x] scrollbar version

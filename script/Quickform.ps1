@@ -726,17 +726,29 @@ function Start-QformEvaluate {
                 }
 
                 'Enum' {
-                    $buttons = $Controls[$item.Name]
+                    $obj = $Controls[$item.Name]
 
-                    [PsCustomObject]@{
-                        Items =
-                            if ($buttons) {
-                                $buttons.Keys | Where-Object {
-                                    $buttons[$_].IsChecked
-                                }
-                            } else {
-                                $null
+                    switch ($obj.As) {
+                        'RadioPanel' {
+                            $buttons = $obj.Object
+
+                            [PsCustomObject]@{
+                                Items =
+                                    if ($buttons) {
+                                        $buttons.Keys | Where-Object {
+                                            $buttons[$_].IsChecked
+                                        }
+                                    } else {
+                                        $null
+                                    }
                             }
+                        }
+
+                        'DropDown' {
+                            [PsCustomObject]@{
+                                Items = $obj.Object.SelectedItem
+                            }
+                        }
                     }
 
                     # # karlr (2023_04_17)
