@@ -258,10 +258,7 @@ function New-ControlsCheckBox {
         [String]
         $Text,
 
-        $Default,
-
-        [PsCustomObject]
-        $Preferences
+        $Default
     )
 
     $checkBox = New-Control CheckBox
@@ -841,11 +838,8 @@ function New-ControlsDropDown {
     }
 
     foreach ($symbol in $Symbols) {
-        $content = $symbol | Get-PropertyOrDefault `
-            -Name Text `
-            -Default $symbol.Name
-
-        [void] $comboBox.Items.Add($content)
+        $what = Get-ControlsNameAndText $symbol
+        [void] $comboBox.Items.Add($what.Text)
     }
 
     $comboBox.SelectedIndex = if ($null -eq $Default) {
@@ -857,6 +851,38 @@ function New-ControlsDropDown {
     return [PsCustomObject]@{
         Container = $stackPanel
         Object = $comboBox
+    }
+}
+
+function Get-ControlsNameAndText {
+    Param(
+        $InputObject
+    )
+
+    $text = ""
+    $name = ""
+
+    switch ($InputObject) {
+        { $_ -is [String] } {
+            $name =
+            $text =
+                ConvertTo-UpperCamelCase $InputObject
+        }
+
+        { $_ -is [PsCustomObject] } {
+            $text = $InputObject | Get-PropertyOrDefault `
+                -Name Text `
+                -Default $InputObject.Name
+
+            $name = $InputObject | Get-PropertyOrDefault `
+                -Name Name `
+                -Default (ConvertTo-UpperCamelCase $text)
+        }
+    }
+
+    return [PsCustomObject]@{
+        Name = $name
+        Text = $text
     }
 }
 
@@ -891,13 +917,10 @@ function New-ControlsRadioBox {
 
     foreach ($symbol in $Symbols) {
         $button = New-Control RadioButton
-
-        $button.Content = $symbol | Get-PropertyOrDefault `
-            -Name Text `
-            -Default $symbol.Name
-
+        $what = Get-ControlsNameAndText $symbol
+        $button.Content = $what.Text
         $noneOptionSpecified = $button.Content -like 'None'
-        $buttons.Add($symbol.Name, $button)
+        $buttons.Add($what.Name, $button)
         $stackPanel.AddChild($button)
     }
 
@@ -1058,20 +1081,20 @@ function New-ControlsTable {
 
 function New-ControlsOkCancelButtons {
     Param(
-        [PsCustomObject]
-        $Preferences
+        [Int]
+        $Margin
     )
 
     $BUTTON_WIDTH = 50
 
     $okButton = New-Control Button
     $okButton.Width = $BUTTON_WIDTH
-    $okButton.Margin = $Preferences.Margin
+    $okButton.Margin = $Margin
     $okButton.Content = 'OK'
 
     $cancelButton = New-Control Button
     $cancelButton.Width = $BUTTON_WIDTH
-    $cancelButton.Margin = $Preferences.Margin
+    $cancelButton.Margin = $Margin
     $cancelButton.Content = 'Cancel'
 
     $endButtons = New-Control WrapPanel

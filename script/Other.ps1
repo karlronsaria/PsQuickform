@@ -349,3 +349,36 @@ function Invoke-SplatCommand {
     & $CommandName @table
 }
 
+function ConvertTo-UpperCamelCase {
+    Param(
+        [String]
+        $InputObject
+    )
+
+    if ([String]::IsNullOrWhiteSpace($InputObject)) {
+        return $InputObject
+    }
+
+    $substrings =
+        $InputObject.Split(' ') `
+            | foreach {
+                $_ -replace "(?:\W)+", ""
+            } `
+            | where {
+                -not [String]::IsNullOrEmpty($_)
+            } `
+            | foreach {
+                $firstChar = $_.Substring(0, 1).ToUpper()
+                $tail =
+                    if ($_.Length -gt 0) {
+                        $_.Substring(1)
+                    } else {
+                        ""
+                    }
+
+                "$firstChar$tail"
+            }
+
+    return [String]::Join("", $substrings)
+}
+

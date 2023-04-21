@@ -334,11 +334,9 @@ function Get-QformLayout {
                 -InputObject $item `
                 -Name 'Default'
 
-            $text = Get-PropertyOrDefault `
-                -InputObject $item `
-                -Name 'Text' `
-                -Default $item.Name
-
+            $what = Get-ControlsNameAndText $item
+            $text = $what.Text
+            $name = $what.Name
             $mandatory = $false
 
             if ($null -eq $item.Type) {
@@ -358,8 +356,7 @@ function Get-QformLayout {
                 'Check' {
                     New-ControlsCheckBox `
                         -Text $text `
-                        -Default $default `
-                        -Preferences $Preferences
+                        -Default $default
                 }
 
                 'Field' {
@@ -381,7 +378,6 @@ function Get-QformLayout {
                     $mandatory = $item | Get-PropertyOrDefault `
                         -Name Mandatory `
                         -Default $false;
-
                     $as = $item | Get-PropertyOrDefault `
                         -Name As `
                         -Default 'RadioPanel';
@@ -472,7 +468,7 @@ function Get-QformLayout {
                         -Text $text `
                         -Mandatory:$mandatory `
                         -Rows $rows `
-                        -Preferences $Preferences
+                        -Margin $Preferences.Margin
                 }
             }
 
@@ -484,7 +480,7 @@ function Get-QformLayout {
             }
 
             $list += @([PsCustomObject]@{
-                Name = $item.Name
+                Name = $name
                 Container = $what.Container
                 Object = $what.Object
             })
@@ -493,7 +489,7 @@ function Get-QformLayout {
 
     End {
         $what = New-ControlsOkCancelButtons `
-            -Preferences $Preferences
+            -Margin $Preferences.Margin
 
         $list += @([PsCustomObject]@{
             Name = '__EndButtons__'

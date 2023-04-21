@@ -10,7 +10,7 @@
         - [ ] Preview
   - for
     - [x] Drop-down type
-    - [ ] Name inference
+    - [x] Name inference
       - ex
         ```powershell
         [PsCustomObject]@{
