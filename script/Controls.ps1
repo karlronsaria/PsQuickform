@@ -902,18 +902,16 @@ function New-ControlsRadioBox {
 
     $groupBox = New-Control GroupBox
     $groupBox.Header = $Text
-
     $stackPanel = New-Control StackPanel
     $groupBox.AddChild($stackPanel)
+    $noneOptionSpecified = $false
+    $buttons = @{}
 
     if (-not $Mandatory -and @($Symbols | where {
         $_.Name -like 'None'
     }).Count -eq 0) {
         $Symbols += @([PsCustomObject]@{ Name = 'None'; })
     }
-
-    $buttons = @{}
-    $noneOptionSpecified = $false
 
     foreach ($symbol in $Symbols) {
         $button = New-Control RadioButton
