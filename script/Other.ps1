@@ -92,11 +92,23 @@ function Test-ValueIsNonEmpty {
         $RemoveEmptyString
     )
 
-    return `
-        $null -ne $InputObject `
-        -and `
-        (-not ($InputObject -is [String]) `
-            -or (-not $RemoveEmptyString -or $InputObject -ne ''))
+    if ($null -eq $InputObject) {
+        return $false
+    }
+
+    return $(switch ($InputObject) {
+        { $_ -is [String] } {
+            -not $RemoveEmptyString -or $InputObject -ne ''
+        }
+
+        { $_ -is [System.Windows.Controls.ItemCollection] } {
+            $InputObject.Count -gt 0
+        }
+
+        default {
+            $true
+        }
+    })
 }
 
 function Get-NonEmptyTable {
@@ -120,7 +132,10 @@ function Get-NonEmptyTable {
         $InputObject.Keys | where {
             $name = $_;
             $value = $InputObject[$_];
-            Test-ValueIsNonEmpty $value $RemoveEmptyString
+
+            Test-ValueIsNonEmpty `
+                -InputObject $value `
+                -RemoveEmptyString:$RemoveEmptyString
         } | foreach {
             $table.Add($name, $value)
         }
@@ -147,7 +162,10 @@ function Get-NonEmptyObject {
             $type = $_.MemberType;
             $name = $_.Name;
             $value = $_.Value;
-            Test-ValueIsNonEmpty $value $RemoveEmptyString
+
+            Test-ValueIsNonEmpty `
+                -InputObject $value `
+                -RemoveEmptyString:$RemoveEmptyString
         } | foreach {
             $obj | Add-Member `
                 -MemberType $type `

@@ -982,7 +982,7 @@ function Show-QformMenuForCommand {
 
         return [PsCustomObject]@{
             Confirm = $formResult.Confirm
-            MenuAnswers = $formResult.Answers
+            MenuAnswers = $formResult.MenuAnswers
             CommandString = "$CommandName$parameterString"
         }
     }
