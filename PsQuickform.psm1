@@ -2,8 +2,6 @@
 . $PsScriptRoot\script\Qform.ps1
 . $PsScriptRoot\script\Quickform.ps1
 
-$QFORM_DEFAULTS_PATH = $DEFAULT_PREFERENCES_PATH
-
 Export-ModuleMember -Function @(
 
     ## Quickform.ps1
@@ -23,8 +21,3 @@ Export-ModuleMember -Function @(
     ## -----------------------------------------------------------------
     'Get-QformResource'
 )
-
-Export-ModuleMember -Variable @(
-    'QFORM_DEFAULTS_PATH'
-)
-
