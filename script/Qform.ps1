@@ -112,24 +112,31 @@ function Get-QformMainLayout {
         $controls.Add("__$($lineName)__", $line)
     }
 
+    $script:mainPanel = $null
+
     $MenuSpecs `
         | Get-QformLayout `
             -Window $Window `
             -StatusLine $statusLine `
             -Preferences $Preferences `
         | foreach {
-            $mainPanel = & $AddToMainPanel `
-                -MainPanel $mainPanel `
+            $script:mainPanel = & $AddToMainPanel `
+                -MainPanel $script:mainPanel `
                 -Control $_.Container `
                 -Preferences $Preferences
 
             $controls.Add($_.Name, $_.Object)
+
+            # Objects added to $mainPanel go out of scope at this point
+            # unless $mainPanel is given a scope of 'Script'
         }
 
-    $container = $mainPanel.Container
+    $container = $script:mainPanel.Container
 
     # Resolve a possible race condition
-    while ($null -eq $container) { }
+    while ($null -eq $container) {
+        $container = $script:mainPanel.Container
+    }
 
     $fillLayout = New-Control StackPanel
     $fillLayout.AddChild($container)
