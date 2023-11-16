@@ -244,7 +244,5 @@ To query for the path to the default preferences file, call the `$QFORM_DEFAULTS
   - [x] parameter set tabs
 
 ---
-
-[Issues](./doc/issue.md)
-
-[Progress](./doc/wish.md)
+[Issues Page](./doc/issue.md)
+[Wishlist Page](./doc/wish.md)
