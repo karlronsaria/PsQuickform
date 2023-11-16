@@ -112,31 +112,24 @@ function Get-QformMainLayout {
         $controls.Add("__$($lineName)__", $line)
     }
 
-    $script:mainPanel = $null
-
     $MenuSpecs `
         | Get-QformLayout `
             -Window $Window `
             -StatusLine $statusLine `
             -Preferences $Preferences `
         | foreach {
-            $script:mainPanel = & $AddToMainPanel `
-                -MainPanel $script:mainPanel `
+            $mainPanel = & $AddToMainPanel `
+                -MainPanel $mainPanel `
                 -Control $_.Container `
                 -Preferences $Preferences
 
             $controls.Add($_.Name, $_.Object)
-
-            # Objects added to $mainPanel go out of scope at this point
-            # unless $mainPanel is given a scope of 'Script'
         }
 
-    $container = $script:mainPanel.Container
+    $container = $mainPanel.Container
 
     # Resolve a possible race condition
-    while ($null -eq $container) {
-        $container = $script:mainPanel.Container
-    }
+    while ($null -eq $container) { }
 
     $fillLayout = New-Control StackPanel
     $fillLayout.AddChild($container)
@@ -193,8 +186,33 @@ class Qform {
             -Header $Page.Name
     }
 
+    hidden static [ScriptBlock] $TabControlIndex = {
+        Param([Qform] $Qform)
+        return $Qform.TabControl.SelectedIndex
+    }
+
+    hidden static [ScriptBlock] $GetCurrentIndex = {
+        Param([Qform] $Qform)
+        return $Qform.CurrentIndex
+    }
+
+    hidden static [ScriptBlock] $SetCurrentIndex = {
+        Param([Qform] $Qform, [Int] $Index)
+
+        while ($Qform.CurrentIndex -ne $Index) {
+            $Qform.Next()
+        }
+    }
+
+    hidden static [ScriptBlock] $SetSelectedTabIndex = {
+        Param([Qform] $Qform, [Int] $Index)
+        $Qform.TabControl.SelectedIndex = $Index
+    }
+
     hidden [ScriptBlock] $MyUpdate
     hidden [ScriptBlock] $MyAddPage
+    hidden [ScriptBlock] $MyIndex
+    hidden [ScriptBlock] $MySetIndex
 
     hidden [void] InitTabControl() {
         $this.PageLine = $false
@@ -202,12 +220,16 @@ class Qform {
         $this.AddToMainGrid($this.TabControl)
         $this.MyUpdate = [Qform]::UpdateTabControl
         $this.MyAddPage = [Qform]::AddPageToTabControl
+        $this.MyIndex = [Qform]::TabControlIndex
+        $this.MySetIndex = [Qform]::SetSelectedTabIndex
     }
 
     hidden [void] InitRefreshControl() {
         $this.PageLine = $this.PageLine
         $this.MyUpdate = [Qform]::UpdateGrid
         $this.MyAddPage = [Qform]::AddPageToGrid
+        $this.MyIndex = [Qform]::GetCurrentIndex
+        $this.MySetIndex = [Qform]::SetCurrentIndex
     }
 
     static [Int] FindDefaultParameterSet($CommandInfo) {
@@ -234,11 +256,11 @@ class Qform {
     }
 
     [Hashtable] Controls() {
-        return $this.Pages[$this.CurrentIndex].Controls
+        return $this.Pages[$this.MyIndex.Invoke($this)[0]].Controls
     }
 
     [PsCustomObject[]] MenuSpecs() {
-        return $this.Pages[$this.CurrentIndex].MenuSpecs
+        return $this.Pages[$this.MyIndex.Invoke($this)[0]].MenuSpecs
     }
 
     [void] Next() {
@@ -272,13 +294,13 @@ class Qform {
     }
 
     hidden [void] SetPageLine() {
-        $page = $this.Pages[$this.CurrentIndex]
+        $page = $this.Pages[$this.MyIndex.Invoke($this)[0]]
         $control = $page.Controls['__PageLine__']
         $control.HorizontalAlignment = 'Center'
 
         $control.Content =
             [Qform]::GetPageLine(
-                $this.CurrentIndex,
+                $this.MyIndex.Invoke($this)[0],
                 $this.Pages.Count,
                 $page.Name
             )
@@ -318,8 +340,7 @@ class Qform {
         }
 
         if ($null -eq $StartingIndex) {
-            $this.CurrentIndex =
-                $this.DefaultIndex = 0
+            $this.DefaultIndex = 0
 
             $page = [Page]::new(
                 $this.Main.Window,
@@ -332,7 +353,6 @@ class Qform {
             $this.AddPage($page)
         }
         else {
-            $this.CurrentIndex =
             $this.DefaultIndex =
                 if (($StartingIndex -ge 0 `
                     -and $StartingIndex -lt $PageInfo.Count) `
@@ -359,14 +379,17 @@ class Qform {
                 $this.AddPage($page)
             }
 
-            if ($null -ne $this.Pages -and $this.Pages.Count -gt 0) {
+            if (-not $IsTabControl -and
+                $null -ne $this.Pages -and
+                $this.Pages.Count -gt 0
+            ) {
                 $closure = New-Closure `
                     -InputObject $this `
                     -ScriptBlock {
                         $refresh = $false
                         $isKeyCombo =
-                            [System.Windows.Input.Keyboard]::Modifiers `
-                            -and [System.Windows.Input.ModifierKeys]::Alt
+                            [System.Windows.Input.Keyboard]::Modifiers -and
+                            [System.Windows.Input.ModifierKeys]::Alt
 
                         if ($isKeyCombo) {
                             if ([System.Windows.Input.Keyboard]::IsKeyDown(
@@ -393,12 +416,13 @@ class Qform {
             }
         }
 
+        [void] $this.MySetIndex.Invoke($this, $this.DefaultIndex)
         $this.Main.Window.Title = $Preferences.Caption
         $this.InitKeyBindings()
     }
 
     hidden [void] InitKeyBindings() {
-        $prefs = $this.Pages[$this.CurrentIndex].Preferences
+        $prefs = $this.Pages[$this.MyIndex.Invoke($this)[0]].Preferences
 
         if ($prefs.EnterToConfirm) {
             $this.Main.Window.Add_KeyDown({
@@ -448,7 +472,7 @@ class Qform {
     }
 
     [Boolean] ShowDialog() {
-        $this.SetPage($this.CurrentIndex)
+        $this.SetPage($this.MyIndex.Invoke($this)[0])
         return $this.Main.Window.ShowDialog()
     }
 }

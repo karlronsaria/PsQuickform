@@ -6,7 +6,7 @@
 <#
 .LINK
 Issue: Event handler fails to update variable from outer scope
-Url: https://stackoverflow.com/questions/55403528/why-wont-variable-update
+Url: <https://stackoverflow.com/questions/55403528/why-wont-variable-update>
 Retreived: 2022_03_02
 #>
 function New-Closure {
@@ -29,8 +29,8 @@ function Add-ControlsTypes {
 
 <#
     .LINK
-    Url: https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox
-    Url: https://stackoverflow.com/users/1042848/vishal-suthar
+    Url: <https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox>
+    Url: <https://stackoverflow.com/users/1042848/vishal-suthar>
     Retreived: 2022_03_02
 #>
 function Set-ControlsWritableText {
@@ -959,7 +959,7 @@ function New-ControlsTable {
 
     <#
     .LINK
-    Url: https://stackoverflow.com/questions/560581/how-to-autosize-and-right-align-gridviewcolumn-data-in-wpf
+    Url: <https://stackoverflow.com/questions/560581/how-to-autosize-and-right-align-gridviewcolumn-data-in-wpf>
     Retrieved: 2023_03_16
     #>
     function Set-ColumnPreferredSize {

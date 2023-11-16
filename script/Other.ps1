@@ -201,8 +201,8 @@ function ConvertTo-Hashtable {
     StackIndex returns the name of the next function up in the call stack.
 
     .LINK
-    Link: https://stackoverflow.com/questions/3689543/is-there-a-way-to-retrieve-a-powershell-function-name-from-within-a-function
-    Link: https://stackoverflow.com/users/7407752/jakobii
+    Url: <https://stackoverflow.com/questions/3689543/is-there-a-way-to-retrieve-a-powershell-function-name-from-within-a-function>
+    Url: <https://stackoverflow.com/users/7407752/jakobii>
     Retrieved: 2022_03_05
 #>
 function Get-ThisFunctionName {

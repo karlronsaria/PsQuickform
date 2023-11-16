@@ -1,6 +1,6 @@
 # issue
 
-- [ ] 2023_11_14_233637
+- [x] 2023_11_14_233637
 
   - when: ``Show-QformMenu`` by ``-Command``
   - what: MenuAnswers only ever marshalls from the first tab in
@@ -31,7 +31,7 @@
     ```text
     InputObject Property Numbered
     ----------- -------- --------
-    the         Length      False
+    the         {Length}    False
     ```
 
 - [x] 2023_11_11_153220

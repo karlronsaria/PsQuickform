@@ -530,8 +530,7 @@ function Invoke-QformCommand {
 
     Process {
         if ($AnswersAsHashtable -and -not $PassThru) {
-            Write-Warning ((Get-ThisFunctionName) `
-                + ": AnswersAsHashtable has no effect unless PassThru is specified.")
+            Write-Warning "$(Get-ThisFunctionName): AnswersAsHashtable has no effect unless PassThru is specified."
         }
 
         $quickform = [PsCustomObject]@{

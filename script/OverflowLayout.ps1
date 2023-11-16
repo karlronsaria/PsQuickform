@@ -13,7 +13,7 @@ function New-ControlsScrollPanel {
         [System.Windows.Controls.ScrollBarVisibility]::Auto
 
     # link
-    # - url: https://stackoverflow.com/questions/1927540/how-to-get-the-size-of-the-current-screen-in-wpf
+    # - url: <https://stackoverflow.com/questions/1927540/how-to-get-the-size-of-the-current-screen-in-wpf>
     # - retrieved: 2022_08_28
     $scrollViewer.MaxHeight =
         [System.Windows.SystemParameters]::WorkArea.Height - 200
@@ -50,7 +50,7 @@ function Add-ControlToScrollPanel {
     }
 
     # link
-    # - url: https://stackoverflow.com/questions/3401636/measuring-controls-created-at-runtime-in-wpf
+    # - url: <https://stackoverflow.com/questions/3401636/measuring-controls-created-at-runtime-in-wpf>
     # - retrieved: 2022_08_28
     $Control.Measure([System.Windows.Size]::new(
         [Double]::PositiveInfinity,
@@ -76,7 +76,7 @@ function New-ControlsMultipanel {
     $container.Margin = $Preferences.Margin
 
     # link
-    # - url: https://stackoverflow.com/questions/1927540/how-to-get-the-size-of-the-current-screen-in-wpf
+    # - url: <https://stackoverflow.com/questions/1927540/how-to-get-the-size-of-the-current-screen-in-wpf>
     # - retrieved: 2022_08_28
     $maxHeight =
         [System.Windows.SystemParameters]::WorkArea.Height - 200
@@ -108,7 +108,7 @@ function Add-ControlToMultipanel {
 
     $nextHeight = if ($null -ne $Control) {
         # link
-        # - url: https://stackoverflow.com/questions/3401636/measuring-controls-created-at-runtime-in-wpf
+        # - url: <https://stackoverflow.com/questions/3401636/measuring-controls-created-at-runtime-in-wpf>
         # - retrieved: 2022_08_28
         $Control.Measure([System.Windows.Size]::new(
             [Double]::PositiveInfinity,

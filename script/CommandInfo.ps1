@@ -90,8 +90,9 @@ function Test-IsCommonParameter {
         $ParameterInfo
     )
 
-    # link: https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_commonparameters?view=powershell-7.2
-    # retrieved: 2022_02_28
+    # link
+    # - url: <https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_commonparameters?view=powershell-7.2>
+    # - retrieved: 2022_02_28
     $names = @(
         'Debug',
         'ErrorAction',
