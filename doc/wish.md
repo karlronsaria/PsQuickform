@@ -1,5 +1,6 @@
 # wish
 - I wish
+  - [ ] String type could toggle Item List View
   - Enum answer would
     - [ ] preserve ordinal information
     - [ ] but behave differently for cmdlet forms
@@ -9,6 +10,7 @@
         - [ ] Open or Goto
         - [ ] Preview
   - for
+    - [ ] Code block or Run box
     - [x] Drop-down type
     - [x] Name inference
       - ex
