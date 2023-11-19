@@ -916,13 +916,15 @@ function Show-QformMenuForCommand {
     Param(
         [Parameter(
             ParameterSetName = 'ByCommandName',
-            Position = 0)]
+            Position = 0
+        )]
         [String]
         $CommandName,
 
         [Parameter(
             ParameterSetName = 'ByCommandInfo',
-            ValueFromPipeline = $true)]
+            ValueFromPipeline = $true
+        )]
         [System.Management.Automation.CommandInfo]
         $CommandInfo,
 

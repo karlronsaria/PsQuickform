@@ -94,17 +94,20 @@ function Test-IsCommonParameter {
     # - url: <https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_commonparameters?view=powershell-7.2>
     # - retrieved: 2022_02_28
     $names = @(
-        'Debug',
-        'ErrorAction',
-        'ErrorVariable',
-        'InformationAction',
-        'InformationVariable',
-        'OutVariable',
-        'OutBuffer',
-        'PipelineVariable',
-        'Verbose',
-        'WarningAction',
+        'Debug'
+        'ErrorAction'
+        'ErrorVariable'
+        'InformationAction'
+        'InformationVariable'
+        'OutVariable'
+        'OutBuffer'
+        'PipelineVariable'
+        'Verbose'
+        'WarningAction'
         'WarningVariable'
+
+        # karlr 2023_11_19
+        'ProgressAction'
     )
 
     return $names -contains $ParameterInfo.Name
