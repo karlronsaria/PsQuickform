@@ -1,0 +1,9 @@
+{
+    "CodeBlockStyle": {
+        "Foreground": "Magenta",
+        "Background": "Black",
+        "Height": 50,
+        "TextWrapping": "WrapWithOverflow",
+        "FontFamily": "Fira Code"
+    }
+}

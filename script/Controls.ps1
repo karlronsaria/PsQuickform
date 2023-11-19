@@ -642,6 +642,9 @@ function New-ControlsFieldBox {
         $MaxLength,
         $Default,
 
+        [Switch]
+        $CodeBlockStyle,
+
         [PsCustomObject]
         $Preferences
     )
@@ -650,6 +653,31 @@ function New-ControlsFieldBox {
     $label = New-Control Label
     $label.Content = $Text
     $textBox = New-Control TextBox
+
+    if ($CodeBlockStyle) {
+        $style = (cat "$PsScriptRoot\..\res\setting.json" |
+            ConvertFrom-Json).
+            CodeBlockStyle
+
+        $textBox.Background =
+            [System.Windows.Media.Brushes]::$($style.Background)
+
+        $textBox.Foreground =
+            [System.Windows.Media.Brushes]::$($style.Foreground)
+
+        $textBox.TextWrapping =
+            [System.Windows.TextWrapping]::$($style.TextWrapping)
+
+        $textBox.FontFamily =
+            [System.Windows.Media.FontFamily]::new($style.FontFamily)
+
+        $textBox.Height = $style.Height
+        $textBox.AcceptsReturn = $true
+
+        $textBox.VerticalScrollBarVisibility =
+        $textBox.HorizontalScrollBarVisibility =
+            [System.Windows.Controls.ScrollBarVisibility]::Auto
+    }
 
     $row2 = if ($Mandatory) {
         Get-ControlsAsterized `

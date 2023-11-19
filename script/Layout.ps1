@@ -38,7 +38,7 @@ function Get-QformControlType {
         '^Float$' = 'Numeric'
         '^Switch.*$' = 'Check'
         '^Bool.*$' = 'Check'
-        $defaultName = 'Field'
+        $defaultName = 'Script'
     }
 
     if ([String]::IsNullOrWhiteSpace($TypeName)) {
@@ -68,7 +68,6 @@ function ConvertTo-QformParameter {
 
     $type = $ParameterInfo.ParameterType
     $validators = Get-FieldValidators -ParameterInfo $ParameterInfo
-    $validatorType = $null
 
     $obj = [PsCustomObject]@{
         Name = $ParameterInfo.Name
@@ -76,9 +75,7 @@ function ConvertTo-QformParameter {
     }
 
     if ($validators) {
-        $validatorType = $validators.Type
-
-        switch ($validatorType) {
+        switch ($validators.Type) {
             'Enum' {
                 $obj.Type = 'Enum'
 
@@ -351,14 +348,14 @@ function Get-QformLayout {
                 }
             }
 
-            $what = switch ($item.Type) {
+            $what = switch -Regex ($item.Type) {
                 'Check' {
                     New-ControlsCheckBox `
                         -Text $text `
                         -Default $default
                 }
 
-                'Field' {
+                'Field|Script' {
                     $maxLength = $item | Get-PropertyOrDefault `
                         -Name MaxLength;
                     $mandatory = $item | Get-PropertyOrDefault `
@@ -370,7 +367,8 @@ function Get-QformLayout {
                         -Mandatory:$mandatory `
                         -MaxLength $maxLength `
                         -Default $default `
-                        -Preferences $Preferences
+                        -Preferences $Preferences `
+                        -CodeBlockStyle:$($_ -eq 'Script')
                 }
 
                 'Enum' {
@@ -536,7 +534,7 @@ function Get-QformLayout {
                                 $object.Control.SelectedItems.Count -gt 0
                             }
 
-                            'Field|Numeric' {
+                            'Field|Numeric|Script' {
                                 -not [String]::IsNullOrEmpty(
                                     $object.Control.Text
                                 )

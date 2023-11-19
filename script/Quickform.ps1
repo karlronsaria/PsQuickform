@@ -83,12 +83,14 @@ function Show-QformMenu {
     Param(
         [Parameter(
             ParameterSetName = 'BySingleObject',
-            ValueFromPipeline = $true)]
+            ValueFromPipeline = $true
+        )]
         [PsCustomObject]
         $InputObject,
 
         [Parameter(
-            ParameterSetName = 'BySeparateObjects')]
+            ParameterSetName = 'BySeparateObjects'
+        )]
         [ValidateScript(
             {
                 $valid = $true
@@ -111,22 +113,40 @@ function Show-QformMenu {
 
         [Parameter(
             ParameterSetName = 'ByCommandName',
-            Position = 0)]
+            Position = 0
+        )]
+        [ArgumentCompleter({
+            Param(
+                $CommandName,
+                $ParameterName,
+                $WordToComplete,
+                $CommandAst,
+                $PreboundParameters
+            )
+
+            return Get-Command |
+                where {
+                    $_ -like "$WordToComplete*"
+                }
+        })]
         [String]
         $CommandName,
 
         [Parameter(
-            ParameterSetName = 'ByCommandName')]
+            ParameterSetName = 'ByCommandName'
+        )]
         [String]
         $ParameterSetName,
 
         [Parameter(
-            ParameterSetName = 'ByCommandName')]
+            ParameterSetName = 'ByCommandName'
+        )]
         [Switch]
         $IncludeCommonParameters,
 
         [Parameter(
-            ParameterSetName = 'ByCommandName')]
+            ParameterSetName = 'ByCommandName'
+        )]
         [Switch]
         $IgnoreLists,
 
@@ -328,18 +348,21 @@ function ConvertTo-QformMenuSpec {
     Param(
         [Parameter(
             ParameterSetName = 'ByCommandName',
-            Position = 0)]
+            Position = 0
+        )]
         [String]
         $CommandName,
 
         [Parameter(
             ParameterSetName = 'ByCommandInfo',
-            ValueFromPipeline = $true)]
+            ValueFromPipeline = $true
+        )]
         [System.Management.Automation.CommandInfo]
         $CommandInfo,
 
         [Parameter(
-            ParameterSetName = 'ByParameterSet')]
+            ParameterSetName = 'ByParameterSet'
+        )]
         $ParameterSet,
 
         [Switch]
@@ -502,13 +525,29 @@ function Invoke-QformCommand {
     Param(
         [Parameter(
             ParameterSetName = 'ByCommandName',
-            Position = 0)]
+            Position = 0
+        )]
+        [ArgumentCompleter({
+            Param(
+                $CommandName,
+                $ParameterName,
+                $WordToComplete,
+                $CommandAst,
+                $PreboundParameters
+            )
+
+            return Get-Command |
+                where {
+                    $_ -like "$WordToComplete*"
+                }
+        })]
         [String]
         $CommandName,
 
         [Parameter(
             ParameterSetName = 'ByCommandInfo',
-            ValueFromPipeline = $true)]
+            ValueFromPipeline = $true
+        )]
         [System.Management.Automation.CommandInfo]
         $CommandInfo,
 
@@ -721,6 +760,12 @@ function Start-QformEvaluate {
                 'Field' {
                     [PsCustomObject]@{
                         Items = $Controls[$item.Name].Text
+                    }
+                }
+
+                'Script' {
+                    [PsCustomObject]@{
+                        Items = Invoke-Expression $Controls[$item.Name].Text
                     }
                 }
 

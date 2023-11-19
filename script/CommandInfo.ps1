@@ -1,14 +1,21 @@
 function Get-FieldValidators {
     [CmdletBinding(DefaultParameterSetName = 'ByInputObject')]
     Param(
-        [Parameter(ParameterSetName = 'ByParameterInfo')]
+        [Parameter(
+            ParameterSetName = 'ByParameterInfo'
+        )]
         $ParameterInfo,
 
-        [Parameter(ParameterSetName = 'ByCommandInfo', ValueFromPipeline = $true)]
+        [Parameter(
+            ParameterSetName = 'ByCommandInfo',
+            ValueFromPipeline = $true
+        )]
         [System.Management.Automation.CommandInfo]
         $CommandInfo,
 
-        [Parameter(ParameterSetName = 'ByCommandName')]
+        [Parameter(
+            ParameterSetName = 'ByCommandName'
+        )]
         [String]
         $CommandName
     )
@@ -16,10 +23,16 @@ function Get-FieldValidators {
     Process {
         switch ($PsCmdlet.ParameterSetName) {
             'ByParameterInfo' {
-                $isEnum = $ParameterInfo.ParameterType.PsObject.Properties.Name `
-                    -contains 'BaseType' `
-                    -and $ParameterInfo.ParameterType.BaseType.Name `
-                    -eq 'Enum'
+                $isEnum =
+                    $ParameterInfo.
+                        ParameterType.
+                        PsObject.
+                        Properties.
+                        Name -contains 'BaseType' -and
+                    $ParameterInfo.
+                        ParameterType.
+                        BaseType.
+                        Name -eq 'Enum'
 
                 if ($isEnum) {
                     [PsCustomObject]@{
@@ -73,7 +86,8 @@ function Get-FieldValidators {
                     [PsCustomObject]@{
                         Name = $parameter.Name;
                         Parameter = $parameter;
-                        Fields = Get-FieldValidators -ParameterInfo $parameter;
+                        Fields = Get-FieldValidators `
+                            -ParameterInfo $parameter;
                     }
                 }
             }
