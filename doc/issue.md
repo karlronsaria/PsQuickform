@@ -1,5 +1,20 @@
 # issue
 
+- [ ] 2023_11_19_002106
+
+  - when: Qform open
+  - howto
+    1. focus Field control
+    2. <[kbd](kbd)>Ctl + O</kbd>
+  - actual: ``OpenFileDialog`` only selects folders
+  - expected: ``OpenFileDialog`` selects files and folders
+
+- [x] 2023_11_19_002430
+
+  - when: Qform open with refresh control instead of tab control
+  - howto: use ``Get-QformMenu`` but set ``IsTabControl`` to ``False``
+  - actual: page line missing
+
 - [x] 2023_11_14_233637
 
   - when: ``Show-QformMenu`` by ``-Command``

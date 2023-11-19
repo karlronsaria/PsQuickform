@@ -28,10 +28,10 @@ function Add-ControlsTypes {
 }
 
 <#
-    .LINK
-    Url: <https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox>
-    Url: <https://stackoverflow.com/users/1042848/vishal-suthar>
-    Retreived: 2022_03_02
+.LINK
+Url: <https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox>
+Url: <https://stackoverflow.com/users/1042848/vishal-suthar>
+Retreived: 2022_03_02
 #>
 function Set-ControlsWritableText {
     Param(
@@ -243,11 +243,11 @@ function Get-ControlsTextDialog {
             -InputObject $textBox `
             -ScriptBlock {
                 $InputObject.Focus()
-        } `
+            } `
     ))
 
     if (-not $main.Window.ShowDialog()) {
-        return
+        return $Text
     }
 
     return $textBox.Text
@@ -307,16 +307,21 @@ function New-ControlsListBox {
         $label
     }
 
-    $buttonNames = @(
-        'New', 'Edit', 'Delete', 'Move Up', 'Move Down', 'Sort'
-    )
+    $buttonNames = [Ordered]@{
+        'New' = 'New' # '_New'
+        'Edit' = 'Edit' # '_Edit'
+        'Delete' = 'Delete' # '_Delete'
+        'Move Up' = 'Move Up' # 'Move _Up'
+        'Move Down' = 'Move Down' # 'Move _Down'
+        'Sort' = 'Sort' # '_Sort'
+    }
 
     $buttonTable = @{}
     $actionTable = @{}
 
-    foreach ($name in $buttonNames) {
+    foreach ($name in $buttonNames.Keys) {
         $button = New-Control Button
-        $button.Content = $name
+        $button.Content = $buttonNames[$name]
         $buttonPanel.AddChild($button)
         $buttonTable.Add($name, $button)
     }
@@ -497,7 +502,7 @@ function New-ControlsListBox {
             }
         }
 
-    foreach ($name in $buttonNames) {
+    foreach ($name in $buttonNames.Keys) {
         $button = $buttonTable[$name]
         $action = $actionTable[$name]
         $button.Add_Click($action)
@@ -556,6 +561,9 @@ function New-ControlsListBox {
                         -LineName 'TextClipped'
                 }
 
+                # karlr (2023_11_18_233610): Not necessary when using
+                # mnemonics. Cannot currently get mnemonics to work properly
+                # when multiple ListBox's appear in form.
                 if ([System.Windows.Input.Keyboard]::IsKeyDown('N')) {
                     & $newAction
                     return

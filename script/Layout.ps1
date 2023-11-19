@@ -1,4 +1,3 @@
-
 <#
     .SYNOPSIS
     Identifies the menu control type used to process a given PowerShell type.

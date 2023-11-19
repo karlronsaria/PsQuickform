@@ -225,7 +225,7 @@ class Qform {
     }
 
     hidden [void] InitRefreshControl() {
-        $this.PageLine = $this.PageLine
+        $this.PageLine = $true
         $this.MyUpdate = [Qform]::UpdateGrid
         $this.MyAddPage = [Qform]::AddPageToGrid
         $this.MyIndex = [Qform]::GetCurrentIndex
@@ -387,23 +387,25 @@ class Qform {
                     -InputObject $this `
                     -ScriptBlock {
                         $refresh = $false
+                        $keyboard = [System.Windows.Input.Keyboard]
                         $isKeyCombo =
-                            [System.Windows.Input.Keyboard]::Modifiers -and
-                            [System.Windows.Input.ModifierKeys]::Alt
+                            $keyboard::Modifiers -and
+                            [System.Windows.Input.ModifierKeys]::Control
 
                         if ($isKeyCombo) {
-                            if ([System.Windows.Input.Keyboard]::IsKeyDown(
-                                'Right'
-                            )) {
-                                $InputObject.Next()
-                                $refresh = $true
-                            }
+                            if ($keyboard::IsKeyDown('Tab')) {
+                                $shiftDown =
+                                    $keyboard::IsKeyDown('LeftShift') -or
+                                    $keyboard::IsKeyDown('RightShift')
 
-                            if ([System.Windows.Input.Keyboard]::IsKeyDown(
-                                'Left'
-                            )) {
-                                $InputObject.Previous()
-                                $refresh = $true
+                                if ($shiftDown) {
+                                    $InputObject.Previous()
+                                    $refresh = $true
+                                }
+                                else {
+                                    $InputObject.Next()
+                                    $refresh = $true
+                                }
                             }
                         }
 

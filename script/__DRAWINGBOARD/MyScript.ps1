@@ -1,6 +1,36 @@
-. "$PsScriptRoot\Controls.ps1"
+. "$PsScriptRoot\..\Controls.ps1"
 
 [void][System.Reflection.Assembly]::LoadWithPartialName('PresentationFramework')
+
+$main = New-ControlsMain
+
+$listBox = New-Control ListBox
+$listBox.SelectionMode = 'Multiple'
+$listBox.Height = 50
+$listBox.Width = 200
+$main.Grid.AddChild($listBox)
+
+$button = New-Control Button
+$button.Width = 50
+$button.Content = '+'
+$main.Grid.AddChild($button)
+
+$closure =
+    New-Closure `
+        -InputObject $listBox `
+        -ScriptBlock {
+            $InputObject.Items.Add("")
+        }
+
+$button.add_Click($closure)
+
+$main.Window.ShowDialog()
+
+
+
+
+<#
+## 2023_11_17_234110
 [xml]$xaml = @'
 <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -175,6 +205,7 @@ $itemId = 0
 }
 
 $form.ShowDialog()
+#>
 
 
 
