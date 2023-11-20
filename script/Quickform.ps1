@@ -764,8 +764,15 @@ function Start-QformEvaluate {
                 }
 
                 'Script' {
+                    $text = $Controls[$item.Name].Text
+
                     [PsCustomObject]@{
-                        Items = Invoke-Expression $Controls[$item.Name].Text
+                        Items = if ([String]::IsNullOrWhiteSpace($text)) {
+                            ""
+                        }
+                        else {
+                            Invoke-Expression $text
+                        }
                     }
                 }
 
