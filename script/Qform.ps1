@@ -4,6 +4,84 @@
 . $PsScriptRoot\OverflowLayout.ps1
 . $PsScriptRoot\Layout.ps1
 
+function Get-QformMainLayout {
+    Param(
+        [System.Windows.Window]
+        $Window,
+
+        [PsCustomObject[]]
+        $MenuSpecs,
+
+        [PsCustomObject]
+        $Preferences,
+
+        [ValidateSet('StatusLine', 'PageLine')]
+        [String[]]
+        $AddLines = @('StatusLine'),
+
+        [ScriptBlock]
+        $AddToMainPanel
+    )
+
+    $controls = @{}
+    $lineNames = @()
+    $statusLine = $null
+
+    foreach ($lineName in $AddLines) {
+        if ($lineName -in $lineNames) {
+            continue
+        }
+
+        $line = New-Control Label
+
+        if ($lineName -eq 'StatusLine') {
+            $statusLine = $line
+
+            Set-ControlsStatus `
+                -StatusLine $statusLine `
+                -LineName 'Idle'
+        }
+
+        $lineNames += @($lineName)
+        $controls.Add("__$($lineName)__", $line)
+    }
+
+    $script:mainPanel = $null
+
+    $MenuSpecs `
+        | Get-QformLayout `
+            -Window $Window `
+            -StatusLine $statusLine `
+            -Preferences $Preferences `
+        | foreach {
+            $script:mainPanel = & $AddToMainPanel `
+                -MainPanel $script:mainPanel `
+                -Control $_.Container `
+                -Preferences $Preferences
+
+            $controls.Add($_.Name, $_.Object)
+
+            # Objects added to $mainPanel go out of scope at this point
+            # unless $mainPanel is given a scope of 'Script'
+        }
+
+    # Resolve a possible race condition
+    while ($null -eq $script:mainPanel.Container) {}
+
+    $fillLayout = New-Control StackPanel
+    $fillLayout.AddChild($container)
+
+    foreach ($lineName in $lineNames) {
+        $fillLayout.AddChild($controls["__$($lineName)__"])
+    }
+
+    return [PsCustomObject]@{
+        FillLayout = $fillLayout
+        Controls = $controls
+        StatusLine = $statusLine
+    }
+}
+
 class Page {
     [String] $Name = ''
     [Hashtable] $Controls = @{}
@@ -67,81 +145,6 @@ class Page {
         $this.Controls = $what.Controls
         $this.FillLayout = $what.FillLayout
         $this.StatusLine = $what.StatusLine
-    }
-}
-
-function Get-QformMainLayout {
-    Param(
-        [System.Windows.Window]
-        $Window,
-
-        [PsCustomObject[]]
-        $MenuSpecs,
-
-        [PsCustomObject]
-        $Preferences,
-
-        [ValidateSet('StatusLine', 'PageLine')]
-        [String[]]
-        $AddLines = @('StatusLine'),
-
-        [ScriptBlock]
-        $AddToMainPanel
-    )
-
-    $controls = @{}
-    $lineNames = @()
-    $statusLine = $null
-
-    foreach ($lineName in $AddLines) {
-        if ($lineName -in $lineNames) {
-            continue
-        }
-
-        $line = New-Control Label
-
-        if ($lineName -eq 'StatusLine') {
-            $statusLine = $line
-
-            Set-ControlsStatus `
-                -StatusLine $statusLine `
-                -LineName 'Idle'
-        }
-
-        $lineNames += @($lineName)
-        $controls.Add("__$($lineName)__", $line)
-    }
-
-    $MenuSpecs `
-        | Get-QformLayout `
-            -Window $Window `
-            -StatusLine $statusLine `
-            -Preferences $Preferences `
-        | foreach {
-            $mainPanel = & $AddToMainPanel `
-                -MainPanel $mainPanel `
-                -Control $_.Container `
-                -Preferences $Preferences
-
-            $controls.Add($_.Name, $_.Object)
-        }
-
-    $container = $mainPanel.Container
-
-    # Resolve a possible race condition
-    while ($null -eq $container) { }
-
-    $fillLayout = New-Control StackPanel
-    $fillLayout.AddChild($container)
-
-    foreach ($lineName in $lineNames) {
-        $fillLayout.AddChild($controls["__$($lineName)__"])
-    }
-
-    return [PsCustomObject]@{
-        FillLayout = $fillLayout
-        Controls = $controls
-        StatusLine = $statusLine
     }
 }
 
