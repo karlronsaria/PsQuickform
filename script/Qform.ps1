@@ -69,7 +69,7 @@ function Get-QformMainLayout {
     while ($null -eq $script:mainPanel.Container) {}
 
     $fillLayout = New-Control StackPanel
-    $fillLayout.AddChild($container)
+    $fillLayout.AddChild($script:mainPanel.Container)
 
     foreach ($lineName in $lineNames) {
         $fillLayout.AddChild($controls["__$($lineName)__"])
