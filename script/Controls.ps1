@@ -114,7 +114,6 @@ function New-ControlsLayout {
 
     $layout.Add_Loaded((
         New-Closure `
-            -InputObject $Preferences.Width `
             -ScriptBlock {
                 if ([double]::IsNaN($this.Width)) {
                     $this.Width = $this.ActualWidth

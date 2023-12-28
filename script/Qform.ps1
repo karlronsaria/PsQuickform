@@ -299,6 +299,11 @@ class Qform {
     hidden [void] SetPageLine() {
         $page = $this.Pages[$this.MyIndex.Invoke($this)[0]]
         $control = $page.Controls['__PageLine__']
+
+        if ($null -eq $control) {
+            return
+        }
+
         $control.HorizontalAlignment = 'Center'
 
         $control.Content =
