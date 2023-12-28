@@ -382,7 +382,19 @@ function Get-QformLayout {
                     $params = @{
                         Text = $text
                         Mandatory = $mandatory
-                        Symbols = $item.Symbols
+                        Symbols =
+                            $item.Symbols |
+                            foreach {
+                                switch ($_) {
+                                    { $_ -is [String] } {
+                                        [PsCustomObject]@{
+                                            Text = $_
+                                        }
+                                    }
+
+                                    default { $_ }
+                                }
+                            }
                         Default = $default
                     }
 
