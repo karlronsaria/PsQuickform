@@ -48,11 +48,13 @@ function Get-QformMainLayout {
 
     $script:mainPanel = $null
 
-    $MenuSpecs `
+    $newMenuSpecs = $MenuSpecs `
         | Get-QformLayout `
             -Window $Window `
             -StatusLine $statusLine `
-            -Preferences $Preferences `
+            -Preferences $Preferences
+
+    $newMenuSpecs `
         | foreach {
             $script:mainPanel = & $AddToMainPanel `
                 -MainPanel $script:mainPanel `
@@ -79,6 +81,7 @@ function Get-QformMainLayout {
         FillLayout = $fillLayout
         Controls = $controls
         StatusLine = $statusLine
+        MenuSpecs = $newMenuSpecs
     }
 }
 
@@ -114,9 +117,6 @@ class Page {
         [String] $Type,
         [String] $Name
     ) {
-        $this.MenuSpecs = $MenuSpecs
-        $this.Name = $Name
-
         $Preferences = Get-QformPreference `
             -Preferences $Preferences
 
@@ -129,7 +129,7 @@ class Page {
             }
         }
 
-        $addLines = if ([String]::IsNullOrEmpty($this.Name)) {
+        $addLines = if ([String]::IsNullOrEmpty($Name)) {
             @('StatusLine')
         } else {
             @('StatusLine', 'PageLine')
@@ -142,9 +142,11 @@ class Page {
             -AddLines $addLines `
             -AddToMainPanel $buildPage
 
+        $this.Name = $Name
         $this.Controls = $what.Controls
         $this.FillLayout = $what.FillLayout
         $this.StatusLine = $what.StatusLine
+        $this.MenuSpecs = $what.MenuSpecs
     }
 }
 

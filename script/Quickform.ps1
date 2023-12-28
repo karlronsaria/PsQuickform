@@ -749,92 +749,69 @@ function Start-QformEvaluate {
 
     Process {
         foreach ($item in $MenuSpecs) {
-            # todo: attempt cleaner solution
-            $value = switch ($item.Type) {
+            $value = $(switch ($item.Type) {
                 'Check' {
-                    [PsCustomObject]@{
-                        Items = $Controls[$item.Name].IsChecked
-                    }
+                    $Controls[$item.Name].IsChecked
                 }
 
                 'Field' {
-                    [PsCustomObject]@{
-                        Items = $Controls[$item.Name].Text
-                    }
+                    $Controls[$item.Name].Text
                 }
 
                 'Script' {
                     $text = $Controls[$item.Name].Text
 
-                    [PsCustomObject]@{
-                        Items = if ([String]::IsNullOrWhiteSpace($text)) {
-                            ""
-                        }
-                        else {
-                            Invoke-Expression $text
-                        }
+                    $(if ([String]::IsNullOrWhiteSpace($text)) {
+                        ""
                     }
+                    else {
+                        Invoke-Expression $text
+                    })
                 }
 
                 'Enum' {
                     $obj = $Controls[$item.Name]
 
-                    switch ($obj.As) {
+                    $(switch ($obj.As) {
                         'RadioPanel' {
                             $buttons = $obj.Object
 
-                            [PsCustomObject]@{
-                                Items =
-                                    if ($buttons) {
-                                        $buttons.Keys | Where-Object {
-                                            $buttons[$_].IsChecked
-                                        }
-                                    } else {
-                                        $null
-                                    }
-                            }
+                            $(if ($buttons) {
+                                $buttons.Keys | Where-Object {
+                                    $buttons[$_].IsChecked
+                                }
+                            } else {
+                                $null
+                            })
                         }
 
                         'DropDown' {
-                            [PsCustomObject]@{
-                                Items = $obj.Object.SelectedItem
-                            }
+                            $obj.Object.SelectedItem
                         }
-                    }
-
-                    # # karlr (2023_04_17)
-                    # # - consider removing
-                    # if ($temp -eq 'None') {
-                    #     $null
-                    # }
-                    # else {
-                    #     $temp
-                    # }
+                    })
                 }
 
                 'Numeric' {
-                    [PsCustomObject]@{
-                        Items = $Controls[$item.Name].Value
-                    }
+                    $Controls[$item.Name].Value
                 }
 
                 'List' {
-                    [PsCustomObject]@{
-                        Items = $Controls[$item.Name].Items
-                    }
+                    $Controls[$item.Name].Items
                 }
 
                 'Table' {
-                    [PsCustomObject]@{
-                        Items = $Controls[$item.Name].SelectedItems
-                    }
+                    $Controls[$item.Name].SelectedItems
                 }
-            }
+
+                default {
+                    continue
+                }
+            })
 
             $out | Add-Member `
                 -MemberType NoteProperty `
                 -Name $item.Name `
-                -Value $value.Items
+                -Value $value
         }
     }
 

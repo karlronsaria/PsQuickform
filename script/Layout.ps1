@@ -478,6 +478,7 @@ function Get-QformLayout {
 
             $list += @([PsCustomObject]@{
                 Name = $name
+                Type = $item.Type
                 Container = $what.Container
                 Object = $what.Object
             })
