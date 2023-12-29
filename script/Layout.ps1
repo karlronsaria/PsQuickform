@@ -390,9 +390,7 @@ function Get-QformLayout {
                             foreach -Begin {
                                 $count = 0
                             } -Process {
-                                $newSymbol = Get-ControlsNameAndText $(
-                                    [PsCustomObject]@{ Text = $_ }
-                                );
+                                $newSymbol = Get-ControlsNameAndText $_
 
                                 [PsCustomObject]@{
                                     Id = ++$count
