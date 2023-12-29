@@ -1,5 +1,8 @@
 # To-do
 
+- [ ] document Enum
+  - [ ] new To property with values Key, Value, Pair
+    - Pair is PsCustomObject with properties Id, Name, Text
 - [ ] document Script type
 - [ ] document Table type
 - [ ] document Enum DropDown type

@@ -378,21 +378,26 @@ function Get-QformLayout {
                     $as = $item | Get-PropertyOrDefault `
                         -Name As `
                         -Default 'RadioPanel';
+                    $to = $item | Get-PropertyOrDefault `
+                        -Name To `
+                        -Default 'Key';
 
-                    $params = @{
+                    $params = [Ordered]@{
                         Text = $text
                         Mandatory = $mandatory
                         Symbols =
                             $item.Symbols |
-                            foreach {
-                                switch ($_) {
-                                    { $_ -is [String] } {
-                                        [PsCustomObject]@{
-                                            Text = $_
-                                        }
-                                    }
+                            foreach -Begin {
+                                $count = 0
+                            } -Process {
+                                $newSymbol = Get-ControlsNameAndText $(
+                                    [PsCustomObject]@{ Text = $_ }
+                                );
 
-                                    default { $_ }
+                                [PsCustomObject]@{
+                                    Id = ++$count
+                                    Name = $newSymbol.Name
+                                    Text = $newSymbol.Text
                                 }
                             }
                         Default = $default
@@ -416,7 +421,9 @@ function Get-QformLayout {
                         Container = $control.Container
                         Object = [PsCustomObject]@{
                             As = $as
+                            To = $to
                             Object = $control.Object
+                            Symbols = $params['Symbols']
                         }
                     }
                 }

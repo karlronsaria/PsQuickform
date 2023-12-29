@@ -779,6 +779,26 @@ function Start-QformEvaluate {
                             $(if ($buttons) {
                                 $buttons.Keys | Where-Object {
                                     $buttons[$_].IsChecked
+                                } | ForEach-Object {
+                                    $name = $_
+
+                                    $(switch ($obj.To) {
+                                        'Key' { $name }
+
+                                        'Value' {
+                                            $obj.Symbols | Where-Object {
+                                                $_.Name -eq $name
+                                            } | ForEach-Object {
+                                                $_.Text
+                                            }
+                                        }
+
+                                        'Pair' {
+                                            $obj.Symbols | Where-Object {
+                                                $_.Name -eq $name
+                                            }
+                                        }
+                                    })
                                 }
                             } else {
                                 $null
