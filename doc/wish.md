@@ -3,8 +3,9 @@
   - [ ] Field type could toggle Item List View
   - [ ] Field type had a Pattern property
   - Enum answer would
-    - [ ] preserve ordinal information
-    - [ ] but behave differently for cmdlet forms
+    - [x] preserve ordinal information
+      - solution: To property, Pair subtype
+    - [x] but behave differently for cmdlet forms
   - Table had key bindings
     - for
       - if row fields procured from a document
