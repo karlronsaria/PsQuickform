@@ -806,7 +806,30 @@ function Start-QformEvaluate {
                         }
 
                         'DropDown' {
-                            $obj.Object.SelectedItem
+                            $($obj.Object.SelectedIndex | ForEach-Object {
+                                $index = $_
+
+                                $(switch ($obj.To) {
+                                    'Key' {
+                                        $obj.Symbols[$index].Name
+                                    }
+
+                                    'Value' {
+                                        $obj.Symbols[$index].Text
+                                    }
+
+                                    'Pair' {
+                                        [PsCustomObject]@{
+                                            Id =
+                                                $index + 1
+                                            Name =
+                                                $obj.Symbols[$index].Name
+                                            Text =
+                                                $obj.Symbols[$index].Text
+                                        }
+                                    }
+                                })
+                            })
                         }
                     })
                 }

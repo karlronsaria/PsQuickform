@@ -9,6 +9,10 @@
   - actual: ``OpenFileDialog`` only selects folders
   - expected: ``OpenFileDialog`` selects files and folders
 
+- [x] 2023_12_28_230434
+
+  - actual: Enum As DropDown cannot return Pair
+
 - [x] 2023_11_19_002430
 
   - when: Qform open with refresh control instead of tab control
