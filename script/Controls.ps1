@@ -225,6 +225,7 @@ function Get-ControlsTextDialog {
     $main.Window.Title = $Caption
     $main.Grid.AddChild($textBox)
 
+    # todo: consider adding to the main window of general forms
     $main.Window.Add_KeyDown({
         if ($_.Key -eq 'Enter') {
             $this.DialogResult = $true

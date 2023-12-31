@@ -9,14 +9,14 @@
         System.String
             The accepted name of a Quickform menu control.
 
-        System.Collections.Hashtable
+        System.Collections.Specialized.OrderedDictionary
             When no TypeName is specified, a table containing all pairs of
             PowerShell type patterns and their respective Quickform menu
             controls. Pattern '_' means default.
 #>
 function Get-QformControlType {
     [OutputType([String])]
-    [OutputType([Hashtable])]
+    [OutputType([System.Collections.Specialized.OrderedDictionary])]
     Param(
         [String]
         $TypeName,
@@ -28,12 +28,14 @@ function Get-QformControlType {
     $defaultName = '_'
     $listPattern = '.*\[\]$'
 
-    $table = [PsCustomObject]@{
-        '^PsCustomObject(\[\])?$' = 'Table'
+    $table = [Ordered]@{
+        '^PsCustomObject(\[\])?$' = 'Table'  # This state will never be reached
         $listPattern = 'List'
         '^String$' = 'Field'
         '^Int.*$' = 'Numeric'
         '^Decimal$' = 'Numeric'
+        '^Long$' = 'Numeric'
+        '^Single$' = 'Numeric'
         '^Double$' = 'Numeric'
         '^Float$' = 'Numeric'
         '^Switch.*$' = 'Check'
@@ -45,17 +47,17 @@ function Get-QformControlType {
         return $table
     }
 
-    foreach ($property in $table.PsObject.Properties) {
-        if ($TypeName -match $property.Name) {
-            if ($IgnoreLists -and $property.Name -eq $listPattern) {
-                continue
-            }
-
-            return $property.Value
-        }
+    $table.Keys |
+    where {
+        $TypeName -match $_ -and
+        (-not $IgnoreLists -or
+        $_ -ne $listPattern)
+    } |
+    foreach {
+        return $table[$_]
     }
 
-    return $table.$defaultName
+    return $table[$defaultName]
 }
 
 function ConvertTo-QformParameter {
@@ -66,7 +68,7 @@ function ConvertTo-QformParameter {
         $IgnoreLists
     )
 
-    $type = $ParameterInfo.ParameterType
+    $paramType = $ParameterInfo.ParameterType
     $validators = Get-FieldValidators -ParameterInfo $ParameterInfo
 
     $obj = [PsCustomObject]@{
@@ -86,25 +88,16 @@ function ConvertTo-QformParameter {
                 $obj | Add-Member `
                     -MemberType NoteProperty `
                     -Name Symbols `
-                    -Value ($values | ForEach-Object {
-                        [PsCustomObject]@{
-                            Name = $_
-                        }
-                    })
+                    -Value $values
             }
 
             'ValidSet' {
                 $obj.Type = 'Enum'
-                $values = $validators.Values
 
                 $obj | Add-Member `
                     -MemberType NoteProperty `
                     -Name Symbols `
-                    -Value ($values | ForEach-Object {
-                        [PsCustomObject]@{
-                            Name = $_
-                        }
-                    })
+                    -Value $validators.Values
             }
 
             'ValidRange' {
@@ -149,7 +142,7 @@ function ConvertTo-QformParameter {
 
     if ($obj.Type -eq '') {
         $obj.Type = Get-QformControlType `
-            -TypeName $type.Name `
+            -TypeName $paramType.Name `
             -IgnoreLists:$IgnoreLists
     }
 
@@ -185,14 +178,14 @@ function Get-QformResource {
     )
 
     Begin {
-        $masterObj = Get-Content `
+        $root = Get-Content `
             -Path "$PsScriptRoot/../res/properties.json" `
         | ConvertFrom-Json
     }
 
     Process {
         foreach ($item in $Type) {
-            $masterObj."$($Type)s"
+            $root."$($item)s"
         }
     }
 }
@@ -335,6 +328,7 @@ function Get-QformLayout {
             $name = $what.Name
             $mandatory = $false
 
+            # Infer the Table type from the Rows property
             if ($null -eq $item.Type) {
                 $rows = Get-PropertyOrDefault `
                     -InputObject $item `
@@ -382,6 +376,7 @@ function Get-QformLayout {
                         -Name To `
                         -Default 'Key';
 
+                    # todo: Why is this an [Ordered]?
                     $params = [Ordered]@{
                         Text = $text
                         Mandatory = $mandatory

@@ -910,7 +910,7 @@ function ConvertTo-QformString {
             }
 
             '.*\[\]' {
-                " -$name $(($value | % { "`""$_"`"" }) -join ', ')"
+                " -$name $(($value | foreach { "`""$_"`"" }) -join ', ')"
             }
         }
     }
