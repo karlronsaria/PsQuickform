@@ -5,8 +5,7 @@
 
 . $PsScriptRoot\Controls.ps1
 
-$types = [PsCustomObject]@{
-Default = [PsCustomObject]@{
+$script:default = [PsCustomObject]@{
     Type = 'Script'
     ContentHasAny = {
         -not [String]::IsNullOrEmpty(
@@ -19,6 +18,9 @@ Default = [PsCustomObject]@{
         )
     }
 }
+
+$types = [PsCustomObject]@{
+Default = $script:default.PsObject.Copy()
 Table = [PsCustomObject]@{
     Check = [PsCustomObject]@{
         DataTypes = @(
@@ -42,7 +44,7 @@ Table = [PsCustomObject]@{
         DataTypes = @(
             [String]
         )
-        HasAny = $default.TextHasAny
+        HasAny = $script:default.TextHasAny
         GetValue = {
             $_.Text
         }
@@ -65,7 +67,7 @@ Table = [PsCustomObject]@{
         DataTypes = @(
             [String]
         )
-        HasAny = $default.TextHasAny
+        HasAny = $script:default.TextHasAny
         GetValue = {
             if ([String]::IsNullOrWhiteSpace($_.Text)) {
                 ""
@@ -157,7 +159,7 @@ Table = [PsCustomObject]@{
             [Double]
             [Decimal]
         )
-        HasAny = $default.TextHasAny
+        HasAny = $script:default.TextHasAny
         GetValue = {
             $_.Value
         }
