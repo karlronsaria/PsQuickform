@@ -5,6 +5,7 @@ class NumberSlider : System.Windows.Controls.DockPanel {
     $Minimum = $null;
     $Maximum = $null;
     $Step = $null;
+    $Type = [Int];
 
     [ScriptBlock[]] $OnMaxReached = @()
     [ScriptBlock[]] $OnMinReached = @()
@@ -28,10 +29,10 @@ class NumberSlider : System.Windows.Controls.DockPanel {
     hidden [String] $PreviousText = '';
 
     hidden [void] ChangeText() {
-        [Int]$myInt = $null
+        $myInt = $null
 
         $valid = [String]::IsNullOrEmpty($this.Field.Text) `
-            -or [Int32]::TryParse($this.Field.Text, [Ref]$myInt)
+            -or $this.Type::TryParse($this.Field.Text, [Ref]$myInt)
 
         if ($valid) {
             $this.PreviousText = [String]$myInt
@@ -42,12 +43,12 @@ class NumberSlider : System.Windows.Controls.DockPanel {
     }
 
     hidden [void] Up() {
-        [Int]$myInt = [Int]$this.Field.Text
+        $myInt = $this.Field.Text -as $this.Type
         $this.SetText([String]($myInt + $this.Step))
     }
 
     hidden [void] Down() {
-        [Int]$myInt = [Int]$this.Field.Text
+        $myInt = $this.Field.Text -as $this.Type
         $this.SetText([String]($myInt - $this.Step))
     }
 
@@ -63,6 +64,7 @@ class NumberSlider : System.Windows.Controls.DockPanel {
     hidden [ScriptBlock] $ctrldown_action = { }
 
     NumberSlider($InitialValue, $Minimum, $Maximum, $Step) {
+        $this.Type = $InitialValue.GetType()
         $this.InitialValue = $InitialValue
         $this.Minimum = $Minimum
         $this.Maximum = $Maximum
@@ -117,7 +119,7 @@ class NumberSlider : System.Windows.Controls.DockPanel {
                     $null
                 }
                 else {
-                    [Int]$this.Field.Text
+                    $this.Field.Text -as $this.Type
                 }
             }
 
@@ -145,7 +147,7 @@ class NumberSlider : System.Windows.Controls.DockPanel {
 
         $this.Field.Add_TextChanged($closure)
 
-        $this.Field.add_GotFocus({
+        $this.Field.Add_GotFocus({
             $this.Select($this.Text.Length, 0)
         })
 
@@ -166,7 +168,10 @@ class NumberSlider : System.Windows.Controls.DockPanel {
             $closure = New-Closure `
                 -InputObject $this `
                 -ScriptBlock {
-                    if ([Int]$InputObject.GetText() -gt $InputObject.Maximum) {
+                    if (
+                        ($InputObject.GetText() -as $InputObject.Type) `
+                        -gt $InputObject.Maximum
+                    ) {
                         $InputObject.Field.Text = $InputObject.Maximum
                         $InputObject.OnMaxReached | foreach { $_.Invoke() }
                     }
@@ -186,7 +191,10 @@ class NumberSlider : System.Windows.Controls.DockPanel {
             $closure = New-Closure `
                 -InputObject $this `
                 -ScriptBlock {
-                    if ([Int]$InputObject.GetText() -lt $InputObject.Minimum) {
+                    if (
+                        ($InputObject.GetText() -as $InputObject.Type) `
+                        -lt $InputObject.Minimum
+                    ) {
                         $InputObject.Field.Text = $InputObject.Minimum
                         $InputObject.OnMinReached | foreach { $_.Invoke() }
                     }
@@ -201,21 +209,27 @@ class NumberSlider : System.Windows.Controls.DockPanel {
                 if ([System.Windows.Input.Keyboard]::Modifiers `
                     -eq [System.Windows.Input.ModifierKeys]::Control)
                 {
-                    if ($_.Key -eq 'Up') {
-                        Invoke-Command $InputObject.ctrlup_action
-                    }
-                    elseif ($_.Key -eq 'Down') {
-                        Invoke-Command $InputObject.ctrldown_action
+                    switch ($_.Key) {
+                        'Up' {
+                            Invoke-Command $InputObject.ctrlup_action
+                        }
+
+                        'Down' {
+                            Invoke-Command $InputObject.ctrldown_action
+                        }
                     }
 
                     return
                 }
 
-                if ($_.Key -eq 'Up') {
-                    Invoke-Command { $InputObject.Up() }
-                }
-                elseif ($_.Key -eq 'Down') {
-                    Invoke-Command { $InputObject.Down() }
+                switch ($_.Key) {
+                    'Up' {
+                        Invoke-Command { $InputObject.Up() }
+                    }
+
+                    'Down' {
+                        Invoke-Command { $InputObject.Down() }
+                    }
                 }
             }
 

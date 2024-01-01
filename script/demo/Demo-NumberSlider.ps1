@@ -32,8 +32,15 @@ $slider2.OnIdle += @($status_Idle)
 $slider2.OnMaxReached += @($status_MaxReached)
 $slider2.OnMinReached += @($status_MinReached)
 
+$slider3 = [NumberSlider]::new(47.1, -11.1, 88.1, 1.1)
+$slider3.Margin = 5
+$slider3.OnIdle += @($status_Idle)
+$slider3.OnMaxReached += @($status_MaxReached)
+$slider3.OnMinReached += @($status_MinReached)
+
 $stackPanel.AddChild($row)
 $stackPanel.AddChild($slider2)
+$stackPanel.AddChild($slider3)
 $stackPanel.AddChild($statusLine)
 
 $main = New-ControlsMain
