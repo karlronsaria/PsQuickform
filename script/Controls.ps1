@@ -80,8 +80,7 @@ function New-Control {
         $Type
     )
 
-    $control = New-Object "System.Windows.Controls.$Type"
-    return $control
+    return New-Object "System.Windows.Controls.$Type"
 }
 
 function New-ControlsMain {
@@ -254,6 +253,7 @@ function Get-ControlsTextDialog {
 }
 
 function New-ControlsCheckBox {
+    [OutputType('PageElementControl')]
     Param(
         [String]
         $Text,
@@ -269,12 +269,14 @@ function New-ControlsCheckBox {
     }
 
     return [PsCustomObject]@{
+        PsTypeName = 'PageElementControl'
         Container = $checkBox
         Object = $checkBox
     }
 }
 
 function New-ControlsListBox {
+    [OutputType('PageElementControl')]
     Param(
         [String]
         $Text,
@@ -626,12 +628,14 @@ function New-ControlsListBox {
     $outerPanel.AddChild($mainPanel)
 
     return [PsCustomObject]@{
+        PsTypeName = 'PageElementControl'
         Container = $outerPanel
         Object = $listBox
     }
 }
 
 function New-ControlsFieldBox {
+    [OutputType('PageElementControl')]
     Param(
         [String]
         $Text,
@@ -745,12 +749,14 @@ function New-ControlsFieldBox {
     $stackPanel.AddChild($row2)
 
     return [PsCustomObject]@{
+        PsTypeName = 'PageElementControl'
         Container = $stackPanel
         Object = $textBox
     }
 }
 
 function New-ControlsSlider {
+    [OutputType('PageElementControl')]
     Param(
         [String]
         $Text,
@@ -841,12 +847,14 @@ function New-ControlsSlider {
     $dockPanel.AddChild($row2)
 
     return [PsCustomObject]@{
+        PsTypeName = 'PageElementControl'
         Container = $dockPanel
         Object = $slider
     }
 }
 
 function New-ControlsDropDown {
+    [OutputType('PageElementControl')]
     Param(
         [String]
         $Text,
@@ -885,6 +893,7 @@ function New-ControlsDropDown {
     }
 
     return [PsCustomObject]@{
+        PsTypeName = 'PageElementControl'
         Container = $stackPanel
         Object = $comboBox
     }
@@ -923,6 +932,7 @@ function Get-ControlsNameAndText {
 }
 
 function New-ControlsRadioBox {
+    [OutputType('PageElementControl')]
     Param(
         [String]
         $Text,
@@ -973,12 +983,14 @@ function New-ControlsRadioBox {
     }
 
     return [PsCustomObject]@{
+        PsTypeName = 'PageElementControl'
         Container = $groupBox
         Object = $buttons
     }
 }
 
 function New-ControlsTable {
+    [OutputType('PageElementControl')]
     Param(
         [String]
         $Text,
@@ -1108,12 +1120,14 @@ function New-ControlsTable {
     ))
 
     return [PsCustomObject]@{
+        PsTypeName = 'PageElementControl'
         Container = $groupBox
         Object = $listView
     }
 }
 
 function New-ControlsOkCancelButtons {
+    [OutputType('PageElementControl')]
     Param(
         [Int]
         $Margin
@@ -1137,6 +1151,7 @@ function New-ControlsOkCancelButtons {
     $endButtons.HorizontalAlignment = 'Center'
 
     return [PsCustomObject]@{
+        PsTypeName = 'PageElementControl'
         Container = $endButtons
         Object = [PsCustomObject]@{
             OkButton = $okButton
@@ -1365,12 +1380,10 @@ function Open-ControlsMonthCalendar {
 
     $item = $dates[0]
 
-    $date = if ($null -eq $textBox.Text) {
+    return $(if ($null -eq $textBox.Text) {
         $item.ToString()
     } else {
         $item.ToString($textBox.Text)
-    }
-
-    return $date
+    })
 }
 

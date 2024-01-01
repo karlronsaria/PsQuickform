@@ -3,6 +3,8 @@
 #     - container
 #     - object
 
+. $PsScriptRoot\Controls.ps1
+
 $types = [PsCustomObject]@{
 Default = [PsCustomObject]@{
     Type = 'Script'
@@ -28,9 +30,8 @@ Table = [PsCustomObject]@{
             $_.IsChecked
         }
         New = {
+            [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
-
-            . "$PsScriptRoot/Controls.ps1"
 
             New-ControlsCheckBox `
                 -Text $Text `
@@ -46,9 +47,8 @@ Table = [PsCustomObject]@{
             $_.Text
         }
         New = {
+            [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
-
-            . "$PsScriptRoot/Controls.ps1"
 
             $maxLength = $Item | Get-PropertyOrDefault `
                 -Name MaxLength
@@ -67,19 +67,16 @@ Table = [PsCustomObject]@{
         )
         HasAny = $default.TextHasAny
         GetValue = {
-            $text = $_.Text
-
-            $(if ([String]::IsNullOrWhiteSpace($text)) {
+            if ([String]::IsNullOrWhiteSpace($_.Text)) {
                 ""
             }
             else {
-                Invoke-Expression $text
-            })
+                Invoke-Expression $_.Text
+            }
         }
         New = {
+            [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
-
-            . "$PsScriptRoot/Controls.ps1"
 
             $maxLength = $InputObject.Item | Get-PropertyOrDefault `
                 -Name MaxLength
@@ -105,19 +102,18 @@ Table = [PsCustomObject]@{
             $_.SelectedItems
         }
         New = {
+            [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
-
-            . "$PsScriptRoot/Controls.ps1"
 
             $rows = $Item | Get-PropertyOrDefault `
                 -Name Rows `
                 -Default @()
 
             New-ControlsTable `
-                -Text $InputObject.Text `
+                -Text $Text `
                 -Mandatory:$Mandatory `
                 -Rows $rows `
-                -Margin $Preferences.Margin
+                -Margin $Prefs.Margin
         }
     }
     List = [PsCustomObject]@{
@@ -132,9 +128,8 @@ Table = [PsCustomObject]@{
             $_.Items
         }
         New = {
+            [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
-
-            . "$PsScriptRoot/Controls.ps1"
 
             $maxCount = $Item | Get-PropertyOrDefault `
                 -Name MaxCount
@@ -167,9 +162,8 @@ Table = [PsCustomObject]@{
             $_.Value
         }
         New = {
+            [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
-
-            . "$PsScriptRoot/Controls.ps1"
 
             $places = $item | Get-PropertyOrDefault `
                 -Name DecimalPlaces `
@@ -199,71 +193,67 @@ Table = [PsCustomObject]@{
         )
         HasAny = { $true }
         GetValue = {
-            $item = $_
+            # This is a filter script block, not a function script block.
+            # Filters need to specify 'Script' scope, because filter commands
+            # like 'ForEach-Object' and 'Where-Object' share scope with the
+            # outer block. Otherwise, binding an '$item' in this block will
+            # affect other '$item' bindings outside the block.
 
-            switch ($item.As) {
+            $script:item = $_
+
+            return $(switch ($script:item.As) {
                 'RadioPanel' {
-                    $buttons = $item.Object
+                    $script:buttons = $script:item.Object
 
-                    if (-not $buttons) {
+                    if (-not $script:buttons) {
                         return
                     }
 
-                    $($buttons.Keys |
-                    where {
-                        $buttons[$_].IsChecked
-                    } |
-                    foreach {
-                        $name = $_
-
-                        $(switch ($item.To) {
+                    foreach (
+                        $name in $script:buttons.Keys |
+                        where { $script:buttons[$_].IsChecked }
+                    ) {
+                        switch ($script:item.To) {
                             'Key' { $name }
 
                             'Value' {
-                                $item.Symbols |
+                                $script:item.Symbols |
                                 where { $_.Name -eq $name } |
                                 foreach { $_.Text }
                             }
 
                             'Pair' {
-                                $item.Symbols |
+                                $script:item.Symbols |
                                 where { $_.Name -eq $name }
                             }
-                        })
-                    })
+                        }
+                    }
                 }
 
                 'DropDown' {
-                    $($obj.Object.SelectedIndex |
-                    foreach {
-                        $index = $_
-                        $symbol = $item.Symbols[$_]
+                    foreach ($index in $script:item.Object.SelectedIndex) {
+                        $script:symbol = $script:item.Symbols[$index]
 
-                        $(switch ($item.To) {
+                        switch ($script:item.To) {
                             'Key' {
-                                $symbol.Name
+                                $script:symbol.Name
                             }
 
                             'Value' {
-                                $symbol.Text
+                                $script:symbol.Text
                             }
 
                             'Pair' {
-                                [PsCustomObject]@{
-                                    Id = $index + 1
-                                    Name = $symbol.Name
-                                    Text = $symbol.Text
-                                }
+                                $script:symbol
                             }
-                        })
-                    })
+                        }
+                    }
                 }
-            }
+            })
         }
         New = {
+            [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
-
-            . "$PsScriptRoot/Controls.ps1"
 
             $as = $Item | Get-PropertyOrDefault `
                 -Name As `
@@ -275,8 +265,7 @@ Table = [PsCustomObject]@{
                 -Name Symbols `
                 -Default @{}
 
-            # todo: Why is this an [Ordered]?
-            $params = [Ordered]@{
+            $params = @{
                 Text = $Text
                 Mandatory = $Mandatory
                 Symbols =
@@ -284,7 +273,8 @@ Table = [PsCustomObject]@{
                     foreach -Begin {
                         $count = 0
                     } -Process {
-                        $newSymbol = Get-ControlsNameAndText $_
+                        $newSymbol =
+                            Get-ControlsNameAndText $_
 
                         [PsCustomObject]@{
                             Id = ++$count
@@ -318,15 +308,4 @@ Table = [PsCustomObject]@{
     }
 }
 }
-
-
-
-
-
-
-
-
-
-
-
 

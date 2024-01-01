@@ -404,6 +404,7 @@ function Get-QformLayout {
                 }
         } else {
             $parameters = [PsCustomObject]@{
+                Types = $types
                 Window = $Window
                 Mandates = $mandates
                 StatusLine = $StatusLine
@@ -414,8 +415,10 @@ function Get-QformLayout {
                 -ScriptBlock {
                     $mandatesSet = $true
 
-                    foreach ($object in $InputObject.Mandates) {
-                        $itemIsSet = $item | foreach $types.Table.($item.Type).HasAny
+                    foreach ($item in $InputObject.Mandates) {
+                        $itemIsSet = $item |
+                            foreach $InputObject.Types.Table.($item.Type).HasAny
+
                         $mandatesSet = $mandatesSet -and $itemIsSet
                     }
 

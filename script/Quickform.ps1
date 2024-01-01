@@ -750,7 +750,8 @@ function Start-QformEvaluate {
 
     Process {
         foreach ($item in $MenuSpecs) {
-            $value = $item | foreach $types.Table.($item.Type).GetValue
+            $value = $Controls[$item.Name] |
+                foreach $types.Table.($item.Type).GetValue
 
             $out | Add-Member `
                 -MemberType NoteProperty `
