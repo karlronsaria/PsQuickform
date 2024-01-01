@@ -3,8 +3,8 @@
 #     - container
 #     - object
 
-$default =
-[PsCustomObject]@{
+$types = [PsCustomObject]@{
+Default = [PsCustomObject]@{
     Type = 'Script'
     ContentHasAny = {
         -not [String]::IsNullOrEmpty(
@@ -17,9 +17,7 @@ $default =
         )
     }
 }
-
-$table =
-[PsCustomObject]@{
+Table = [PsCustomObject]@{
     Check = [PsCustomObject]@{
         DataTypes = @(
             [Boolean]
@@ -318,6 +316,7 @@ $table =
             }
         }
     }
+}
 }
 
 

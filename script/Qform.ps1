@@ -3,6 +3,7 @@
 . $PsScriptRoot\Controls.ps1
 . $PsScriptRoot\OverflowLayout.ps1
 . $PsScriptRoot\Layout.ps1
+. $PsScriptRoot\Type.ps1
 
 function Get-QformMainLayout {
     Param(

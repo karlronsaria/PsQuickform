@@ -1,3 +1,5 @@
+. $PsScriptRoot\Type.ps1
+
 <#
     .SYNOPSIS
     Identifies the menu control type used to process a given PowerShell type.
@@ -319,14 +321,26 @@ function Get-QformLayout {
 
     Process {
         foreach ($item in $MenuSpecs) {
+            $id = Get-ControlsNameAndText $item
+            $text = $id.Text
+            $name = $id.Name
+
+            $mandatory = $item | Get-PropertyOrDefault `
+                -Name Mandatory `
+                -Default $false
+
             $default = Get-PropertyOrDefault `
                 -InputObject $item `
                 -Name 'Default'
 
-            $what = Get-ControlsNameAndText $item
-            $text = $what.Text
-            $name = $what.Name
-            $mandatory = $false
+            $newParams = @{
+                Item = $item
+                Pref = $Preferences
+                Label = $StatusLine
+                Text = $id.Text
+                Default = $default
+                Mandatory = $mandatory
+            }
 
             # Infer the Table type from the Rows property
             if ($null -eq $item.Type) {
@@ -342,144 +356,7 @@ function Get-QformLayout {
                 }
             }
 
-            $what = switch -Regex ($item.Type) {
-                'Check' {
-                    New-ControlsCheckBox `
-                        -Text $text `
-                        -Default $default
-                }
-
-                'Field|Script' {
-                    $maxLength = $item | Get-PropertyOrDefault `
-                        -Name MaxLength;
-                    $mandatory = $item | Get-PropertyOrDefault `
-                        -Name Mandatory `
-                        -Default $false;
-
-                    New-ControlsFieldBox `
-                        -Text $text `
-                        -Mandatory:$mandatory `
-                        -MaxLength $maxLength `
-                        -Default $default `
-                        -Preferences $Preferences `
-                        -CodeBlockStyle:$($_ -eq 'Script')
-                }
-
-                'Enum' {
-                    $mandatory = $item | Get-PropertyOrDefault `
-                        -Name Mandatory `
-                        -Default $false;
-                    $as = $item | Get-PropertyOrDefault `
-                        -Name As `
-                        -Default 'RadioPanel';
-                    $to = $item | Get-PropertyOrDefault `
-                        -Name To `
-                        -Default 'Key';
-
-                    # todo: Why is this an [Ordered]?
-                    $params = [Ordered]@{
-                        Text = $text
-                        Mandatory = $mandatory
-                        Symbols =
-                            $item.Symbols |
-                            foreach -Begin {
-                                $count = 0
-                            } -Process {
-                                $newSymbol = Get-ControlsNameAndText $_
-
-                                [PsCustomObject]@{
-                                    Id = ++$count
-                                    Name = $newSymbol.Name
-                                    Text = $newSymbol.Text
-                                }
-                            }
-                        Default = $default
-                    }
-
-                    $control = switch ($as) {
-                        'RadioPanel' {
-                            New-ControlsRadioBox @params
-                        }
-
-                        'DropDown' {
-                            New-ControlsDropDown @params
-                        }
-                    }
-
-                    # Mandatory enumerations are self-managed. They either do
-                    # or don't implement 'None'.
-                    $mandatory = $false
-
-                    [PsCustomObject]@{
-                        Container = $control.Container
-                        Object = [PsCustomObject]@{
-                            As = $as
-                            To = $to
-                            Object = $control.Object
-                            Symbols = $params['Symbols']
-                        }
-                    }
-                }
-
-                'Numeric' {
-                    $places = $item | Get-PropertyOrDefault `
-                        -Name DecimalPlaces `
-                        -Default $Preferences.NumericDecimalPlaces;
-                    $min = $item | Get-PropertyOrDefault `
-                        -Name Minimum `
-                        -Default $Preferences.NumericMinimum;
-                    $max = $item | Get-PropertyOrDefault `
-                        -Name Maximum `
-                        -Default $Preferences.NumericMaximum;
-                    $mandatory = $item | Get-PropertyOrDefault `
-                        -Name Mandatory `
-                        -Default $false;
-
-                    New-ControlsSlider `
-                        -Text $text `
-                        -Mandatory:$mandatory `
-                        -DecimalPlaces $places `
-                        -Minimum $min `
-                        -Maximum $max `
-                        -Default $default `
-                        -StatusLine $StatusLine `
-                        -Preferences $Preferences
-                }
-
-                'List' {
-                    $maxCount = $item | Get-PropertyOrDefault `
-                        -Name MaxCount;
-                    $maxLength = $item | Get-PropertyOrDefault `
-                        -Name MaxLength;
-                    $mandatory = $item | Get-PropertyOrDefault `
-                        -Name Mandatory `
-                        -Default $false;
-
-                    New-ControlsListBox `
-                        -Text $text `
-                        -Mandatory:$mandatory `
-                        -MaxCount $maxCount `
-                        -MaxLength $maxLength `
-                        -Default $default `
-                        -StatusLine $StatusLine `
-                        -Preferences $Preferences
-                }
-
-                'Table' {
-                    $mandatory = $item | Get-PropertyOrDefault `
-                        -Name Mandatory `
-                        -Default $false;
-                    $rows = $item | Get-PropertyOrDefault `
-                        -Name Rows `
-                        -Default @();
-
-                    New-ControlsTable `
-                        -Text $text `
-                        -Mandatory:$mandatory `
-                        -Rows $rows `
-                        -Margin $Preferences.Margin
-                }
-            }
+            $what = & $types.Table.($item.Type).New @newParams
 
             if ($mandatory) {
                 $mandates += @([PsCustomObject]@{
@@ -538,28 +415,7 @@ function Get-QformLayout {
                     $mandatesSet = $true
 
                     foreach ($object in $InputObject.Mandates) {
-                        $itemIsSet = switch -Regex ($object.Type) {
-                            'List' {
-                                $object.Control.Items.Count -gt 0
-                            }
-
-                            'Table' {
-                                $object.Control.SelectedItems.Count -gt 0
-                            }
-
-                            'Field|Numeric|Script' {
-                                -not [String]::IsNullOrEmpty(
-                                    $object.Control.Text
-                                )
-                            }
-
-                            default {
-                                -not [String]::IsNullOrEmpty(
-                                    $object.Control.Content
-                                )
-                            }
-                        }
-
+                        $itemIsSet = $item | foreach $types.Table.($item.Type).HasAny
                         $mandatesSet = $mandatesSet -and $itemIsSet
                     }
 

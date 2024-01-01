@@ -1,6 +1,7 @@
 . $PsScriptRoot\Controls.ps1
 . $PsScriptRoot\CommandInfo.ps1
 . $PsScriptRoot\Qform.ps1
+. $PsScriptRoot\Type.ps1
 
 <#
     .SYNOPSIS
@@ -749,107 +750,7 @@ function Start-QformEvaluate {
 
     Process {
         foreach ($item in $MenuSpecs) {
-            $value = $(switch ($item.Type) {
-                'Check' {
-                    $Controls[$item.Name].IsChecked
-                }
-
-                'Field' {
-                    $Controls[$item.Name].Text
-                }
-
-                'Script' {
-                    $text = $Controls[$item.Name].Text
-
-                    $(if ([String]::IsNullOrWhiteSpace($text)) {
-                        ""
-                    }
-                    else {
-                        Invoke-Expression $text
-                    })
-                }
-
-                'Enum' {
-                    $obj = $Controls[$item.Name]
-
-                    $(switch ($obj.As) {
-                        'RadioPanel' {
-                            $buttons = $obj.Object
-
-                            $(if ($buttons) {
-                                $buttons.Keys | Where-Object {
-                                    $buttons[$_].IsChecked
-                                } | ForEach-Object {
-                                    $name = $_
-
-                                    $(switch ($obj.To) {
-                                        'Key' { $name }
-
-                                        'Value' {
-                                            $obj.Symbols | Where-Object {
-                                                $_.Name -eq $name
-                                            } | ForEach-Object {
-                                                $_.Text
-                                            }
-                                        }
-
-                                        'Pair' {
-                                            $obj.Symbols | Where-Object {
-                                                $_.Name -eq $name
-                                            }
-                                        }
-                                    })
-                                }
-                            } else {
-                                $null
-                            })
-                        }
-
-                        'DropDown' {
-                            $($obj.Object.SelectedIndex | ForEach-Object {
-                                $index = $_
-
-                                $(switch ($obj.To) {
-                                    'Key' {
-                                        $obj.Symbols[$index].Name
-                                    }
-
-                                    'Value' {
-                                        $obj.Symbols[$index].Text
-                                    }
-
-                                    'Pair' {
-                                        [PsCustomObject]@{
-                                            Id =
-                                                $index + 1
-                                            Name =
-                                                $obj.Symbols[$index].Name
-                                            Text =
-                                                $obj.Symbols[$index].Text
-                                        }
-                                    }
-                                })
-                            })
-                        }
-                    })
-                }
-
-                'Numeric' {
-                    $Controls[$item.Name].Value
-                }
-
-                'List' {
-                    $Controls[$item.Name].Items
-                }
-
-                'Table' {
-                    $Controls[$item.Name].SelectedItems
-                }
-
-                default {
-                    continue
-                }
-            })
+            $value = $item | foreach $types.Table.($item.Type).GetValue
 
             $out | Add-Member `
                 -MemberType NoteProperty `
