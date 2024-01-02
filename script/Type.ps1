@@ -196,10 +196,11 @@ Table = [PsCustomObject]@{
         HasAny = { $true }
         GetValue = {
             # This is a filter script block, not a function script block.
-            # Filters need to specify 'Script' scope, because filter commands
-            # like 'ForEach-Object' and 'Where-Object' share scope with the
-            # outer block. Otherwise, binding an '$item' in this block will
-            # affect other '$item' bindings outside the block.
+            # Filter bindings need to specify 'Script' scope, because filter
+            # commands like 'ForEach-Object' and 'Where-Object' share their
+            # scope with the outer block. Otherwise, binding an '$item' in
+            # this block will affect other '$item' bindings outside the
+            # block.
 
             $script:item = $_
 
