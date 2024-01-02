@@ -64,8 +64,9 @@ function Get-QformMainLayout {
 
             $controls.Add($_.Name, $_.Object)
 
-            # Objects added to $mainPanel go out of scope at this point
-            # unless $mainPanel is given a scope of 'Script'
+            # Objects added to $mainPanel reach end of life at
+            # this point unless $mainPanel is given a scope of
+            # 'Script'
         }
 
     # Resolve a possible race condition

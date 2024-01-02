@@ -21,7 +21,30 @@ $script:default = [PsCustomObject]@{
 
 $types = [PsCustomObject]@{
 Default = $script:default.PsObject.Copy()
+Events = [PsCustomObject]@{
+    CheckBox = 'Checked'
+    TextBox = 'TextChanged'
+    ListView = 'SelectionChanged'
+    ListBox = 'LayoutUpdated'
+    NumberSlider = 'TextChanged'
+    GroupBox = 'LayoutUpdated'
+    ComboBox = 'TextChanged'
+}
 Table = [PsCustomObject]@{
+    Label = [PsCustomObject]@{
+        HasAny = { $true }
+        GetValue = {
+            $_.Content
+        }
+        New = {
+            [OutputType('PageElementControl')]
+            Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
+
+            New-ControlsLabel `
+                -Text $Text `
+                -Default $Default
+        }
+    }
     Check = [PsCustomObject]@{
         DataTypes = @(
             [Boolean]

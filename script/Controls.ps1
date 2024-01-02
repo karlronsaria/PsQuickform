@@ -634,6 +634,75 @@ function New-ControlsListBox {
     }
 }
 
+function Set-ControlsCodeBlockStyle {
+    Param(
+        [System.Windows.Controls.Control]
+        $Control,
+
+        [Switch]
+        $IsField
+    )
+
+    $style = (cat "$PsScriptRoot\..\res\setting.json" |
+        ConvertFrom-Json).
+        CodeBlockStyle
+
+    $Control.Background =
+        [System.Windows.Media.Brushes]::$($style.Background)
+
+    $Control.Foreground =
+        [System.Windows.Media.Brushes]::$($style.Foreground)
+
+    $Control.FontFamily =
+        [System.Windows.Media.FontFamily]::new($style.FontFamily)
+
+    $Control.Height = $style.Height
+
+    if ($IsField) {
+        $Control.TextWrapping =
+            [System.Windows.TextWrapping]::$($style.TextWrapping)
+
+        $Control.AcceptsReturn = $true
+
+        $Control.VerticalScrollBarVisibility =
+        $Control.HorizontalScrollBarVisibility =
+            [System.Windows.Controls.ScrollBarVisibility]::Auto
+    }
+}
+
+function New-ControlsLabel {
+    [OutputType('PageElementControl')]
+    Param(
+        [String]
+        $Text,
+
+        [Switch]
+        $Mandatory
+    )
+
+    $label = New-Control Label
+    $label.Content = $Text
+
+    if ($CodeBlockStyle) {
+        Set-ControlsCodeBlockStyle `
+            -Control $label `
+            -IsField
+    }
+
+    $row = if ($Mandatory) {
+        Get-ControlsAsterized `
+            -Control $label
+    } else {
+        $label
+    }
+
+    return [PsCustomObject]@{
+        PsTypeName = 'PageElementControl'
+        Container = $label
+        Object = $label
+    }
+}
+
 function New-ControlsFieldBox {
     [OutputType('PageElementControl')]
     Param(
@@ -659,28 +728,9 @@ function New-ControlsFieldBox {
     $textBox = New-Control TextBox
 
     if ($CodeBlockStyle) {
-        $style = (cat "$PsScriptRoot\..\res\setting.json" |
-            ConvertFrom-Json).
-            CodeBlockStyle
-
-        $textBox.Background =
-            [System.Windows.Media.Brushes]::$($style.Background)
-
-        $textBox.Foreground =
-            [System.Windows.Media.Brushes]::$($style.Foreground)
-
-        $textBox.TextWrapping =
-            [System.Windows.TextWrapping]::$($style.TextWrapping)
-
-        $textBox.FontFamily =
-            [System.Windows.Media.FontFamily]::new($style.FontFamily)
-
-        $textBox.Height = $style.Height
-        $textBox.AcceptsReturn = $true
-
-        $textBox.VerticalScrollBarVisibility =
-        $textBox.HorizontalScrollBarVisibility =
-            [System.Windows.Controls.ScrollBarVisibility]::Auto
+        Set-ControlsCodeBlockStyle `
+            -Control $textBox `
+            -IsField
     }
 
     $row2 = if ($Mandatory) {

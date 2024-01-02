@@ -23,6 +23,10 @@ class NumberSlider : System.Windows.Controls.DockPanel {
         }
     }
 
+    [void] Add_TextChanged([ScriptBlock] $ScriptBlock) {
+        $this.Field.Add_TextChanged($ScriptBlock)
+    }
+
     hidden [System.Windows.Controls.Primitives.RepeatButton] $UpButton;
     hidden [System.Windows.Controls.Primitives.RepeatButton] $DownButton;
     hidden [System.Windows.Controls.TextBox] $Field;

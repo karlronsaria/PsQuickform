@@ -1,211 +1,123 @@
-. "$PsScriptRoot\..\Controls.ps1"
+dir $PsScriptRoot\..\*.ps1 | foreach { . $_ }
 
-[void][System.Reflection.Assembly]::LoadWithPartialName('PresentationFramework')
+Get-Command Add-ControlsTypes |
+    query Definition |
+    foreach { iex $_ }
 
-$main = New-ControlsMain
+# Add-Type -AssemblyName PresentationFramework
 
-$listBox = New-Control ListBox
-$listBox.SelectionMode = 'Multiple'
-$listBox.Height = 50
-$listBox.Width = 200
-$main.Grid.AddChild($listBox)
+function Get-What {
+    [OutputType([PsCustomObject])]
+    [CmdletBinding()]
+    Param(
+        [Parameter(ValueFromPipeline = $true)]
+        [PsCustomObject[]]
+        $PageInfo,
 
-$button = New-Control Button
-$button.Width = 50
-$button.Content = '+'
-$main.Grid.AddChild($button)
+        [PsCustomObject]
+        $Preferences,
 
-$closure =
-    New-Closure `
-        -InputObject $listBox `
-        -ScriptBlock {
-            $InputObject.Items.Add("")
-        }
+        [Switch]
+        $IsTabControl,
 
-$button.add_Click($closure)
+        [Switch]
+        $AnswersAsHashtable,
 
-$main.Window.ShowDialog()
+        [Nullable[Int]]
+        $StartingIndex
+    )
 
-
-
-
-<#
-## 2023_11_17_234110
-[xml]$xaml = @'
-<Window
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    >
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition
-                MinHeight="400"
-                Height="*"
-                />
-            <RowDefinition Height="50"/>
-            <RowDefinition Height="50"/>
-        </Grid.RowDefinitions>
-
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*"/>
-            <ColumnDefinition Width="5*"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- todo: lookup: wpf ListView CanReorderItems -->
-        <ListView
-            Name="listView"
-            Grid.Row="0"
-            Grid.Column="0"
-            Margin="5"
-            AllowDrop="True"
-            ScrollViewer.VerticalScrollBarVisibility="Auto"
-            >
-
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <StackPanel
-                        MinWidth="150"
-                        >
-                        <TextBox
-                            Text="{Binding Name}"
-                            IsReadOnly="True"
-                            BorderThickness="0"
-                            />
-                        <TextBox
-                            Text="{Binding Description}"
-                            IsReadOnly="True"
-                            BorderThickness="0"
-                            />
-                    </StackPanel>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
-
-        <Grid
-            Name="gridViewContainer"
-            Grid.Row="0"
-            Grid.Column="1"
-            Grid.ColumnSpan="1"
-            Margin="5"
-            >
-            <ListView
-                Name="gridView"
-                >
-
-                <ListView.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel
-                            MaxWidth="{
-                                Binding ActualWidth,
-                                ElementName=gridViewContainer
-                            }"
-                            HorizontalAlignment="Left"
-                            />
-                    </ItemsPanelTemplate>
-                </ListView.ItemsPanel>
-
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel
-                            MinWidth="200"
-                            >
-                            <TextBox
-                                Text="{Binding Name}"
-                                IsReadOnly="True"
-                                IsEnabled="False"
-                                BorderThickness="0"
-                                />
-                            <TextBox
-                                Text="{Binding Description}"
-                                IsReadOnly="True"
-                                IsEnabled="False"
-                                BorderThickness="0"
-                                />
-                        </StackPanel>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-
-            </ListView>
-        </Grid>
-    </Grid>
-</Window>
-'@
-
-$reader = New-Object System.Xml.XmlNodeReader $xaml
-$form = $null
-
-try {
-    $form = [Windows.Markup.XamlReader]::Load($reader)
-}
-catch {
-    Write-Output "Unable to load Windows.Markup.XamlReader. Some possible causes for this problem include: .NET Framework is missing, PowerShell must be launched with PowerShell -sta, invalid XAML code was encountered."
-    return
-}
-
-$ui = [PsCustomObject]@{}
-
-$xaml.SelectNodes("//*[@Name]") | foreach {
-    $ui | Add-Member `
-        -MemberType 'NoteProperty' `
-        -Name $_.Name `
-        -Value $form.FindName($_.Name)
-}
-
-$ui.listView.add_Drop({
-    Write-Host $_.Data.GetData([System.Windows.DataFormats]::StringFormat)
-})
-
-$ui.gridView.add_SelectionChanged({
-    $item = $this.SelectedItem
-
-    if ($null -eq $item) {
-        return
+    Begin {
+        $myPageInfo = @()
     }
 
-    $this.FindName('listView').Items.Add($item)
-})
+    Process {
+        $myPageInfo += @($PageInfo)
+    }
 
-[void] $ui.listView.Items.Add([PsCustomObject]@{
-    Name = 'Sus'
-    Description = "A sus."
-})
+    End {
+        $myPreferences = Get-QformPreference `
+            -Preferences $Preferences
 
-[void] $ui.listView.Items.Add([PsCustomObject]@{
-    Name = 'Ihr'
-    Description = "An ihr."
-})
+        $form = [Qform]::new(
+            $myPreferences,
+            $myPageInfo,
+            [Boolean]$IsTabControl,
+            $StartingIndex
+        )
 
-[void] $ui.listView.Items.Add([PsCustomObject]@{
-    Name = 'Oth'
-    Description = "An oth."
-})
 
-$itemId = 0
 
-1 .. 15 | foreach {
-    [void] $ui.gridView.Items.Add([PsCustomObject]@{
-        Id = $itemId++
-        Name = 'Sus'
-        Description = "A sus."
-    })
 
-    [void] $ui.gridView.Items.Add([PsCustomObject]@{
-        Id = $itemId++
-        Name = 'Ihr'
-        Description = "An ihr."
-    })
+        $myField = $form.Controls()['Hostname']
+        $myEnum = $form.Controls()['ClientSize']
+        $myLabel = $form.Controls()['MyViewLabel']
 
-    [void] $ui.gridView.Items.Add([PsCustomObject]@{
-        Id = $itemId++
-        Name = 'Oth'
-        Description = "An oth."
-    })
+        $closure = New-Closure `
+            -InputObject ([PsCustomObject]@{
+                Controls = $form.Controls()
+                Types = $types
+            }) `
+            -ScriptBlock {
+                $InputObject.Controls['MyViewLabel'].Content =
+                    "What: ($($InputObject.Controls['Hostname'] |
+                        foreach $InputObject.Types.Table.'Field'.GetValue))"
+            }
+
+        $myField.Add_TextChanged($closure)
+
+        # $myUpdate = New-Closure `
+        #     -InputObject $form.Controls() `
+        #     -ScriptBlock {
+        #         return "what_-_$($InputObject['Hostname'].Text)"
+        #     }
+
+        # $myTextChange = New-Closure `
+        #     -InputObject ([PsCustomObject]@{
+        #         Label = $myLabel
+        #         Update = $myUpdate
+        #     }) `
+        #     -ScriptBlock {
+        #         $InputObject.Label.Text = "I just changed!" # & $InputObject.Update
+        #     }
+
+        # $myField.Add_TextChanged({
+        #     $myLabel.Text = "I just changed!"  # & $myUpdate
+        # })
+        # $myField.Add_TextChanged($myTextChange)
+
+
+
+        $myLabel.Content = 'HWAT!'
+
+        $confirm = $form.ShowDialog()
+
+        $answers = $form.MenuSpecs() `
+            | Start-QformEvaluate `
+                -Controls $form.Controls() `
+            | Get-NonEmptyObject `
+                -RemoveEmptyString
+
+        if ($AnswersAsHashtable) {
+            $answers = $answers | ConvertTo-Hashtable
+        }
+
+        return [PsCustomObject]@{
+            Confirm = $confirm
+            MenuAnswers = $answers
+        }
+    }
 }
 
-$form.ShowDialog()
-#>
+$what = dir "$PsScriptRoot\myform.json" |
+    cat |
+    ConvertFrom-Json
+
+Get-What `
+    -PageInfo $what.MenuSpecs `
+    -Preferences $what.Preferences
+
+
 
 
 
