@@ -46,6 +46,27 @@ function Get-What {
             $StartingIndex
         )
 
+                                # Pages |
+                                # where { $_.Name -eq 'Hostname' } |
+                                # foreach { $_.Type }
+
+        # $closure = New-Closure `
+        #     -InputObject ([PsCustomObject]@{
+        #         Controls = $form.Controls()
+        #         Pages = $form.MenuSpecs()
+        #         Types = $types
+        #     }) `
+        #     -ScriptBlock {
+        #         $InputObject.Controls['MyViewLabel'].Content =
+        #             "What: ($(
+        #                 $InputObject.Controls['Hostname'] |
+        #                 foreach $InputObject.
+        #                     Types.
+        #                     Table.'Field'.GetValue
+        #             ))"
+        #     }
+
+
 
 
 
@@ -53,40 +74,45 @@ function Get-What {
         $myEnum = $form.Controls()['ClientSize']
         $myLabel = $form.Controls()['MyViewLabel']
 
+        $getAccessor = {
+            Param(
+                $Qform,
+
+                [PsCustomObject]
+                $Types,
+
+                [String]
+                $ElementName
+            )
+
+            $element = ($Qform.Controls())[$ElementName]
+
+            $type = $Qform.MenuSpecs() |
+                where { $_.Name -eq $ElementName } |
+                foreach { $_.Type }
+
+            return $element |
+                foreach $Types.Table.$type.GetValue
+        }
+
         $closure = New-Closure `
             -InputObject ([PsCustomObject]@{
-                Controls = $form.Controls()
+                Qform = $form
                 Types = $types
+                ElementName = 'Hostname'
+                GetAccessor = $getAccessor
             }) `
             -ScriptBlock {
-                $InputObject.Controls['MyViewLabel'].Content =
-                    "What: ($($InputObject.Controls['Hostname'] |
-                        foreach $InputObject.Types.Table.'Field'.GetValue))"
+                ($InputObject.Qform.Controls())['MyViewLabel'].Content =
+                    "What: ($(
+                        & $InputObject.GetAccessor `
+                            -Qform $InputObject.Qform `
+                            -Types $InputObject.Types `
+                            -ElementName $InputObject.ElementName
+                    ))"
             }
 
         $myField.Add_TextChanged($closure)
-
-        # $myUpdate = New-Closure `
-        #     -InputObject $form.Controls() `
-        #     -ScriptBlock {
-        #         return "what_-_$($InputObject['Hostname'].Text)"
-        #     }
-
-        # $myTextChange = New-Closure `
-        #     -InputObject ([PsCustomObject]@{
-        #         Label = $myLabel
-        #         Update = $myUpdate
-        #     }) `
-        #     -ScriptBlock {
-        #         $InputObject.Label.Text = "I just changed!" # & $InputObject.Update
-        #     }
-
-        # $myField.Add_TextChanged({
-        #     $myLabel.Text = "I just changed!"  # & $myUpdate
-        # })
-        # $myField.Add_TextChanged($myTextChange)
-
-
 
         $myLabel.Content = 'HWAT!'
 
