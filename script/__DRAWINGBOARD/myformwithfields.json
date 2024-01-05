@@ -1,0 +1,22 @@
+{
+    "Preferences": {
+        "Caption": "My Form"
+    },
+    "MenuSpecs": [
+        {
+            "Name": "Hostname",
+            "Type": "Field",
+            "Text": "New hostname:"
+        },
+        {
+            "Name": "Username",
+            "Type": "Field",
+            "Text": "New user:"
+        },
+        {
+            "Name": "MyViewLabel",
+            "Type": "Label",
+            "Text": "Hello, world!"
+        }
+    ]
+}

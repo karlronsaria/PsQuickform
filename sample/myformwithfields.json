@@ -1,0 +1,17 @@
+{
+    "Preferences": {
+        "Caption": "My Form"
+    },
+    "MenuSpecs": [
+        {
+            "Name": "Hostname",
+            "Type": "Field",
+            "Text": "New hostname:"
+        },
+        {
+            "Name": "Username",
+            "Type": "Field",
+            "Text": "New user:"
+        }
+    ]
+}

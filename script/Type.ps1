@@ -17,12 +17,14 @@ $script:default = [PsCustomObject]@{
             $_.Control.Text
         )
     }
+    GetEventObject = { $_ }
 }
 
 $types = [PsCustomObject]@{
 Default = $script:default.PsObject.Copy()
 Events = [PsCustomObject]@{
     CheckBox = 'Checked'
+    RadioButton = 'Checked'
     TextBox = 'TextChanged'
     ListView = 'SelectionChanged'
     ListBox = 'LayoutUpdated'
@@ -32,6 +34,7 @@ Events = [PsCustomObject]@{
 }
 Table = [PsCustomObject]@{
     Label = [PsCustomObject]@{
+        GetEventObject = $default.GetEventObject
         HasAny = { $true }
         GetValue = {
             $_.Content
@@ -50,6 +53,7 @@ Table = [PsCustomObject]@{
             [Boolean]
             [Switch]
         )
+        GetEventObject = $default.GetEventObject
         HasAny = { $true }
         GetValue = {
             $_.IsChecked
@@ -67,6 +71,7 @@ Table = [PsCustomObject]@{
         DataTypes = @(
             [String]
         )
+        GetEventObject = $default.GetEventObject
         HasAny = $script:default.TextHasAny
         GetValue = {
             $_.Text
@@ -90,6 +95,7 @@ Table = [PsCustomObject]@{
         DataTypes = @(
             [String]
         )
+        GetEventObject = $default.GetEventObject
         HasAny = $script:default.TextHasAny
         GetValue = {
             if ([String]::IsNullOrWhiteSpace($_.Text)) {
@@ -120,6 +126,7 @@ Table = [PsCustomObject]@{
             [PsCustomObject]
             [PsCustomObject[]]
         )
+        GetEventObject = $default.GetEventObject
         HasAny = {
             $_.Control.SelectedItems.Count -gt 0
         }
@@ -146,6 +153,7 @@ Table = [PsCustomObject]@{
             [String[]]
             [Object[]]
         )
+        GetEventObject = $default.GetEventObject
         HasAny = {
             $_.Control.Items.Count -gt 0
         }
@@ -186,6 +194,7 @@ Table = [PsCustomObject]@{
         GetValue = {
             $_.Value
         }
+        GetEventObject = $default.GetEventObject
         New = {
             [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
@@ -216,6 +225,7 @@ Table = [PsCustomObject]@{
             [String[]]
             [Enum]
         )
+        GetEventObject = { @($_.Object.Values)[0] }
         HasAny = { $true }
         GetValue = {
             # This is a filter script block, not a function script block.

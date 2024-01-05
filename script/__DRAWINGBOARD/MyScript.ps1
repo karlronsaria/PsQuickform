@@ -4,7 +4,7 @@ Get-Command Add-ControlsTypes |
     query Definition |
     foreach { iex $_ }
 
-# Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName PresentationFramework
 
 function Get-What {
     [OutputType([PsCustomObject])]
@@ -95,24 +95,72 @@ function Get-What {
                 foreach $Types.Table.$type.GetValue
         }
 
+        $expression =
+            "What: (<Hostname>: <Username>) The: (<ClientSize>)"
+
+        $captures = [Regex]::Matches($expression, "\<[^\<\>]+\>")
+        $bindings = @()
+
+        foreach ($capture in $captures) {
+            $name = $capture.Value -replace "^\<|\>$", ""
+
+            $what =
+@"
+& `$InputObject.GetAccessor -Qform `$InputObject.Qform -Types `$InputObject.Types -ElementName $name
+"@
+
+            $expression = $expression -replace $capture, "`$($what)"
+            $bindings += @($name)
+        }
+
         $closure = New-Closure `
             -InputObject ([PsCustomObject]@{
                 Qform = $form
                 Types = $types
-                ElementName = 'Hostname'
+                What = "`"$expression`""
                 GetAccessor = $getAccessor
             }) `
             -ScriptBlock {
                 ($InputObject.Qform.Controls())['MyViewLabel'].Content =
-                    "What: ($(
-                        & $InputObject.GetAccessor `
-                            -Qform $InputObject.Qform `
-                            -Types $InputObject.Types `
-                            -ElementName $InputObject.ElementName
-                    ))"
+                    iex $InputObject.What
             }
 
-        $myField.Add_TextChanged($closure)
+        foreach ($binding in $bindings) {
+            $script:control = $form.Controls()[$binding]
+            $type = ($form.MenuSpecs() |
+                where { $_.Name -eq $binding }).
+                Type
+            $element = $types.Table.$type
+            $script:eventObject = $script:control |
+                foreach $element.GetEventObject
+            $eventName = $types.Events.($script:eventObject.GetType().Name)
+            $script:eventObject."Add_$eventName"($closure)
+        }
+
+        $eventObject = $control |
+            foreach $types.Table.$(($form.MenuSpecs() |
+            where { $_.Name -eq 'ClientSize' }).
+            Type).GetEventObject
+
+        $eventName = $types.Events.($eventObject.GetType().Name)
+
+        $eventObject.
+        "Add_$eventName"($closure)
+
+        # $form.
+        #     Controls()['ClientSize'].
+        #     Object.
+        #     Values[0].
+        #     "Add_$('Checked')"($closure)
+
+        # $form.
+        #     Controls()['ClientSize'].
+        #     Object.
+        #     Values[0].
+        #     "Add_$('Checked')"($closure)
+
+        # $object[$object.Keys[0]].Add_Checked($closure)
+        # $form.Controls()['NumberOfCpus'].Add_TextChanged($closure)
 
         $myLabel.Content = 'HWAT!'
 
