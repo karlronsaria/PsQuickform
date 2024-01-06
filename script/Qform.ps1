@@ -25,6 +25,7 @@ function Get-QformMainLayout {
     )
 
     $controls = @{}
+    # todo: $unitElements = @{}
     $lineNames = @()
     $statusLine = $null
 
@@ -63,6 +64,7 @@ function Get-QformMainLayout {
                 -Preferences $Preferences
 
             $controls.Add($_.Name, $_.Object)
+            # todo: $unitElements.Add($_.Name, $_.UnitElement)
 
             # Objects added to $mainPanel reach end of life at
             # this point unless $mainPanel is given a scope of
@@ -82,6 +84,7 @@ function Get-QformMainLayout {
     return [PsCustomObject]@{
         FillLayout = $fillLayout
         Controls = $controls
+        # todo: UnitElements = $unitElements
         StatusLine = $statusLine
         MenuSpecs = $newMenuSpecs
     }
@@ -90,6 +93,7 @@ function Get-QformMainLayout {
 class Page {
     [String] $Name = ''
     [Hashtable] $Controls = @{}
+    # todo: [Hashtable] $UnitElements = @{}
     [PsCustomObject[]] $MenuSpecs = @()
     $FillLayout = $null
     $StatusLine = $null
@@ -149,6 +153,7 @@ class Page {
         $this.FillLayout = $what.FillLayout
         $this.StatusLine = $what.StatusLine
         $this.MenuSpecs = $what.MenuSpecs
+        # todo: $this.UnitElements = $what.UnitElements
     }
 }
 
@@ -261,6 +266,13 @@ class Qform {
     static [String] GetPageLine($Index, $Count, $Name) {
         return "ParameterSet $($Index + 1) of $Count`: $Name"
     }
+
+<#
+    # todo
+    [Hashtable] UnitElements() {
+        return $this.Pages[$this.MyIndex.Invoke($this)[0]].UnitElements
+    }
+#>
 
     [Hashtable] Controls() {
         return $this.Pages[$this.MyIndex.Invoke($this)[0]].Controls

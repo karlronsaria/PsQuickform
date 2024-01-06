@@ -96,7 +96,7 @@ function Get-What {
         }
 
         $expression =
-            "What: (<Hostname>: <Username>) The: (<ClientSize>)"
+            "What: (<Hostname>: <Username>) The: (<ClientSize>) Cores: (<NumberOfCpus>)"
 
         $captures = [Regex]::Matches($expression, "\<[^\<\>]+\>")
         $bindings = @()
@@ -127,25 +127,32 @@ function Get-What {
 
         foreach ($binding in $bindings) {
             $script:control = $form.Controls()[$binding]
+
             $type = ($form.MenuSpecs() |
                 where { $_.Name -eq $binding }).
                 Type
-            $element = $types.Table.$type
-            $script:eventObject = $script:control |
-                foreach $element.GetEventObject
-            $eventName = $types.Events.($script:eventObject.GetType().Name)
-            $script:eventObject."Add_$eventName"($closure)
+
+            # $script:control.GetType().Name
+
+            $eventName = $types.Events.($script:control.GetType().Name)
+            $script:control."Add_$eventName"($closure)
+
+            # $element = $types.Table.$type
+            # $script:eventObject = $script:control |
+            #     foreach $element.GetEventObject
+            # $eventName = $types.Events.($script:eventObject.GetType().Name)
+            # $script:eventObject."Add_$eventName"($closure)
         }
 
-        $eventObject = $control |
-            foreach $types.Table.$(($form.MenuSpecs() |
-            where { $_.Name -eq 'ClientSize' }).
-            Type).GetEventObject
+        # $eventObject = $control |
+        #     foreach $types.Table.$(($form.MenuSpecs() |
+        #     where { $_.Name -eq 'ClientSize' }).
+        #     Type).GetEventObject
 
-        $eventName = $types.Events.($eventObject.GetType().Name)
+        # $eventName = $types.Events.($eventObject.GetType().Name)
 
-        $eventObject.
-        "Add_$eventName"($closure)
+        # $eventObject.
+        # "Add_$eventName"($closure)
 
         # $form.
         #     Controls()['ClientSize'].

@@ -272,6 +272,7 @@ function New-ControlsCheckBox {
         PsTypeName = 'PageElementControl'
         Container = $checkBox
         Object = $checkBox
+        # UnitElement = $checkBox
     }
 }
 
@@ -631,6 +632,7 @@ function New-ControlsListBox {
         PsTypeName = 'PageElementControl'
         Container = $outerPanel
         Object = $listBox
+        # UnitElement = $listBox
     }
 }
 
@@ -700,6 +702,7 @@ function New-ControlsLabel {
         PsTypeName = 'PageElementControl'
         Container = $label
         Object = $label
+        # UnitElement = $label
     }
 }
 
@@ -802,6 +805,7 @@ function New-ControlsFieldBox {
         PsTypeName = 'PageElementControl'
         Container = $stackPanel
         Object = $textBox
+        # UnitElement = $textBox
     }
 }
 
@@ -900,6 +904,7 @@ function New-ControlsSlider {
         PsTypeName = 'PageElementControl'
         Container = $dockPanel
         Object = $slider
+        # UnitElement = $slider
     }
 }
 
@@ -946,6 +951,7 @@ function New-ControlsDropDown {
         PsTypeName = 'PageElementControl'
         Container = $stackPanel
         Object = $comboBox
+        # UnitElement = $comboBox
     }
 }
 
@@ -1036,6 +1042,7 @@ function New-ControlsRadioBox {
         PsTypeName = 'PageElementControl'
         Container = $groupBox
         Object = $buttons
+        # UnitElement = @($buttons.Values)[0]
     }
 }
 
@@ -1173,6 +1180,7 @@ function New-ControlsTable {
         PsTypeName = 'PageElementControl'
         Container = $groupBox
         Object = $listView
+        # UnitElement = $listView
     }
 }
 

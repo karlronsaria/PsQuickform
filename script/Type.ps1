@@ -29,7 +29,8 @@ Events = [PsCustomObject]@{
     ListView = 'SelectionChanged'
     ListBox = 'LayoutUpdated'
     NumberSlider = 'TextChanged'
-    GroupBox = 'LayoutUpdated'
+    GroupBox = 'Checked'
+    PSCustomObject = 'Checked'
     ComboBox = 'TextChanged'
 }
 Table = [PsCustomObject]@{
@@ -331,14 +332,35 @@ Table = [PsCustomObject]@{
                 }
             }
 
+            $object = [PsCustomObject]@{
+                As = $as
+                To = $to
+                Object = $control.Object
+                Symbols = $params['Symbols']
+            }
+
+            switch ($as) {
+                'RadioPanel' {
+                    $object | Add-Member `
+                        -MemberType 'ScriptMethod' `
+                        -Name 'Add_Checked' `
+                        -Value (
+                            New-Closure `
+                                -InputObject $control.Object.Values `
+                                -ScriptBlock {
+                                    Param([ScriptBlock] $Handle)
+
+                                    $InputObject | foreach {
+                                        $_.Add_Checked($Handle)
+                                    }
+                                }
+                        )
+                }
+            }
+
             [PsCustomObject]@{
                 Container = $control.Container
-                Object = [PsCustomObject]@{
-                    As = $as
-                    To = $to
-                    Object = $control.Object
-                    Symbols = $params['Symbols']
-                }
+                Object = $object
             }
         }
     }
