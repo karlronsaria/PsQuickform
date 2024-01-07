@@ -34,9 +34,8 @@ Events = [PsCustomObject]@{
     ComboBox = 'TextChanged'
 }
 Table = [PsCustomObject]@{
-    Label = [PsCustomObject]@{
-        GetEventObject = $default.GetEventObject
-        HasAny = { $true }
+    View = [PsCustomObject]@{
+        HasAny = $default.ContentHasAny
         GetValue = {
             $_.Content
         }
@@ -47,6 +46,71 @@ Table = [PsCustomObject]@{
             New-ControlsLabel `
                 -Text $Text `
                 -Default $Default
+        }
+        PostProcess = {
+            Param ($PageInfo, $Controls, $Types, $ItemName)
+
+            $getAccessor = {
+                Param(
+                    [PsCustomObject[]]
+                    $PageInfo,
+
+                    [Hashtable]
+                    $Controls,
+
+                    [PsCustomObject]
+                    $Types,
+
+                    [String]
+                    $ElementName
+                )
+
+                $type = $PageInfo |
+                    where { $_.Name -eq $ElementName } |
+                    foreach { $_.Type }
+
+                return $Controls[$ElementName] |
+                    foreach $Types.Table.$type.GetValue
+            }
+
+            $expression = $PageInfo |
+                where { $_.Name -eq $ItemName } |
+                Get-PropertyOrDefault `
+                    -Name Expression
+
+            $bindings = @()
+
+            [Regex]::Matches($expression, "\<[^\<\>]+\>") | foreach {
+                $name = $_.Value -replace "^\<|\>$", ""
+
+                $what =
+@"
+& `$InputObject.GetAccessor -PageInfo `$InputObject.PageInfo -Controls `$InputObject.Controls -Types `$InputObject.Types -ElementName $name
+"@
+
+                $expression = $expression -replace $_, "`$($what)"
+                $bindings += @($name)
+            }
+
+            $closure = New-Closure `
+                -InputObject ([PsCustomObject]@{
+                    PageInfo = $PageInfo
+                    Controls = $Controls
+                    Types = $Types
+                    ItemName = $ItemName
+                    Expression = "`"$expression`""
+                    GetAccessor = $getAccessor
+                }) `
+                -ScriptBlock {
+                    $InputObject.Controls[$InputObject.ItemName].Content =
+                        iex $InputObject.Expression
+                }
+
+            foreach ($binding in $bindings) {
+                $control = $Controls[$binding]
+                $eventName = $Types.Events.($control.GetType().Name)
+                $control."Add_$eventName"($closure)
+            }
         }
     }
     Check = [PsCustomObject]@{

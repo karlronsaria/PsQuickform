@@ -43,8 +43,9 @@
         },
         {
             "Name": "MyViewLabel",
-            "Type": "Label",
-            "Text": "Hello, world!"
+            "Type": "View",
+            "Text": "Hello, world!",
+            "Expression": "What: (<Hostname>: <Username>) The: (<ClientSize>) Cores: (<NumberOfCpus>)"
         }
     ]
 }

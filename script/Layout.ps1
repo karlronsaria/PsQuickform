@@ -317,6 +317,8 @@ function Get-QformLayout {
     Begin {
         $mandates = @()
         $list = @()
+        $pageInfo = @()
+        $controls = @{}
     }
 
     Process {
@@ -370,8 +372,10 @@ function Get-QformLayout {
                 Type = $item.Type
                 Container = $what.Container
                 Object = $what.Object
-                # todo: Unit = $what.UnitElement
             })
+
+            $pageInfo += @($item)
+            $controls.Add($name, $what.Object)
         }
     }
 
@@ -438,6 +442,25 @@ function Get-QformLayout {
         }
 
         $endButtons.OkButton.Add_Click($action)
+
+        foreach ($item in $list) {
+            $postProcess = $types.Table.($item.Type) |
+                Get-PropertyOrDefault `
+                    -Name PostProcess `
+                    -Default $null
+
+            if ($null -eq $postProcess) {
+                continue
+            }
+
+            & $postProcess `
+                -PageInfo $pageInfo `
+                -Controls $controls `
+                -Types $types `
+                -ItemName $item.Name
+        }
+
+        # todo: change return type, due to redundant use of Controls table
         return $list
     }
 }
@@ -465,7 +488,7 @@ function Convert-CommandInfoToPageInfo {
         }
     }
 
-    # TODO: consider revising as failable type
+    # todo: consider revising as failable type
     if (-not $parameterSets) {
         throw "No parameter sets could be found $(
             if ($ParameterSetName) { "matching '$ParameterSetName' " }
