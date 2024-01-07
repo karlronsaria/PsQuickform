@@ -10,6 +10,7 @@
     - [ ] how to send information correctly
     - [ ] new To property with values Key, Value, Pair
       - Pair is PsCustomObject with properties Id, Name, Text
+- [ ] document View type
 - [ ] document Script type
 - [ ] document Table type
 - [ ] document Enum DropDown type
