@@ -51,26 +51,39 @@ function Set-ControlsStatus {
         [System.Windows.Controls.Control]
         $StatusLine,
 
+        [Parameter(ParameterSetName = 'FromList')]
         [String]
-        $LineName
+        $LineName,
+
+        [Parameter(ParameterSetName = 'Direct')]
+        [String]
+        $Text,
+
+        [Parameter(ParameterSetName = 'Direct')]
+        [String]
+        $ForeColor = 'Black'
     )
 
-    $status = ( `
-        Get-Content "$PsScriptRoot/../res/text.json" `
-            | ConvertFrom-Json `
-    ).Status `
-        | where Name -eq $LineName
+    switch ($PsCmdlet.ParameterSetName) {
+        'FromList' {
+            $status = ( `
+                Get-Content "$PsScriptRoot/../res/text.json" `
+                    | ConvertFrom-Json `
+            ).Status `
+                | where Name -eq $LineName
 
-    $text = $status | Get-PropertyOrDefault `
-        -Name Text `
-        -Default 'ToolTip missing!'
+            $Text = $status | Get-PropertyOrDefault `
+                -Name Text `
+                -Default 'ToolTip missing!'
 
-    $foreColor = $status | Get-PropertyOrDefault `
-        -Name Foreground `
-        -Default 'Black'
+            $ForeColor = $status | Get-PropertyOrDefault `
+                -Name Foreground `
+                -Default 'Black'
+        }
+    }
 
-    $StatusLine.Content = $text
-    $StatusLine.Foreground = $foreColor
+    $StatusLine.Content = $Text
+    $StatusLine.Foreground = $ForeColor
 }
 
 function New-Control {

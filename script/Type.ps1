@@ -9,12 +9,12 @@ $script:default = [PsCustomObject]@{
     Type = 'Script'
     ContentHasAny = {
         -not [String]::IsNullOrEmpty(
-            $_.Control.Content
+            $_.Content
         )
     }
     TextHasAny = {
         -not [String]::IsNullOrEmpty(
-            $_.Control.Text
+            $_.Text
         )
     }
     GetEventObject = { $_ }
@@ -193,7 +193,7 @@ Table = [PsCustomObject]@{
         )
         GetEventObject = $default.GetEventObject
         HasAny = {
-            $_.Control.SelectedItems.Count -gt 0
+            $_.SelectedItems.Count -gt 0
         }
         GetValue = {
             $_.SelectedItems
@@ -220,7 +220,7 @@ Table = [PsCustomObject]@{
         )
         GetEventObject = $default.GetEventObject
         HasAny = {
-            $_.Control.Items.Count -gt 0
+            $_.Items.Count -gt 0
         }
         GetValue = {
             $_.Items

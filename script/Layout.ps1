@@ -316,6 +316,7 @@ function Get-QformLayout {
 
     Begin {
         $mandates = @()
+        $patterns = @()
         $list = @()
         $pageInfo = @()
         $controls = @{}
@@ -330,6 +331,9 @@ function Get-QformLayout {
             $mandatory = $item | Get-PropertyOrDefault `
                 -Name Mandatory `
                 -Default $false
+
+            $pattern = $item | Get-PropertyOrDefault `
+                -Name Pattern
 
             $default = Get-PropertyOrDefault `
                 -InputObject $item `
@@ -367,6 +371,15 @@ function Get-QformLayout {
                 })
             }
 
+            if ($pattern) {
+                $patterns += @([PsCustomObject]@{
+                    Type = $item.Type
+                    Name = $name
+                    Pattern = $pattern
+                    Control = $what.Object
+                })
+            }
+
             $list += @([PsCustomObject]@{
                 Name = $name
                 Type = $item.Type
@@ -400,7 +413,7 @@ function Get-QformLayout {
                 } `
         ))
 
-        $action = if ($mandates.Count -eq 0) {
+        $action = if (($mandates.Count + $patterns.Count) -eq 0) {
             New-Closure `
                 -InputObject $Window `
                 -ScriptBlock {
@@ -412,6 +425,7 @@ function Get-QformLayout {
                 Types = $types
                 Window = $Window
                 Mandates = $mandates
+                Patterns = $patterns
                 StatusLine = $StatusLine
             }
 
@@ -421,23 +435,39 @@ function Get-QformLayout {
                     $mandatesSet = $true
 
                     foreach ($item in $InputObject.Mandates) {
-                        $itemIsSet = $item |
+                        $itemIsSet = $item.Control |
                             foreach $InputObject.Types.Table.($item.Type).HasAny
 
                         $mandatesSet = $mandatesSet -and $itemIsSet
                     }
 
-                    if ($mandatesSet) {
-                        $InputObject.Window.DialogResult = $true
-                        $InputObject.Window.Close()
-                    }
-                    else {
+                    if (-not $mandatesSet) {
                         . $PsScriptRoot\Controls.ps1
 
                         Set-ControlsStatus `
                             -StatusLine $InputObject.StatusLine `
                             -LineName 'MandatoryValuesNotSet'
+
+                        return
                     }
+
+                    foreach ($item in $InputObject.Patterns) {
+                        $value = $item.Control |
+                            foreach $InputObject.Types.Table.($item.Type).GetValue
+
+                        if ($value -notmatch $item.Pattern) {
+                            . $PsScriptRoot\Controls.ps1
+
+                            Set-ControlsStatus `
+                                -StatusLine $InputObject.StatusLine `
+                                -Text "Text element '$($item.Name)' must match the pattern '$($item.Pattern)'"
+
+                            return
+                        }
+                    }
+
+                    $InputObject.Window.DialogResult = $true
+                    $InputObject.Window.Close()
                 }
         }
 

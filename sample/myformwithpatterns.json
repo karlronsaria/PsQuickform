@@ -1,0 +1,19 @@
+{
+    "Preferences": {
+        "Caption": "My Form"
+    },
+    "MenuSpecs": [
+        {
+            "Name": "Hostname",
+            "Type": "Field",
+            "Pattern": "^[A-Za-z](\\w|\\d)+$",
+            "Text": "New hostname:"
+        },
+        {
+            "Name": "Username",
+            "Type": "Field",
+            "Pattern": "^u\\w(\\w|\\d)+$",
+            "Text": "New user:"
+        }
+    ]
+}
