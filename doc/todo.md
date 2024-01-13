@@ -6,14 +6,15 @@
       - [ ] As to Render(As)|Use
       - [ ] To to Out(putAs)|Get
 - document
+  - [ ] Pattern property
   - [ ] Enum
+    - [ ] DropDown (ComboBox) type
     - [ ] how to send information correctly
     - [ ] new To property with values Key, Value, Pair
       - Pair is PsCustomObject with properties Id, Name, Text
-- [ ] document View type
-- [ ] document Script type
-- [ ] document Table type
-- [ ] document Enum DropDown type
+  - [ ] View type
+  - [ ] Script type
+  - [ ] Table type
 - feat
   - [ ] dark theme
   - [x] scrollbar version

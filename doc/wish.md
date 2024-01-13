@@ -1,7 +1,7 @@
 # wish
 - I wish
   - [ ] Field type could toggle Item List View
-  - [ ] Field type had a Pattern property
+  - [x] Field type had a Pattern property
   - Enum answer would
     - [x] preserve ordinal information
       - solution: To property, Pair subtype
