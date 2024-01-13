@@ -4,14 +4,14 @@
     },
     "MenuSpecs": [
         {
-            "Name": "Hostname",
-            "Type": "Field (^[A-Za-z](\\w|\\d)+$)",
+            "Name": "Hostname (^[A-Za-z](\\w|\\d)+$)",
+            "Type": "Field",
             "Pattern": "^[A-Za-z](\\w|\\d)+$",
             "Text": "New hostname:"
         },
         {
-            "Name": "Username",
-            "Type": "Field (^u\\w(\\w|\\d)+$)",
+            "Name": "Username (^u\\w(\\w|\\d)+$)",
+            "Type": "Field",
             "Pattern": "^u\\w(\\w|\\d)+$",
             "Text": "New user:"
         }
