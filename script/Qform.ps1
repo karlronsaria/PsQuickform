@@ -5,6 +5,33 @@
 . $PsScriptRoot\Layout.ps1
 . $PsScriptRoot\Type.ps1
 
+class Logger {
+    [ScriptBlock[]] $Handlers = @()
+
+    [void] Log($Exception) {
+        foreach ($handler in $this.Handlers) {
+            & $handler $Exception
+        }
+    }
+
+    [void] Add([ScriptBlock] $Log) {
+        $this.Handlers += @($Log)
+    }
+
+    Logger([ScriptBlock] $Log) {
+        $this.Add($Log)
+    }
+
+    Logger() { }
+
+    static [Logger] ToConsole() {
+        return [Logger]::new({
+            Param($Exception)
+            Write-Host ($Exception | Out-String)
+        })
+    }
+}
+
 function Get-QformMainLayout {
     Param(
         [System.Windows.Window]
@@ -21,7 +48,10 @@ function Get-QformMainLayout {
         $AddLines = @('StatusLine'),
 
         [ScriptBlock]
-        $AddToMainPanel
+        $AddToMainPanel,
+
+        [Logger]
+        $Logger
     )
 
     $controls = @{}
@@ -53,7 +83,8 @@ function Get-QformMainLayout {
         | Get-QformLayout `
             -Window $Window `
             -StatusLine $statusLine `
-            -Preferences $Preferences
+            -Preferences $Preferences `
+            -Logger $Logger
 
     $newMenuSpecs `
         | foreach {
@@ -93,6 +124,7 @@ class Page {
     [PsCustomObject[]] $MenuSpecs = @()
     $FillLayout = $null
     $StatusLine = $null
+    [Logger] $Logger
 
     hidden static [ScriptBlock] $BuildMultipanelPage = {
         Param($MainPanel, $Control, $Preferences)
@@ -119,6 +151,8 @@ class Page {
         [String] $Type,
         [String] $Name
     ) {
+        $this.Logger = [Logger]::ToConsole()
+
         $Preferences = Get-QformPreference `
             -Preferences $Preferences
 
@@ -142,7 +176,8 @@ class Page {
             -MenuSpecs $MenuSpecs `
             -Preferences $Preferences `
             -AddLines $addLines `
-            -AddToMainPanel $buildPage
+            -AddToMainPanel $buildPage `
+            -Logger $this.Logger
 
         $this.Name = $Name
         $this.Controls = $what.Controls
@@ -336,6 +371,20 @@ class Qform {
     }
 
     Qform(
+        [PsCustomObject] $Preferences,
+        [PsCustomObject[]] $PageInfo,
+        [Boolean] $IsTabControl,
+        [Nullable[Int]] $StartingIndex
+    ) {
+        $this.Init(
+            $Preferences,
+            $PageInfo,
+            $IsTabControl,
+            $StartingIndex
+        )
+    }
+
+    hidden [void] Init(
         [PsCustomObject] $Preferences,
         [PsCustomObject[]] $PageInfo,
         [Boolean] $IsTabControl,

@@ -17,7 +17,6 @@ $script:default = [PsCustomObject]@{
             $_.Text
         )
     }
-    GetEventObject = { $_ }
 }
 
 $types = [PsCustomObject]@{
@@ -34,6 +33,47 @@ Events = [PsCustomObject]@{
     ComboBox = 'TextChanged'
 }
 Table = [PsCustomObject]@{
+    Log = [PsCustomObject]@{
+        DataTypes = @(
+            [String]
+        )
+        HasAny = $script:default.TextHasAny
+        GetValue = {
+            $_.Text
+        }
+        New = {
+            [OutputType('PageElementControl')]
+            Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
+
+            $maxLength = $InputObject.Item | Get-PropertyOrDefault `
+                -Name MaxLength
+
+            New-ControlsFieldBox `
+                -Text $Text `
+                -Mandatory:$Mandatory `
+                -MaxLength $maxLength `
+                -Default $Default `
+                -Preferences $Pref `
+                -Style 'DebugWindow'
+        }
+        PostProcess = {
+            Param ($PageInfo, $Controls, $Types, $ItemName, $Logger)
+
+            $closure = New-Closure `
+                -InputObject ([PsCustomObject]@{
+                    Controls = $Controls
+                    ItemName = $ItemName
+                }) `
+                -ScriptBlock {
+                    Param($Exception)
+
+                    $control = $InputObject.Controls[$InputObject.ItemName]
+                    $control.Text = "$($control.Text)`n`n$($Exception | Out-String)"
+                }
+
+            $Logger.Add($closure)
+        }
+    }
     View = [PsCustomObject]@{
         HasAny = $default.ContentHasAny
         GetValue = {
@@ -48,7 +88,7 @@ Table = [PsCustomObject]@{
                 -Default $Default
         }
         PostProcess = {
-            Param ($PageInfo, $Controls, $Types, $ItemName)
+            Param ($PageInfo, $Controls, $Types, $ItemName, $Logger)
 
             $getAccessor = {
                 Param(
@@ -100,10 +140,16 @@ Table = [PsCustomObject]@{
                     ItemName = $ItemName
                     Expression = "`"$expression`""
                     GetAccessor = $getAccessor
+                    Logger = $Logger
                 }) `
                 -ScriptBlock {
-                    $InputObject.Controls[$InputObject.ItemName].Content =
-                        iex $InputObject.Expression
+                    try {
+                        $InputObject.Controls[$InputObject.ItemName].Content =
+                            iex $InputObject.Expression
+                    }
+                    catch {
+                        $InputObject.Logger.Log($_)
+                    }
                 }
 
             foreach ($binding in $bindings) {
@@ -118,7 +164,6 @@ Table = [PsCustomObject]@{
             [Boolean]
             [Switch]
         )
-        GetEventObject = $default.GetEventObject
         HasAny = { $true }
         GetValue = {
             $_.IsChecked
@@ -136,7 +181,6 @@ Table = [PsCustomObject]@{
         DataTypes = @(
             [String]
         )
-        GetEventObject = $default.GetEventObject
         HasAny = $script:default.TextHasAny
         GetValue = {
             $_.Text
@@ -160,7 +204,6 @@ Table = [PsCustomObject]@{
         DataTypes = @(
             [String]
         )
-        GetEventObject = $default.GetEventObject
         HasAny = $script:default.TextHasAny
         GetValue = {
             if ([String]::IsNullOrWhiteSpace($_.Text)) {
@@ -183,7 +226,7 @@ Table = [PsCustomObject]@{
                 -MaxLength $maxLength `
                 -Default $Default `
                 -Preferences $Pref `
-                -CodeBlockStyle
+                -Style 'CodeBlock'
         }
     }
     Table = [PsCustomObject]@{
@@ -191,7 +234,6 @@ Table = [PsCustomObject]@{
             [PsCustomObject]
             [PsCustomObject[]]
         )
-        GetEventObject = $default.GetEventObject
         HasAny = {
             $_.SelectedItems.Count -gt 0
         }
@@ -218,7 +260,6 @@ Table = [PsCustomObject]@{
             [String[]]
             [Object[]]
         )
-        GetEventObject = $default.GetEventObject
         HasAny = {
             $_.Items.Count -gt 0
         }
@@ -259,7 +300,6 @@ Table = [PsCustomObject]@{
         GetValue = {
             $_.Value
         }
-        GetEventObject = $default.GetEventObject
         New = {
             [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
@@ -290,7 +330,6 @@ Table = [PsCustomObject]@{
             [String[]]
             [Enum]
         )
-        GetEventObject = { @($_.Object.Values)[0] }
         HasAny = { $true }
         GetValue = {
             # This is a filter script block, not a function script block.

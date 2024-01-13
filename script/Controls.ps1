@@ -731,8 +731,9 @@ function New-ControlsFieldBox {
         $MaxLength,
         $Default,
 
-        [Switch]
-        $CodeBlockStyle,
+        [ValidateSet('CodeBlock', 'DebugWindow')]
+        [String]
+        $Style,
 
         [PsCustomObject]
         $Preferences
@@ -743,10 +744,21 @@ function New-ControlsFieldBox {
     $label.Content = $Text
     $textBox = New-Control TextBox
 
-    if ($CodeBlockStyle) {
-        Set-ControlsCodeBlockStyle `
-            -Control $textBox `
-            -IsField
+    switch ($Style) {
+        'CodeBlock' {
+            Set-ControlsCodeBlockStyle `
+                -Control $textBox `
+                -IsField
+        }
+
+        # todo
+        'DebugWindow' {
+            Set-ControlsCodeBlockStyle `
+                -Control $textBox `
+                -IsField
+
+            $textBox.Height = $Preferences.LogHeight
+        }
     }
 
     $row2 = if ($Mandatory) {
@@ -818,7 +830,6 @@ function New-ControlsFieldBox {
         PsTypeName = 'PageElementControl'
         Container = $stackPanel
         Object = $textBox
-        # UnitElement = $textBox
     }
 }
 

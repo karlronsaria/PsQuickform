@@ -311,7 +311,10 @@ function Get-QformLayout {
         $StatusLine,
 
         [PsCustomObject]
-        $Preferences
+        $Preferences,
+
+        [Logger]
+        $Logger
     )
 
     Begin {
@@ -487,7 +490,8 @@ function Get-QformLayout {
                 -PageInfo $pageInfo `
                 -Controls $controls `
                 -Types $types `
-                -ItemName $item.Name
+                -ItemName $item.Name `
+                -Logger $Logger
         }
 
         # todo: change return type, due to redundant use of Controls table
