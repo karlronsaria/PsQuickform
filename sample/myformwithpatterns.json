@@ -5,13 +5,13 @@
     "MenuSpecs": [
         {
             "Name": "Hostname",
-            "Type": "Field",
+            "Type": "Field (^[A-Za-z](\\w|\\d)+$)",
             "Pattern": "^[A-Za-z](\\w|\\d)+$",
             "Text": "New hostname:"
         },
         {
             "Name": "Username",
-            "Type": "Field",
+            "Type": "Field (^u\\w(\\w|\\d)+$)",
             "Pattern": "^u\\w(\\w|\\d)+$",
             "Text": "New user:"
         }
