@@ -445,7 +445,7 @@ class Qform {
                 $this.Pages.Count -gt 0
             ) {
                 $closure = New-Closure `
-                    -InputObject $this `
+                    -Parameters $this `
                     -ScriptBlock {
                         $refresh = $false
                         $keyboard = [System.Windows.Input.Keyboard]
@@ -460,18 +460,18 @@ class Qform {
                                     $keyboard::IsKeyDown('RightShift')
 
                                 if ($shiftDown) {
-                                    $InputObject.Previous()
+                                    $Parameters.Previous()
                                     $refresh = $true
                                 }
                                 else {
-                                    $InputObject.Next()
+                                    $Parameters.Next()
                                     $refresh = $true
                                 }
                             }
                         }
 
                         if ($refresh) {
-                            $InputObject.SetPage($InputObject.CurrentIndex)
+                            $Parameters.SetPage($Parameters.CurrentIndex)
                         }
                     }
 
@@ -514,7 +514,7 @@ class Qform {
         $helpMessage = $helpMessage -Join "`r`n"
 
         $closure = New-Closure `
-            -InputObject $helpMessage `
+            -Parameters $helpMessage `
             -ScriptBlock {
                 $isKeyCombo =
                     $_.Key -eq [System.Windows.Input.Key]::OemQuestion `
@@ -523,7 +523,7 @@ class Qform {
 
                 if ($isKeyCombo) {
                     [System.Windows.MessageBox]::Show(
-                        $InputObject,
+                        $Parameters,
                         'Help'
                     )
 

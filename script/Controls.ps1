@@ -14,13 +14,13 @@ function New-Closure {
         [ScriptBlock]
         $ScriptBlock,
 
-        $InputObject
+        $Parameters
     )
 
     return & {
-        Param($InputObject)
+        Param($Parameters)
         return $ScriptBlock.GetNewClosure()
-    } $InputObject
+    } $Parameters
 }
 
 function Add-ControlsTypes {
@@ -66,11 +66,10 @@ function Set-ControlsStatus {
 
     switch ($PsCmdlet.ParameterSetName) {
         'FromList' {
-            $status = ( `
-                Get-Content "$PsScriptRoot/../res/text.json" `
-                    | ConvertFrom-Json `
-            ).Status `
-                | where Name -eq $LineName
+            $status = Get-Content "$PsScriptRoot/../res/text.json" |
+                ConvertFrom-Json |
+                foreach { $_.Status } |
+                where Name -eq $LineName
 
             $Text = $status | Get-PropertyOrDefault `
                 -Name Text `
@@ -252,9 +251,9 @@ function Get-ControlsTextDialog {
 
     $main.Window.Add_ContentRendered(( `
         New-Closure `
-            -InputObject $textBox `
+            -Parameters $textBox `
             -ScriptBlock {
-                $InputObject.Focus()
+                $Parameters.Focus()
             } `
     ))
 
@@ -355,13 +354,13 @@ function New-ControlsListBox {
     }
 
     $actionTable['New'] = New-Closure `
-        -InputObject $parameters `
+        -Parameters $parameters `
         -ScriptBlock {
-            $listBox = $InputObject.ListBox
-            $maxCount = $InputObject.MaxCount
-            $maxLength = $InputObject.MaxLength
-            $statusLine = $InputObject.StatusLine
-            $prefs = $InputObject.Preferences
+            $listBox = $Parameters.ListBox
+            $maxCount = $Parameters.MaxCount
+            $maxLength = $Parameters.MaxLength
+            $statusLine = $Parameters.StatusLine
+            $prefs = $Parameters.Preferences
             $index = $listBox.SelectedIndex
 
             . $PsScriptRoot\Controls.ps1
@@ -399,11 +398,11 @@ function New-ControlsListBox {
     }
 
     $actionTable['Edit'] = New-Closure `
-        -InputObject $parameters `
+        -Parameters $parameters `
         -ScriptBlock {
-            $listBox = $InputObject.ListBox
-            $prefs = $InputObject.Preferences
-            $maxLength = $InputObject.MaxLength
+            $listBox = $Parameters.ListBox
+            $prefs = $Parameters.Preferences
+            $maxLength = $Parameters.MaxLength
             $index = $listBox.SelectedIndex
 
             if ($index -lt 0) {
@@ -421,9 +420,9 @@ function New-ControlsListBox {
         }
 
     $actionTable['Delete'] = New-Closure `
-        -InputObject $listBox `
+        -Parameters $listBox `
         -ScriptBlock {
-            $listBox = $InputObject
+            $listBox = $Parameters
             $index = $listBox.SelectedIndex
 
             if ($index -lt 0) {
@@ -448,9 +447,9 @@ function New-ControlsListBox {
         }
 
     $actionTable['Move Up'] = New-Closure `
-        -InputObject $listBox `
+        -Parameters $listBox `
         -ScriptBlock {
-            $listBox = $InputObject
+            $listBox = $Parameters
             $index = $listBox.SelectedIndex
 
             $immovable = $listBox.Items.Count -le 1 `
@@ -475,9 +474,9 @@ function New-ControlsListBox {
         }
 
     $actionTable['Move Down'] = New-Closure `
-        -InputObject $listBox `
+        -Parameters $listBox `
         -ScriptBlock {
-            $listBox = $InputObject
+            $listBox = $Parameters
             $index = $listBox.SelectedIndex
 
             $immovable = $listBox.Items.Count -le 1 `
@@ -503,9 +502,9 @@ function New-ControlsListBox {
         }
 
     $actionTable['Sort'] = New-Closure `
-        -InputObject $listBox `
+        -Parameters $listBox `
         -ScriptBlock {
-            $listBox = $InputObject
+            $listBox = $Parameters
 
             $items = $listBox.Items | sort | foreach {
                 [String]::new($_)
@@ -524,10 +523,10 @@ function New-ControlsListBox {
         $button.Add_Click($action)
 
         $action = New-Closure `
-            -InputObject $action `
+            -Parameters $action `
             -ScriptBlock {
                 if ($_.Key -eq 'Space') {
-                    & $InputObject
+                    & $Parameters
                 }
             }
 
@@ -547,13 +546,13 @@ function New-ControlsListBox {
     }
 
     $keyDown = New-Closure `
-        -InputObject $parameters `
+        -Parameters $parameters `
         -ScriptBlock {
-            $listBox = $InputObject.ListBox
-            $newAction = $InputObject.NewAction
-            $editAction = $InputObject.EditAction
-            $deleteAction = $InputObject.DeleteAction
-            $statusLine = $InputObject.StatusLine
+            $listBox = $Parameters.ListBox
+            $newAction = $Parameters.NewAction
+            $editAction = $Parameters.EditAction
+            $deleteAction = $Parameters.DeleteAction
+            $statusLine = $Parameters.StatusLine
             $myEventArgs = $_
 
             $isKeyCombo = [System.Windows.Input.Keyboard]::Modifiers `
@@ -611,23 +610,23 @@ function New-ControlsListBox {
     $listBox.Add_PreViewKeyDown($keyDown)
 
     $listBox.Add_GotFocus((New-Closure `
-        -InputObject $StatusLine `
+        -Parameters $StatusLine `
         -ScriptBlock {
             . $PsScriptRoot\Controls.ps1
 
             Set-ControlsStatus `
-                -StatusLine $InputObject `
+                -StatusLine $Parameters `
                 -LineName 'InListBox'
         } `
     ))
 
     $listBox.Add_LostFocus((New-Closure `
-        -InputObject $StatusLine `
+        -Parameters $StatusLine `
         -ScriptBlock {
             . $PsScriptRoot\Controls.ps1
 
             Set-ControlsStatus `
-                -StatusLine $InputObject `
+                -StatusLine $Parameters `
                 -LineName 'Idle'
         } `
     ))
@@ -692,30 +691,44 @@ function New-ControlsLabel {
         $Text,
 
         [Switch]
-        $Mandatory
+        $Mandatory,
+
+        [Switch]
+        $CodeBlockStyle
     )
 
+    $stackPanel = New-Control StackPanel
     $label = New-Control Label
     $label.Content = $Text
+    $view = New-Control Label
 
     if ($CodeBlockStyle) {
         Set-ControlsCodeBlockStyle `
-            -Control $label `
-            -IsField
+            -Control $view
     }
 
-    $row = if ($Mandatory) {
+    $row2 = if ($Mandatory) {
         Get-ControlsAsterized `
-            -Control $label
+            -Control $view
     } else {
-        $label
+        $view
     }
+
+    if ($null -ne $MaxLength) {
+        $textBox.MaxLength = $MaxLength
+    }
+
+    if ($null -ne $Default) {
+        $view.Content = $Default
+    }
+
+    $stackPanel.AddChild($label)
+    $stackPanel.AddChild($row2)
 
     return [PsCustomObject]@{
         PsTypeName = 'PageElementControl'
-        Container = $label
-        Object = $label
-        # UnitElement = $label
+        Container = $stackPanel
+        Object = $view
     }
 }
 
@@ -757,6 +770,7 @@ function New-ControlsFieldBox {
                 -Control $textBox `
                 -IsField
 
+            $textBox.IsReadOnly = $true
             $textBox.Height = $Preferences.LogHeight
         }
     }
@@ -773,9 +787,9 @@ function New-ControlsFieldBox {
     $monthCalendarPrefs.Width = 350
 
     $keyDown = New-Closure `
-        -InputObject $monthCalendarPrefs `
+        -Parameters $monthCalendarPrefs `
         -ScriptBlock {
-            $monthCalendarPrefs = $InputObject
+            $monthCalendarPrefs = $Parameters
             $myEventArgs = $_
 
             $isKeyCombo =
@@ -881,12 +895,12 @@ function New-ControlsSlider {
 
     if ($null -ne $Minimum -or $null -ne $Maximum) {
         $closure = New-Closure `
-            -InputObject $StatusLine `
+            -Parameters $StatusLine `
             -ScriptBlock {
                 . $PsScriptRoot\Controls.ps1
 
                 Set-ControlsStatus `
-                    -StatusLine $InputObject `
+                    -StatusLine $Parameters `
                     -LineName 'Idle'
             }
 
@@ -895,12 +909,12 @@ function New-ControlsSlider {
 
     if ($null -ne $Minimum) {
         $closure = New-Closure `
-            -InputObject $StatusLine `
+            -Parameters $StatusLine `
             -ScriptBlock {
                 . $PsScriptRoot\Controls.ps1
 
                 Set-ControlsStatus `
-                    -StatusLine $InputObject `
+                    -StatusLine $Parameters `
                     -LineName 'MinReached'
             }
 
@@ -909,12 +923,12 @@ function New-ControlsSlider {
 
     if ($null -ne $Maximum) {
         $closure = New-Closure `
-            -InputObject $StatusLine `
+            -Parameters $StatusLine `
             -ScriptBlock {
                 . $PsScriptRoot\Controls.ps1
 
                 Set-ControlsStatus `
-                    -StatusLine $InputObject `
+                    -StatusLine $Parameters `
                     -LineName 'MaxReached'
             }
 
@@ -1160,7 +1174,7 @@ function New-ControlsTable {
 
     $stackPanel.Add_Loaded(( `
         New-Closure `
-            -InputObject ( `
+            -Parameters ( `
                 [PsCustomObject]@{
                     GridView = $gridView
                     Resize =
@@ -1168,13 +1182,13 @@ function New-ControlsTable {
                 } `
             ) `
             -ScriptBlock {
-                & $InputObject.Resize $InputObject.GridView
+                & $Parameters.Resize $Parameters.GridView
             } `
     ))
 
     $textBox.Add_TextChanged(( `
         New-Closure `
-            -InputObject ( `
+            -Parameters ( `
                 [PsCustomObject]@{
                     TextBox = $textBox
                     ListView = $listView
@@ -1183,19 +1197,19 @@ function New-ControlsTable {
                 }
             ) `
             -ScriptBlock {
-                $InputObject.ListView.Items.Clear()
-                $text = $InputObject.TextBox.Text
+                $Parameters.ListView.Items.Clear()
+                $text = $Parameters.TextBox.Text
 
                 $items = if ([String]::IsNullOrEmpty($text)) {
-                    $InputObject.Rows
+                    $Parameters.Rows
                 } else {
-                    $InputObject.Rows | where {
+                    $Parameters.Rows | where {
                         $_.PsObject.Properties.Value -like "*$text*"
                     }
                 }
 
                 foreach ($item in $items) {
-                    [void]$InputObject.ListView.Items.Add($item)
+                    [void]$Parameters.ListView.Items.Add($item)
                 }
             }
     ))
@@ -1271,17 +1285,17 @@ function Open-ControlsTable {
         -Preferences $Preferences
 
     $okAction = New-Closure `
-        -InputObject $main.Window `
+        -Parameters $main.Window `
         -ScriptBlock {
-            $InputObject.DialogResult = $true
-            $InputObject.Close()
+            $Parameters.DialogResult = $true
+            $Parameters.Close()
         }
 
     $cancelAction = New-Closure `
-        -InputObject $main.Window `
+        -Parameters $main.Window `
         -ScriptBlock {
-            $InputObject.DialogResult = $false
-            $InputObject.Close()
+            $Parameters.DialogResult = $false
+            $Parameters.Close()
         }
 
     $endButtons.Object.OkButton.Add_Click($okAction)
@@ -1297,16 +1311,16 @@ function Open-ControlsTable {
 
     $main.Window.Add_PreViewKeyDown(( `
         New-Closure `
-            -InputObject $parameters `
+            -Parameters $parameters `
             -ScriptBlock {
                 if ($_.Key -eq 'Enter') {
-                    & $InputObject.OkAction
+                    & $Parameters.OkAction
                     $_.Handled = $true
                     return
                 }
 
                 if ($_.Key -eq 'Escape') {
-                    & $InputObject.CancelAction
+                    & $Parameters.CancelAction
                     $_.Handled = $true
                     return
                 }
@@ -1403,17 +1417,17 @@ function Open-ControlsMonthCalendar {
         -Preferences $Preferences
 
     $okAction = New-Closure `
-        -InputObject $main.Window `
+        -Parameters $main.Window `
         -ScriptBlock {
-            $InputObject.DialogResult = $true
-            $InputObject.Close()
+            $Parameters.DialogResult = $true
+            $Parameters.Close()
         }
 
     $cancelAction = New-Closure `
-        -InputObject $main.Window `
+        -Parameters $main.Window `
         -ScriptBlock {
-            $InputObject.DialogResult = $false
-            $InputObject.Close()
+            $Parameters.DialogResult = $false
+            $Parameters.Close()
         }
 
     $endButtons.Object.OkButton.Add_Click($okAction)
@@ -1430,16 +1444,16 @@ function Open-ControlsMonthCalendar {
 
     $main.Window.Add_PreViewKeyDown(( `
         New-Closure `
-            -InputObject $parameters `
+            -Parameters $parameters `
             -ScriptBlock {
                 if ($_.Key -eq 'Enter') {
-                    & $InputObject.OkAction
+                    & $Parameters.OkAction
                     $_.Handled = $true
                     return
                 }
 
                 if ($_.Key -eq 'Escape') {
-                    & $InputObject.CancelAction
+                    & $Parameters.CancelAction
                     $_.Handled = $true
                     return
                 }

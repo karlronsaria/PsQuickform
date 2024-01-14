@@ -338,8 +338,7 @@ function Get-QformLayout {
             $pattern = $item | Get-PropertyOrDefault `
                 -Name Pattern
 
-            $default = Get-PropertyOrDefault `
-                -InputObject $item `
+            $default = $item | Get-PropertyOrDefault `
                 -Name 'Default'
 
             $newParams = @{
@@ -353,8 +352,7 @@ function Get-QformLayout {
 
             # Infer the Table type from the Rows property
             if ($null -eq $item.Type) {
-                $rows = Get-PropertyOrDefault `
-                    -InputObject $item `
+                $rows = $item | Get-PropertyOrDefault `
                     -Name 'Rows'
 
                 if ($null -ne $rows) {
@@ -409,19 +407,19 @@ function Get-QformLayout {
 
         $endButtons.CancelButton.Add_Click(( `
             New-Closure `
-                -InputObject $Window `
+                -Parameters $Window `
                 -ScriptBlock {
-                    $InputObject.DialogResult = $false
-                    $InputObject.Close()
+                    $Parameters.DialogResult = $false
+                    $Parameters.Close()
                 } `
         ))
 
         $action = if (($mandates.Count + $patterns.Count) -eq 0) {
             New-Closure `
-                -InputObject $Window `
+                -Parameters $Window `
                 -ScriptBlock {
-                    $InputObject.DialogResult = $true
-                    $InputObject.Close()
+                    $Parameters.DialogResult = $true
+                    $Parameters.Close()
                 }
         } else {
             $parameters = [PsCustomObject]@{
@@ -433,13 +431,13 @@ function Get-QformLayout {
             }
 
             New-Closure `
-                -InputObject $parameters `
+                -Parameters $parameters `
                 -ScriptBlock {
                     $mandatesSet = $true
 
-                    foreach ($item in $InputObject.Mandates) {
+                    foreach ($item in $Parameters.Mandates) {
                         $itemIsSet = $item.Control |
-                            foreach $InputObject.Types.Table.($item.Type).HasAny
+                            foreach $Parameters.Types.Table.($item.Type).HasAny
 
                         $mandatesSet = $mandatesSet -and $itemIsSet
                     }
@@ -448,29 +446,29 @@ function Get-QformLayout {
                         . $PsScriptRoot\Controls.ps1
 
                         Set-ControlsStatus `
-                            -StatusLine $InputObject.StatusLine `
+                            -StatusLine $Parameters.StatusLine `
                             -LineName 'MandatoryValuesNotSet'
 
                         return
                     }
 
-                    foreach ($item in $InputObject.Patterns) {
+                    foreach ($item in $Parameters.Patterns) {
                         $value = $item.Control |
-                            foreach $InputObject.Types.Table.($item.Type).GetValue
+                            foreach $Parameters.Types.Table.($item.Type).GetValue
 
                         if ($value -notmatch $item.Pattern) {
                             . $PsScriptRoot\Controls.ps1
 
                             Set-ControlsStatus `
-                                -StatusLine $InputObject.StatusLine `
+                                -StatusLine $Parameters.StatusLine `
                                 -Text "Text element '$($item.Name)' must match the pattern '$($item.Pattern)'"
 
                             return
                         }
                     }
 
-                    $InputObject.Window.DialogResult = $true
-                    $InputObject.Window.Close()
+                    $Parameters.Window.DialogResult = $true
+                    $Parameters.Window.Close()
                 }
         }
 

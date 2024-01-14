@@ -45,7 +45,7 @@ Table = [PsCustomObject]@{
             [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
 
-            $maxLength = $InputObject.Item | Get-PropertyOrDefault `
+            $maxLength = $Item | Get-PropertyOrDefault `
                 -Name MaxLength
 
             New-ControlsFieldBox `
@@ -60,14 +60,14 @@ Table = [PsCustomObject]@{
             Param ($PageInfo, $Controls, $Types, $ItemName, $Logger)
 
             $closure = New-Closure `
-                -InputObject ([PsCustomObject]@{
+                -Parameters ([PsCustomObject]@{
                     Controls = $Controls
                     ItemName = $ItemName
                 }) `
                 -ScriptBlock {
                     Param($Exception)
 
-                    $control = $InputObject.Controls[$InputObject.ItemName]
+                    $control = $Parameters.Controls[$Parameters.ItemName]
                     $control.Text = "$($control.Text)`n`n$($Exception | Out-String)"
                 }
 
@@ -85,7 +85,8 @@ Table = [PsCustomObject]@{
 
             New-ControlsLabel `
                 -Text $Text `
-                -Default $Default
+                -Default $Default `
+                -CodeBlockStyle
         }
         PostProcess = {
             Param ($PageInfo, $Controls, $Types, $ItemName, $Logger)
@@ -125,7 +126,7 @@ Table = [PsCustomObject]@{
 
                 $what =
 @"
-& `$InputObject.GetAccessor -PageInfo `$InputObject.PageInfo -Controls `$InputObject.Controls -Types `$InputObject.Types -ElementName $name
+& `$Parameters.GetAccessor -PageInfo `$Parameters.PageInfo -Controls `$Parameters.Controls -Types `$Parameters.Types -ElementName $name
 "@
 
                 $expression = $expression -replace $_, "`$($what)"
@@ -133,7 +134,7 @@ Table = [PsCustomObject]@{
             }
 
             $closure = New-Closure `
-                -InputObject ([PsCustomObject]@{
+                -Parameters ([PsCustomObject]@{
                     PageInfo = $PageInfo
                     Controls = $Controls
                     Types = $Types
@@ -144,11 +145,14 @@ Table = [PsCustomObject]@{
                 }) `
                 -ScriptBlock {
                     try {
-                        $InputObject.Controls[$InputObject.ItemName].Content =
-                            iex $InputObject.Expression
+                        $Parameters.Controls[$Parameters.ItemName].Content =
+                            iex $Parameters.Expression
+
+                        # todo
+                        Get-Item -What
                     }
                     catch {
-                        $InputObject.Logger.Log($_)
+                        $Parameters.Logger.Log($_)
                     }
                 }
 
@@ -217,7 +221,7 @@ Table = [PsCustomObject]@{
             [OutputType('PageElementControl')]
             Param ($Item, $Pref, $Label, $Text, $Default, $Mandatory)
 
-            $maxLength = $InputObject.Item | Get-PropertyOrDefault `
+            $maxLength = $Item | Get-PropertyOrDefault `
                 -Name MaxLength
 
             New-ControlsFieldBox `
@@ -449,11 +453,11 @@ Table = [PsCustomObject]@{
                         -Name 'Add_Checked' `
                         -Value (
                             New-Closure `
-                                -InputObject $control.Object.Values `
+                                -Parameters $control.Object.Values `
                                 -ScriptBlock {
                                     Param([ScriptBlock] $Handle)
 
-                                    $InputObject | foreach {
+                                    $Parameters | foreach {
                                         $_.Add_Checked($Handle)
                                     }
                                 }

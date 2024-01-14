@@ -136,17 +136,17 @@ class NumberSlider : System.Windows.Controls.DockPanel {
                 [ScriptBlock]
                 $ScriptBlock,
 
-                $InputObject
+                $Parameters
             )
 
-            return & { Param($InputObject) $ScriptBlock.GetNewClosure() } $InputObject
+            return & { Param($Parameters) $ScriptBlock.GetNewClosure() } $Parameters
         }
 
         $closure = New-Closure `
-            -InputObject $this `
+            -Parameters $this `
             -ScriptBlock {
-                $InputObject.ChangeText()
-                $InputObject.OnIdle | foreach { $_.Invoke() }
+                $Parameters.ChangeText()
+                $Parameters.OnIdle | foreach { $_.Invoke() }
             }
 
         $this.Field.Add_TextChanged($closure)
@@ -155,29 +155,29 @@ class NumberSlider : System.Windows.Controls.DockPanel {
             $this.Select($this.Text.Length, 0)
         })
 
-        $closure = New-Closure { $InputObject.Up() } $this
+        $closure = New-Closure { $Parameters.Up() } $this
         $this.UpButton.Add_Click($closure)
 
-        $closure = New-Closure { $InputObject.Down() } $this
+        $closure = New-Closure { $Parameters.Down() } $this
         $this.DownButton.Add_Click($closure)
 
         if ($null -eq $this.Maximum) {
             $this.ctrlup_action =
-                New-Closure { $InputObject.Up() } $this
+                New-Closure { $Parameters.Up() } $this
         }
         else {
             $this.ctrlup_action =
-                New-Closure { $InputObject.SetToMaximum() } $this
+                New-Closure { $Parameters.SetToMaximum() } $this
 
             $closure = New-Closure `
-                -InputObject $this `
+                -Parameters $this `
                 -ScriptBlock {
                     if (
-                        ($InputObject.GetText() -as $InputObject.Type) `
-                        -gt $InputObject.Maximum
+                        ($Parameters.GetText() -as $Parameters.Type) `
+                        -gt $Parameters.Maximum
                     ) {
-                        $InputObject.Field.Text = $InputObject.Maximum
-                        $InputObject.OnMaxReached | foreach { $_.Invoke() }
+                        $Parameters.Field.Text = $Parameters.Maximum
+                        $Parameters.OnMaxReached | foreach { $_.Invoke() }
                     }
                 }
 
@@ -186,21 +186,21 @@ class NumberSlider : System.Windows.Controls.DockPanel {
 
         if ($null -eq $Minimum) {
             $this.ctrldown_action =
-                New-Closure { $InputObject.Down() } $this
+                New-Closure { $Parameters.Down() } $this
         }
         else {
             $this.ctrldown_action =
-                New-Closure { $InputObject.SetToMinimum() } $this
+                New-Closure { $Parameters.SetToMinimum() } $this
 
             $closure = New-Closure `
-                -InputObject $this `
+                -Parameters $this `
                 -ScriptBlock {
                     if (
-                        ($InputObject.GetText() -as $InputObject.Type) `
-                        -lt $InputObject.Minimum
+                        ($Parameters.GetText() -as $Parameters.Type) `
+                        -lt $Parameters.Minimum
                     ) {
-                        $InputObject.Field.Text = $InputObject.Minimum
-                        $InputObject.OnMinReached | foreach { $_.Invoke() }
+                        $Parameters.Field.Text = $Parameters.Minimum
+                        $Parameters.OnMinReached | foreach { $_.Invoke() }
                     }
                 }
 
@@ -208,18 +208,18 @@ class NumberSlider : System.Windows.Controls.DockPanel {
         }
 
         $closure = New-Closure `
-            -InputObject $this `
+            -Parameters $this `
             -ScriptBlock {
                 if ([System.Windows.Input.Keyboard]::Modifiers `
                     -eq [System.Windows.Input.ModifierKeys]::Control)
                 {
                     switch ($_.Key) {
                         'Up' {
-                            Invoke-Command $InputObject.ctrlup_action
+                            Invoke-Command $Parameters.ctrlup_action
                         }
 
                         'Down' {
-                            Invoke-Command $InputObject.ctrldown_action
+                            Invoke-Command $Parameters.ctrldown_action
                         }
                     }
 
@@ -228,11 +228,11 @@ class NumberSlider : System.Windows.Controls.DockPanel {
 
                 switch ($_.Key) {
                     'Up' {
-                        Invoke-Command { $InputObject.Up() }
+                        Invoke-Command { $Parameters.Up() }
                     }
 
                     'Down' {
-                        Invoke-Command { $InputObject.Down() }
+                        Invoke-Command { $Parameters.Down() }
                     }
                 }
             }
