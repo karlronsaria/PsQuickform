@@ -1,4 +1,5 @@
 . $PsScriptRoot\Required.ps1
+. $PsScriptRoot\script\Closure.ps1
 . $PsScriptRoot\script\Qform.ps1
 . $PsScriptRoot\script\Quickform.ps1
 

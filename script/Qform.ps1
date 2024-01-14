@@ -5,33 +5,6 @@
 . $PsScriptRoot\Layout.ps1
 . $PsScriptRoot\Type.ps1
 
-class Logger {
-    [ScriptBlock[]] $Handlers = @()
-
-    [void] Log($Exception) {
-        foreach ($handler in $this.Handlers) {
-            & $handler $Exception
-        }
-    }
-
-    [void] Add([ScriptBlock] $Log) {
-        $this.Handlers += @($Log)
-    }
-
-    Logger([ScriptBlock] $Log) {
-        $this.Add($Log)
-    }
-
-    Logger() { }
-
-    static [Logger] ToConsole() {
-        return [Logger]::new({
-            Param($Exception)
-            Write-Host ($Exception | Out-String)
-        })
-    }
-}
-
 function Get-QformMainLayout {
     Param(
         [System.Windows.Window]
