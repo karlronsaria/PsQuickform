@@ -307,14 +307,8 @@ function Get-QformLayout {
         [System.Windows.Window]
         $Window,
 
-        [System.Windows.Controls.Label]
-        $StatusLine,
-
-        [PsCustomObject]
-        $Preferences,
-
-        [Logger]
-        $Logger
+        [Controls]
+        $Builder
     )
 
     Begin {
@@ -327,7 +321,7 @@ function Get-QformLayout {
 
     Process {
         foreach ($item in $MenuSpecs) {
-            $id = Get-ControlsNameAndText $item
+            $id = [Controls]::GetNameAndText($item)
             $text = $id.Text
             $name = $id.Name
 
@@ -343,8 +337,8 @@ function Get-QformLayout {
 
             $newParams = @{
                 Item = $item
-                Pref = $Preferences
-                Label = $StatusLine
+                Pref = $ControlBuilder.Preferences
+                Label = $ControlBuilder.StatusLine
                 Text = $id.Text
                 Default = $default
                 Mandatory = $mandatory
@@ -405,63 +399,64 @@ function Get-QformLayout {
 
         $endButtons = $what.Object
 
-        $endButtons.CancelButton.Add_Click(( `
-            New-Closure `
-                -Parameters $Window `
-                -ScriptBlock {
-                    $Parameters.DialogResult = $false
-                    $Parameters.Close()
-                } `
+        $endButtons.CancelButton.Add_Click($Builder.NewClosure(
+            $Window,
+            {
+                $Parameters.DialogResult = $false
+                $Parameters.Close()
+            }
         ))
 
         $action = if (($mandates.Count + $patterns.Count) -eq 0) {
-            New-Closure `
-                -Parameters $Window `
-                -ScriptBlock {
+            $Builder.NewClosure(
+                $Window,
+                {
                     $Parameters.DialogResult = $true
                     $Parameters.Close()
                 }
+            )
         } else {
             $parameters = [PsCustomObject]@{
                 Types = $types
                 Window = $Window
                 Mandates = $mandates
                 Patterns = $patterns
-                StatusLine = $StatusLine
+                Builder = $Builder
             }
 
-            New-Closure `
-                -Parameters $parameters `
-                -ScriptBlock {
+            $Builder.NewClosure(
+                $parameters,
+                {
                     $mandatesSet = $true
 
                     foreach ($item in $Parameters.Mandates) {
                         $itemIsSet = $item.Control |
-                            foreach $Parameters.Types.Table.($item.Type).HasAny
+                            foreach $Parameters.
+                                Types.
+                                Table.
+                                ($item.Type).
+                                HasAny
 
                         $mandatesSet = $mandatesSet -and $itemIsSet
                     }
 
                     if (-not $mandatesSet) {
-                        . $PsScriptRoot\Controls.ps1
-
-                        Set-ControlsStatus `
-                            -StatusLine $Parameters.StatusLine `
-                            -LineName 'MandatoryValuesNotSet'
-
+                        $Builder.SetStatus('MandatoryValuesNotSet')
                         return
                     }
 
                     foreach ($item in $Parameters.Patterns) {
                         $value = $item.Control |
-                            foreach $Parameters.Types.Table.($item.Type).GetValue
+                            foreach $Parameters.
+                                Types.
+                                Table.
+                                ($item.Type).
+                                GetValue
 
                         if ($value -notmatch $item.Pattern) {
-                            . $PsScriptRoot\Controls.ps1
-
-                            Set-ControlsStatus `
-                                -StatusLine $Parameters.StatusLine `
-                                -Text "Text element '$($item.Name)' must match the pattern '$($item.Pattern)'"
+                            $Builder.SetStatus(
+                                "Text element '$($item.Name)' must match the pattern '$($item.Pattern)'"
+                            )
 
                             return
                         }
@@ -470,6 +465,7 @@ function Get-QformLayout {
                     $Parameters.Window.DialogResult = $true
                     $Parameters.Window.Close()
                 }
+            )
         }
 
         $endButtons.OkButton.Add_Click($action)
@@ -489,7 +485,7 @@ function Get-QformLayout {
                 -Controls $controls `
                 -Types $types `
                 -ItemName $item.Name `
-                -Logger $Logger
+                -Logger $Builder.Logger
         }
 
         # todo: change return type, due to redundant use of Controls table

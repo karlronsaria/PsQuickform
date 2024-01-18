@@ -4,118 +4,146 @@
 . $PsScriptRoot\Other.ps1
 . $PsScriptRoot\NumberSlider.ps1
 
+class PageElementControl {
+    $Container
+    $Object
+}
+
+class Controls {
+    [PsCustomObject] $Preferences
+    [String[]] $Help
+    [PsCustomObject[]] $Statuses
+    [System.Windows.Controls.Label] $StatusLine
+    [Logger] $Logger
+
+    hidden [void] Init(
+        [PsCustomObject] $Preferences,
+        [System.Windows.Controls.Label] $StatusLine,
+        [Logger] $Logger
+    ) {
+        $this.Preferences = $Preferences.PsObject.Copy()
+
+        $temp = cat "$PsScriptRoot/../res/text.json" |
+            ConvertFrom-Json
+
+        $this.Help = $temp.Help
+        $this.Statuses = $temp.Status
+        $this.StatusLine = $StatusLine
+        $this.Logger = $Logger
+    }
+
+    Controls(
+        [PsCustomObject] $Preferences,
+        [System.Windows.Controls.Label] $StatusLine,
+        [Logger] $Logger
+    ) {
+        $this.Init($Preferences, $StatusLine, $Logger)
+    }
+
+    Controls() {
+        $this.Init(
+            (cat "$PsScriptRoot/../res/preference.json" |
+                ConvertFrom-Json),
+            [Controls]::NewControl('Label'),
+            [Logger]::new()
+        )
+    }
+
+    [ScriptBlock] NewClosure($Parameters, [ScriptBlock] $ScriptBlock) {
+        return $Logger.GetNewClosure($Parameters, $ScriptBlock)
+    }
+
+    [ScriptBlock] NewClosure([ScriptBlock] $ScriptBlock) {
+        return $Logger.GetNewClosure($ScriptBlock)
+    }
+
 <#
 .LINK
 Url: <https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox>
 Url: <https://stackoverflow.com/users/1042848/vishal-suthar>
 Retreived: 2022_03_02
 #>
-function Set-ControlsWritableText {
-    Param(
+    static [void] SetWriteableText(
         [System.Windows.Controls.Control]
         $Control,
 
         [String]
         $Text
-    )
+    ) {
+        $Control.Text = $Text
+        $Control.Select($Control.Text.Length, 0)
+    }
 
-    $Control.Text = $Text
-    $Control.Select($Control.Text.Length, 0)
-}
-
-function Set-ControlsStatus {
-    Param(
-        [System.Windows.Controls.Control]
-        $StatusLine,
-
-        [Parameter(ParameterSetName = 'FromList')]
-        [String]
-        $LineName,
-
-        [Parameter(ParameterSetName = 'Direct')]
+    [void] SetStatus(
         [String]
         $Text,
 
-        [Parameter(ParameterSetName = 'Direct')]
         [String]
         $ForeColor = 'Black'
-    )
+    ) {
+        $this.StatusLine.Content = $Text
+        $this.StatusLine.Foreground = $ForeColor
+    }
 
-    switch ($PsCmdlet.ParameterSetName) {
-        'FromList' {
-            $status = Get-Content "$PsScriptRoot/../res/text.json" |
-                ConvertFrom-Json |
-                foreach { $_.Status } |
-                where Name -eq $LineName
+    [void] SetStatus(
+        [String]
+        $LineName
+    ) {
+        $status = $this.Statuses |
+            where Name -eq $LineName
 
-            $Text = $status | Get-PropertyOrDefault `
-                -Name Text `
-                -Default 'ToolTip missing!'
+        $Text = $status | Get-PropertyOrDefault `
+            -Name Text `
+            -Default 'ToolTip missing!'
 
-            $ForeColor = $status | Get-PropertyOrDefault `
-                -Name Foreground `
-                -Default 'Black'
+        $ForeColor = $status | Get-PropertyOrDefault `
+            -Name Foreground `
+            -Default 'Black'
+
+        $this.StatusLine.Content = $Text
+        $this.StatusLine.Foreground = $ForeColor
+    }
+
+    static [System.Windows.FrameworkElement]
+    NewControl([String] $TypeName) {
+        return New-Object "System.Windows.Controls.$TypeName"
+    }
+
+    [PsCustomObject] NewMain() {
+        $form = New-Object System.Windows.Window
+        $form.SizeToContent = 'WidthAndHeight'
+        $form.WindowStartupLocation = 'CenterScreen'
+
+        $form.Add_ContentRendered($this.NewClosure({
+            $this.Activate()
+        }))
+
+        $grid = [Controls]::NewControl('StackPanel')
+        $form.AddChild($grid)
+
+        return [PsCustomObject]@{
+            Window = $form
+            Grid = $grid
         }
     }
 
-    $StatusLine.Content = $Text
-    $StatusLine.Foreground = $ForeColor
-}
+    [System.Windows.Controls.StackPanel] NewLayout() {
+        $layout = [Controls]::NewControl('StackPanel')
+        $layout.Width = $this.Preferences.Width
+        $layout.MinWidth = $this.Preferences.Width
 
-function New-Control {
-    Param(
-        [Parameter(Position = 0)]
-        [String]
-        $Type
-    )
+        $layout.Add_Loaded($this.NewClosure({
+            if ([double]::IsNaN($this.Width)) {
+                $this.Width = $this.ActualWidth
+            }
 
-    return New-Object "System.Windows.Controls.$Type"
-}
+            $this.Width = [double]::NaN
+        }))
 
-function New-ControlsMain {
-    $form = New-Object System.Windows.Window
-    $form.SizeToContent = 'WidthAndHeight'
-    $form.WindowStartupLocation = 'CenterScreen'
-
-    $form.Add_ContentRendered({
-        $this.Activate()
-    })
-
-    $grid = New-Control StackPanel
-    $form.AddChild($grid)
-
-    return [PsCustomObject]@{
-        Window = $form
-        Grid = $grid
+        return $layout
     }
-}
 
-function New-ControlsLayout {
-    Param(
-        [PsCustomObject]
-        $Preferences
-    )
-
-    $layout = New-Control StackPanel
-    $layout.Width = $Preferences.Width
-    $layout.MinWidth = $Preferences.Width
-
-    $layout.Add_Loaded((
-        New-Closure `
-            -ScriptBlock {
-                if ([double]::IsNaN($this.Width)) {
-                    $this.Width = $this.ActualWidth
-                }
-
-                $this.Width = [double]::NaN
-            } `
-    ))
-
-    return $layout
-}
-
-function Add-ControlsTabItem {
-    Param(
+    static [void] AddTabItem(
         [System.Windows.Controls.TabControl]
         $TabControl,
 
@@ -124,62 +152,53 @@ function Add-ControlsTabItem {
 
         [String]
         $Header
-    )
-
-    $tab = New-Control TabItem
-    $tab.Header = $Header
-    $tab.AddChild($Control)
-    $TabControl.Items.Add($tab)
-}
-
-function New-ControlsTabLayout {
-    Param(
-        [System.Windows.FrameworkElement[]]
-        $Control,
-
-        [String[]]
-        $Header
-    )
-
-    $tabs = New-Control TabControl
-    $count = [Math]::Min($Control.Count, $Header.Count)
-    $index = 0
-
-    while ($index -lt $count) {
-        Add-ControlsTabItem `
-            -Control @($Control)[$index] `
-            -Header @($Header)[$index]
-
-        $index = $index + 1
+    ) {
+        $tab = [Controls]::NewControl('TabItem')
+        $tab.Header = $Header
+        $tab.AddChild($Control)
+        $TabControl.Items.Add($tab)
     }
 
-    return $tabs
-}
+    [System.Windows.Controls.TabControl] NewTabLayout(
+        [System.Windows.FrameworkElement[]]
+        $Control = @(),
 
-function Get-ControlsAsterized {
-    Param(
+        [String[]]
+        $Header = @()
+    ) {
+        $tabs = [Controls]::NewControl('TabControl')
+
+        0 .. [Math]::Min($Control.Count, $Header.Count) |
+        foreach {
+            [Controls]::AddTabItem(
+                $tabs,
+                @($Control)[$_],
+                @($Header)[$_]
+            )
+        }
+
+        return $tabs
+    }
+
+    [System.Windows.Controls.DockPanel] Asterize(
+        [System.Windows.FrameworkElement]
         $Control
-    )
+    ) {
+        $asterisk = $this.NewControl('Label')
+        $asterisk.Content = '*'
+        $asterisk.FontSize = $asterisk.FontSize + 5
+        $asterisk.Foreground = 'DarkRed'
+        $asterisk.VerticalContentAlignment = 'Center'
+        $asterisk.HorizontalContentAlignment = 'Center'
+        $row = $this.NewControl('DockPanel')
+        $row.Margin = $Control.Margin
+        $Control.Margin = 0
+        $row.AddChild($asterisk)
+        $row.AddChild($Control)
+        return $row
+    }
 
-    $asterisk = New-Control Label
-    $asterisk.Content = '*'
-    $asterisk.FontSize = $asterisk.FontSize + 5
-    $asterisk.Foreground = 'DarkRed'
-    $asterisk.VerticalContentAlignment = 'Center'
-    $asterisk.HorizontalContentAlignment = 'Center'
-    $row = New-Control DockPanel
-    $row.Margin = $Control.Margin
-    $Control.Margin = 0
-    $row.AddChild($asterisk)
-    $row.AddChild($Control)
-    return $row
-}
-
-function Get-ControlsTextDialog {
-    Param(
-        [PsCustomObject]
-        $Preferences,
-
+    [String] ShowTextDialog(
         [String]
         $Text,
 
@@ -188,86 +207,65 @@ function Get-ControlsTextDialog {
 
         [Int]
         $MaxLength
-    )
+    ) {
+        $textBox = [Controls]::NewControl('TextBox')
+        $textBox.Width = $this.Preferences.Width
+        $textBox.Margin = $this.Preferences.Margin
 
-    if ($null -eq $Preferences) {
-        $Preferences = Get-Content "$PsScriptRoot/../res/preference.json" `
-            | ConvertFrom-Json
-    }
-
-    $textBox = New-Control TextBox
-    $textBox.Width = $Preferences.Width
-    $textBox.Margin = $Preferences.Margin
-
-    if ($null -ne $MaxLength) {
-        $textBox.MaxLength = $MaxLength
-    }
-
-    Set-ControlsWritableText `
-        -Control $textBox `
-        -Text $Text
-
-    $main = New-ControlsMain `
-        -Preferences $Preferences
-
-    $main.Window.Title = $Caption
-    $main.Grid.AddChild($textBox)
-
-    # todo: consider adding to the main window of general forms
-    $main.Window.Add_KeyDown({
-        if ($_.Key -eq 'Enter') {
-            $this.DialogResult = $true
-            $this.Close()
+        if ($null -ne $MaxLength) {
+            $textBox.MaxLength = $MaxLength
         }
 
-        if ($_.Key -eq 'Escape') {
-            $this.DialogResult = $false
-            $this.Close()
+        [Controls]::SetWriteableText($textBox, $Text)
+        $main = $this.NewMain()
+        $main.Window.Title = $Caption
+        $main.Grid.AddChild($textBox)
+
+        # todo: consider adding to the main window of general forms
+        $main.Window.Add_KeyDown($this.NewClosure({
+            if ($_.Key -eq 'Enter') {
+                $this.DialogResult = $true
+                $this.Close()
+            }
+
+            if ($_.Key -eq 'Escape') {
+                $this.DialogResult = $false
+                $this.Close()
+            }
+        }))
+
+        $main.Window.Add_ContentRendered($this.NewClosure(
+            $textBox,
+            { $Parameters.Focus() }
+        ))
+
+        if (-not $main.Window.ShowDialog()) {
+            return $Text
         }
-    })
 
-    $main.Window.Add_ContentRendered(( `
-        New-Closure `
-            -Parameters $textBox `
-            -ScriptBlock {
-                $Parameters.Focus()
-            } `
-    ))
-
-    if (-not $main.Window.ShowDialog()) {
-        return $Text
+        return $textBox.Text
     }
 
-    return $textBox.Text
-}
-
-function New-ControlsCheckBox {
-    [OutputType('PageElementControl')]
-    Param(
+    [PageElementControl] NewCheckBox(
         [String]
         $Text,
 
         $Default
-    )
+    ) {
+        $checkBox = [Controls]::NewControl('CheckBox')
+        $checkBox.Content = $Text
 
-    $checkBox = New-Control CheckBox
-    $checkBox.Content = $Text
+        if ($null -ne $Default) {
+            $checkBox.IsChecked = $Default
+        }
 
-    if ($null -ne $Default) {
-        $checkBox.IsChecked = $Default
+        return [PageElementControl]@{
+            Container = $checkBox
+            Object = $checkBox
+        }
     }
 
-    return [PsCustomObject]@{
-        PsTypeName = 'PageElementControl'
-        Container = $checkBox
-        Object = $checkBox
-        # UnitElement = $checkBox
-    }
-}
-
-function New-ControlsListBox {
-    [OutputType('PageElementControl')]
-    Param(
+    [PageElementControl] NewListBox(
         [String]
         $Text,
 
@@ -276,442 +274,426 @@ function New-ControlsListBox {
 
         $MaxLength,
         $MaxCount,
-        $Default,
+        $Default
+    ) {
+        $outerPanel = $this.NewControl('StackPanel')
+        $mainPanel = $this.NewControl('DockPanel')
+        $buttonPanel = $this.NewControl('StackPanel')
 
-        [System.Windows.Controls.Label]
-        $StatusLine,
+        $label = $this.NewControl('Label')
+        $label.Content = $Text
 
-        [PsCustomObject]
-        $Preferences
-    )
+        $asterism = if ($Mandatory) {
+            $this.Asterize($label)
+        }
+        else {
+            $label
+        }
 
-    $outerPanel = New-Control StackPanel
-    $mainPanel = New-Control DockPanel
-    $buttonPanel = New-Control StackPanel
+        $buttonNames = [Ordered]@{
+            'New' = 'New' # '_New'
+            'Edit' = 'Edit' # '_Edit'
+            'Delete' = 'Delete' # '_Delete'
+            'Move Up' = 'Move Up' # 'Move _Up'
+            'Move Down' = 'Move Down' # 'Move _Down'
+            'Sort' = 'Sort' # '_Sort'
+        }
 
-    $label = New-Control Label
-    $label.Content = $Text
+        $buttonTable = @{}
+        $actionTable = @{}
 
-    $asterism = if ($Mandatory) {
-        Get-ControlsAsterized `
-            -Control $label
-    } else {
-        $label
-    }
+        foreach ($name in $buttonNames.Keys) {
+            $button = $this.NewControl('Button')
+            $button.Content = $buttonNames[$name]
+            $buttonPanel.AddChild($button)
+            $buttonTable.Add($name, $button)
+        }
 
-    $buttonNames = [Ordered]@{
-        'New' = 'New' # '_New'
-        'Edit' = 'Edit' # '_Edit'
-        'Delete' = 'Delete' # '_Delete'
-        'Move Up' = 'Move Up' # 'Move _Up'
-        'Move Down' = 'Move Down' # 'Move _Down'
-        'Sort' = 'Sort' # '_Sort'
-    }
+        $listBox = $this.NewControl('ListBox')
+        $listBox.Height = 200
+        $listBox.SelectionMode = 'Multiple'
 
-    $buttonTable = @{}
-    $actionTable = @{}
+        $parameters = [PsCustomObject]@{
+            ListBox = $listBox
+            MaxCount = $MaxCount
+            MaxLength = $MaxLength
+            This = $this
+        }
 
-    foreach ($name in $buttonNames.Keys) {
-        $button = New-Control Button
-        $button.Content = $buttonNames[$name]
-        $buttonPanel.AddChild($button)
-        $buttonTable.Add($name, $button)
-    }
-
-    $listBox = New-Control ListBox
-    $listBox.Height = 200
-    $listBox.SelectionMode = 'Multiple'
-
-    $parameters = [PsCustomObject]@{
-        ListBox = $listBox
-        MaxCount = $MaxCount
-        MaxLength = $MaxLength
-        StatusLine = $StatusLine
-        Preferences = $Preferences
-    }
-
-    $actionTable['New'] = New-Closure `
-        -Parameters $parameters `
-        -ScriptBlock {
-            $listBox = $Parameters.ListBox
-            $maxCount = $Parameters.MaxCount
-            $maxLength = $Parameters.MaxLength
-            $statusLine = $Parameters.StatusLine
-            $prefs = $Parameters.Preferences
-            $index = $listBox.SelectedIndex
-
-            . $PsScriptRoot\Controls.ps1
-
-            if ($null -ne $maxCount `
-                -and $listBox.Items.Count -eq $maxCount)
+        $actionTable['New'] = $this.NewClosure(
+            $parameters,
             {
-                Set-ControlsStatus `
-                    -StatusLine $statusLine `
-                    -LineName 'MaxCountReached'
+                $listBox = $Parameters.ListBox
+                $maxCount = $Parameters.MaxCount
+                $maxLength = $Parameters.MaxLength
+                $prefs = $Parameters.This.Preferences
+                $index = $listBox.SelectedIndex
 
-                return
-            }
-
-            if ($index -ge 0) {
-                $listBox.Items.Insert($index, '')
-            }
-            else {
-                $listBox.Items.Add('')
-                $index = $listBox.Items.Count - 1
-            }
-
-            $listBox.Items[$index] =
-                Get-ControlsTextDialog `
-                    -Preferences $prefs `
-                    -Text $listBox.Items[$index] `
-                    -Caption 'Edit ListBox Item' `
-                    -MaxLength $maxLength
-        }
-
-    $parameters = [PsCustomObject]@{
-        ListBox = $listBox
-        MaxLength = $MaxLength
-        Preferences = $Preferences
-    }
-
-    $actionTable['Edit'] = New-Closure `
-        -Parameters $parameters `
-        -ScriptBlock {
-            $listBox = $Parameters.ListBox
-            $prefs = $Parameters.Preferences
-            $maxLength = $Parameters.MaxLength
-            $index = $listBox.SelectedIndex
-
-            if ($index -lt 0) {
-                return
-            }
-
-            . $PsScriptRoot\Controls.ps1
-
-            $listBox.Items[$index] =
-                Get-ControlsTextDialog `
-                    -Preferences $prefs `
-                    -Text $listBox.Items[$index] `
-                    -Caption 'Edit ListBox Item' `
-                    -MaxLength $maxLength
-        }
-
-    $actionTable['Delete'] = New-Closure `
-        -Parameters $listBox `
-        -ScriptBlock {
-            $listBox = $Parameters
-            $index = $listBox.SelectedIndex
-
-            if ($index -lt 0) {
-                return
-            }
-
-            $listBox.Items.RemoveAt($index)
-
-            if ($listBox.Items.Count -eq 0) {
-                return
-            }
-
-            $index = if ($index -eq 0) {
-                0
-            } else {
-                $index - 1
-            }
-
-            $listBox.SelectedItems.Add(
-                $listBox.Items.GetItemAt($index)
-            )
-        }
-
-    $actionTable['Move Up'] = New-Closure `
-        -Parameters $listBox `
-        -ScriptBlock {
-            $listBox = $Parameters
-            $index = $listBox.SelectedIndex
-
-            $immovable = $listBox.Items.Count -le 1 `
-                -or $index -le 0
-
-            if ($immovable) {
-                return
-            }
-
-            $items = $listBox.Items
-            $temp = $items[$index - 1]
-            $items[$index - 1] = $items[$index]
-            $items[$index] = $temp
-
-            $listBox.SelectedItems.Remove(
-                $listBox.Items.GetItemAt($index)
-            )
-
-            $listBox.SelectedItems.Add(
-                $listBox.Items.GetItemAt($index - 1)
-            )
-        }
-
-    $actionTable['Move Down'] = New-Closure `
-        -Parameters $listBox `
-        -ScriptBlock {
-            $listBox = $Parameters
-            $index = $listBox.SelectedIndex
-
-            $immovable = $listBox.Items.Count -le 1 `
-                -or $index -lt 0 `
-                -or $index -eq $listBox.Items.Count - 1
-
-            if ($immovable) {
-                return
-            }
-
-            $items = $listBox.Items
-            $temp = $items[$index + 1]
-            $items[$index + 1] = $items[$index]
-            $items[$index] = $temp
-
-            $listBox.SelectedItems.Remove(
-                $listBox.Items.GetItemAt($index)
-            )
-
-            $listBox.SelectedItems.Add(
-                $listBox.Items.GetItemAt($index + 1)
-            )
-        }
-
-    $actionTable['Sort'] = New-Closure `
-        -Parameters $listBox `
-        -ScriptBlock {
-            $listBox = $Parameters
-
-            $items = $listBox.Items | sort | foreach {
-                [String]::new($_)
-            }
-
-            $listBox.Items.Clear()
-
-            foreach ($item in $items) {
-                $listBox.Items.Add($item)
-            }
-        }
-
-    foreach ($name in $buttonNames.Keys) {
-        $button = $buttonTable[$name]
-        $action = $actionTable[$name]
-        $button.Add_Click($action)
-
-        $action = New-Closure `
-            -Parameters $action `
-            -ScriptBlock {
-                if ($_.Key -eq 'Space') {
-                    & $Parameters
-                }
-            }
-
-        $button.Add_KeyDown($action)
-    }
-
-    $newAction = $actionTable['New']
-    $editAction = $actionTable['Edit']
-    $deleteAction = $actionTable['Delete']
-
-    $parameters = [PsCustomObject]@{
-        ListBox = $listBox
-        NewAction = $newAction
-        EditAction = $editAction
-        DeleteAction = $deleteAction
-        StatusLine = $StatusLine
-    }
-
-    $keyDown = New-Closure `
-        -Parameters $parameters `
-        -ScriptBlock {
-            $listBox = $Parameters.ListBox
-            $newAction = $Parameters.NewAction
-            $editAction = $Parameters.EditAction
-            $deleteAction = $Parameters.DeleteAction
-            $statusLine = $Parameters.StatusLine
-            $myEventArgs = $_
-
-            $isKeyCombo = [System.Windows.Input.Keyboard]::Modifiers `
-                -and [System.Windows.Input.ModifierKeys]::Alt
-
-            if ($isKeyCombo) {
-                if ([System.Windows.Input.Keyboard]::IsKeyDown('C')) {
-                    $index = $listBox.SelectedIndex
-
-                    if ($index -lt 0) {
-                        return
-                    }
-
-                    Set-Clipboard `
-                        -Value $listBox.Items[$index]
-
-                    . $PsScriptRoot\Controls.ps1
-
-                    Set-ControlsStatus `
-                        -StatusLine $statusLine `
-                        -LineName 'TextClipped'
-                }
-
-                # karlr (2023_11_18_233610): Not necessary when using
-                # mnemonics. Cannot currently get mnemonics to work properly
-                # when multiple ListBox's appear in form.
-                if ([System.Windows.Input.Keyboard]::IsKeyDown('N')) {
-                    & $newAction
+                if ($null -ne $maxCount `
+                    -and $listBox.Items.Count -eq $maxCount)
+                {
+                    $parameters.This.SetStatus('MaxCountReached')
                     return
                 }
 
-                if ([System.Windows.Input.Keyboard]::IsKeyDown('Space')) {
-                    $index = $listBox.SelectedIndex
+                if ($index -ge 0) {
+                    $listBox.Items.Insert($index, '')
+                }
+                else {
+                    $listBox.Items.Add('')
+                    $index = $listBox.Items.Count - 1
+                }
 
-                    if ($index -lt 0) {
+                $listBox.Items[$index] = $this.ShowTextDialog(
+                    $listBox.Items[$index],
+                    'Edit ListBox Item',
+                    $maxLength
+                )
+            }
+        )
+
+        $parameters = [PsCustomObject]@{
+            ListBox = $listBox
+            MaxLength = $MaxLength
+            Preferences = $this.Preferences
+        }
+
+        $actionTable['Edit'] = $this.NewClosure(
+            $parameters,
+            {
+                $listBox = $Parameters.ListBox
+                $prefs = $this.Parameters.Preferences
+                $maxLength = $Parameters.MaxLength
+                $index = $listBox.SelectedIndex
+
+                if ($index -lt 0) {
+                    return
+                }
+
+                $listBox.Items[$index] = $this.ShowTextDialog(
+                    $listBox.Items[$index],
+                    'Edit ListBox Item',
+                    $maxLength
+                )
+            }
+        )
+
+        $actionTable['Delete'] = $this.NewClosure(
+            $listBox,
+            {
+                $listBox = $Parameters
+                $index = $listBox.SelectedIndex
+
+                if ($index -lt 0) {
+                    return
+                }
+
+                $listBox.Items.RemoveAt($index)
+
+                if ($listBox.Items.Count -eq 0) {
+                    return
+                }
+
+                $index = if ($index -eq 0) {
+                    0
+                } else {
+                    $index - 1
+                }
+
+                $listBox.SelectedItems.Add(
+                    $listBox.Items.GetItemAt($index)
+                )
+            }
+        )
+
+        $actionTable['Move Up'] = $this.NewClosure(
+            $listBox,
+            {
+                $listBox = $Parameters
+                $index = $listBox.SelectedIndex
+
+                $immovable = $listBox.Items.Count -le 1 `
+                    -or $index -le 0
+
+                if ($immovable) {
+                    return
+                }
+
+                $items = $listBox.Items
+                $temp = $items[$index - 1]
+                $items[$index - 1] = $items[$index]
+                $items[$index] = $temp
+
+                $listBox.SelectedItems.Remove(
+                    $listBox.Items.GetItemAt($index)
+                )
+
+                $listBox.SelectedItems.Add(
+                    $listBox.Items.GetItemAt($index - 1)
+                )
+            }
+        )
+
+        $actionTable['Move Down'] = $this.NewClosure(
+            $listBox,
+            {
+                $listBox = $Parameters
+                $index = $listBox.SelectedIndex
+
+                $immovable = $listBox.Items.Count -le 1 `
+                    -or $index -lt 0 `
+                    -or $index -eq $listBox.Items.Count - 1
+
+                if ($immovable) {
+                    return
+                }
+
+                $items = $listBox.Items
+                $temp = $items[$index + 1]
+                $items[$index + 1] = $items[$index]
+                $items[$index] = $temp
+
+                $listBox.SelectedItems.Remove(
+                    $listBox.Items.GetItemAt($index)
+                )
+
+                $listBox.SelectedItems.Add(
+                    $listBox.Items.GetItemAt($index + 1)
+                )
+            }
+        )
+
+        $actionTable['Sort'] = $this.NewClosure(
+            $listBox,
+            {
+                $listBox = $Parameters
+
+                $items = $listBox.Items | sort | foreach {
+                    [String]::new($_)
+                }
+
+                $listBox.Items.Clear()
+
+                foreach ($item in $items) {
+                    $listBox.Items.Add($item)
+                }
+            }
+        )
+
+        foreach ($name in $buttonNames.Keys) {
+            $button = $buttonTable[$name]
+            $action = $actionTable[$name]
+            $button.Add_Click($action)
+
+            $action = $this.NewClosure(
+                $action,
+                {
+                    if ($_.Key -eq 'Space') {
+                        & $Parameters
+                    }
+                }
+            )
+
+            $button.Add_KeyDown($action)
+        }
+
+        $newAction = $actionTable['New']
+        $editAction = $actionTable['Edit']
+        $deleteAction = $actionTable['Delete']
+
+        $parameters = [PsCustomObject]@{
+            ListBox = $listBox
+            NewAction = $newAction
+            EditAction = $editAction
+            DeleteAction = $deleteAction
+            This = $this
+        }
+
+        $keyDown = $this.NewClosure(
+            $parameters,
+            {
+                $listBox = $Parameters.ListBox
+                $newAction = $Parameters.NewAction
+                $editAction = $Parameters.EditAction
+                $deleteAction = $Parameters.DeleteAction
+                $myEventArgs = $_
+
+                $isKeyCombo = [System.Windows.Input.Keyboard]::Modifiers `
+                    -and [System.Windows.Input.ModifierKeys]::Alt
+
+                if ($isKeyCombo) {
+                    if ([System.Windows.Input.Keyboard]::IsKeyDown('C')) {
+                        $index = $listBox.SelectedIndex
+
+                        if ($index -lt 0) {
+                            return
+                        }
+
+                        Set-Clipboard `
+                            -Value $listBox.Items[$index]
+
+                        $Parameters.This.SetStatus('TextClipped')
+                    }
+
+                    # karlr (2023_11_18_233610): Not necessary when using
+                    # mnemonics. Cannot currently get mnemonics to work
+                    # properly when multiple ListBox's appear in form.
+                    if ([System.Windows.Input.Keyboard]::IsKeyDown('N')) {
+                        & $newAction
                         return
                     }
 
-                    $listBox.UnselectAll()
-                    $myEventArgs.Handled = $true
+                    if ([System.Windows.Input.Keyboard]::
+                        IsKeyDown('Space')
+                    ) {
+                        $index = $listBox.SelectedIndex
+
+                        if ($index -lt 0) {
+                            return
+                        }
+
+                        $listBox.UnselectAll()
+                        $myEventArgs.Handled = $true
+                    }
+                }
+
+                if ($myEventArgs.Key -eq 'F2') {
+                    & $editAction
+                    return
+                }
+
+                if ($myEventArgs.Key -eq 'Delete') {
+                    & $deleteAction
+                    return
                 }
             }
+        )
 
-            if ($myEventArgs.Key -eq 'F2') {
-                & $editAction
-                return
-            }
+        $listBox.Add_PreViewKeyDown($keyDown)
 
-            if ($myEventArgs.Key -eq 'Delete') {
-                & $deleteAction
-                return
+        $listBox.Add_GotFocus($this.NewClosure(
+            $this,
+            {
+                $Parameters.SetStatus('InListBox')
             }
+        ))
+
+        $listBox.Add_LostFocus($this.NewClosure(
+            $this,
+            {
+                $Parameters.SetStatus('Idle')
+            }
+        ))
+
+        foreach ($item in $Default) {
+            $listBox.Items.Add($item)
         }
 
-    $listBox.Add_PreViewKeyDown($keyDown)
+        $mainPanel.AddChild($buttonPanel)
+        $mainPanel.AddChild($listBox)
+        $outerPanel.AddChild($asterism)
+        $outerPanel.AddChild($mainPanel)
 
-    $listBox.Add_GotFocus((New-Closure `
-        -Parameters $StatusLine `
-        -ScriptBlock {
-            . $PsScriptRoot\Controls.ps1
-
-            Set-ControlsStatus `
-                -StatusLine $Parameters `
-                -LineName 'InListBox'
-        } `
-    ))
-
-    $listBox.Add_LostFocus((New-Closure `
-        -Parameters $StatusLine `
-        -ScriptBlock {
-            . $PsScriptRoot\Controls.ps1
-
-            Set-ControlsStatus `
-                -StatusLine $Parameters `
-                -LineName 'Idle'
-        } `
-    ))
-
-    foreach ($item in $Default) {
-        $listBox.Items.Add($item)
+        return [PageElementControl]@{
+            Container = $outerPanel
+            Object = $listBox
+        }
     }
 
-    $mainPanel.AddChild($buttonPanel)
-    $mainPanel.AddChild($listBox)
-    $outerPanel.AddChild($asterism)
-    $outerPanel.AddChild($mainPanel)
-
-    return [PsCustomObject]@{
-        PsTypeName = 'PageElementControl'
-        Container = $outerPanel
-        Object = $listBox
-        # UnitElement = $listBox
-    }
-}
-
-function Set-ControlsCodeBlockStyle {
-    Param(
+    static [void] SetCodeBlockStyle(
         [System.Windows.Controls.Control]
         $Control,
 
         [Switch]
         $IsField
-    )
+    ) {
+        $style = (cat "$PsScriptRoot\..\res\setting.json" |
+            ConvertFrom-Json).
+            CodeBlockStyle
 
-    $style = (cat "$PsScriptRoot\..\res\setting.json" |
-        ConvertFrom-Json).
-        CodeBlockStyle
+        $Control.Background =
+            [System.Windows.Media.Brushes]::$($style.Background)
 
-    $Control.Background =
-        [System.Windows.Media.Brushes]::$($style.Background)
+        $Control.Foreground =
+            [System.Windows.Media.Brushes]::$($style.Foreground)
 
-    $Control.Foreground =
-        [System.Windows.Media.Brushes]::$($style.Foreground)
+        $Control.FontFamily =
+            [System.Windows.Media.FontFamily]::new($style.FontFamily)
 
-    $Control.FontFamily =
-        [System.Windows.Media.FontFamily]::new($style.FontFamily)
+        $Control.Height = $style.Height
 
-    $Control.Height = $style.Height
+        if ($IsField) {
+            $Control.TextWrapping =
+                [System.Windows.TextWrapping]::$($style.TextWrapping)
 
-    if ($IsField) {
-        $Control.TextWrapping =
-            [System.Windows.TextWrapping]::$($style.TextWrapping)
+            $Control.AcceptsReturn = $true
 
-        $Control.AcceptsReturn = $true
-
-        $Control.VerticalScrollBarVisibility =
-        $Control.HorizontalScrollBarVisibility =
-            [System.Windows.Controls.ScrollBarVisibility]::Auto
+            $Control.VerticalScrollBarVisibility =
+            $Control.HorizontalScrollBarVisibility =
+                [System.Windows.Controls.ScrollBarVisibility]::Auto
+        }
     }
-}
 
-function New-ControlsLabel {
-    [OutputType('PageElementControl')]
-    Param(
+    [PageElementControl] NewLabel(
         [String]
         $Text,
 
         [Switch]
         $Mandatory,
 
+        $Default,
+
         [Switch]
         $CodeBlockStyle
-    )
+    ) {
+        $stackPanel = [Controls]::NewControl('StackPanel')
+        $label = [Controls]::NewControl('Label')
+        $label.Content = $Text
+        $view = [Controls]::NewControl('Label')
 
-    $stackPanel = New-Control StackPanel
-    $label = New-Control Label
-    $label.Content = $Text
-    $view = New-Control Label
+        if ($CodeBlockStyle) {
+            [Controls]::SetCodeBlockStyle($view)
+        }
 
-    if ($CodeBlockStyle) {
-        Set-ControlsCodeBlockStyle `
-            -Control $view
+        $row2 = if ($Mandatory) {
+            [Controls]::Asterize($view)
+        } else {
+            $view
+        }
+
+        if ($null -ne $Default) {
+            $view.Content = $Default
+        }
+
+        $stackPanel.AddChild($label)
+        $stackPanel.AddChild($row2)
+
+        return [PageElementControl]@{
+            Container = $stackPanel
+            Object = $view
+        }
     }
 
-    $row2 = if ($Mandatory) {
-        Get-ControlsAsterized `
-            -Control $view
-    } else {
-        $view
+    [PageElementControl] NewFieldBox(
+        [String]
+        $Text,
+
+        [Switch]
+        $Mandatory,
+
+        $MaxLength,
+        $Default
+    ) {
+        return $($this.NewFieldBox(
+            $Text,
+            $Mandatory,
+            $MaxLength,
+            $Default,
+            ""
+        ))
     }
 
-    if ($null -ne $MaxLength) {
-        $textBox.MaxLength = $MaxLength
-    }
-
-    if ($null -ne $Default) {
-        $view.Content = $Default
-    }
-
-    $stackPanel.AddChild($label)
-    $stackPanel.AddChild($row2)
-
-    return [PsCustomObject]@{
-        PsTypeName = 'PageElementControl'
-        Container = $stackPanel
-        Object = $view
-    }
-}
-
-function New-ControlsFieldBox {
-    [OutputType('PageElementControl')]
-    Param(
+    [PageElementControl] NewFieldBox(
         [String]
         $Text,
 
@@ -721,112 +703,92 @@ function New-ControlsFieldBox {
         $MaxLength,
         $Default,
 
-        [ValidateSet('CodeBlock', 'DebugWindow')]
         [String]
-        $Style,
+        $Style
+    ) {
+        $stackPanel = [Controls]::NewControl('StackPanel')
+        $label = [Controls]::NewControl('Label')
+        $label.Content = $Text
+        $textBox = [Controls]::NewControl('TextBox')
 
-        [PsCustomObject]
-        $Preferences
-    )
+        switch ($Style) {
+            'CodeBlock' {
+                [Controls]::SetCodeBlockStyle($textBox, $true)
+            }
 
-    $stackPanel = New-Control StackPanel
-    $label = New-Control Label
-    $label.Content = $Text
-    $textBox = New-Control TextBox
-
-    switch ($Style) {
-        'CodeBlock' {
-            Set-ControlsCodeBlockStyle `
-                -Control $textBox `
-                -IsField
-        }
-
-        # todo
-        'DebugWindow' {
-            Set-ControlsCodeBlockStyle `
-                -Control $textBox `
-                -IsField
-
-            $textBox.IsReadOnly = $true
-            $textBox.Height = $Preferences.LogHeight
-        }
-    }
-
-    $row2 = if ($Mandatory) {
-        Get-ControlsAsterized `
-            -Control $textBox
-    } else {
-        $textBox
-    }
-
-    $monthCalendarPrefs = $Preferences.PsObject.Copy()
-    $monthCalendarPrefs.Caption = 'Get Date'
-    $monthCalendarPrefs.Width = 350
-
-    $keyDown = New-Closure `
-        -Parameters $monthCalendarPrefs `
-        -ScriptBlock {
-            $monthCalendarPrefs = $Parameters
-            $myEventArgs = $_
-
-            $isKeyCombo =
-                $myEventArgs.KeyboardDevice.Modifiers -contains `
-                [System.Windows.Input.ModifierKeys]::Control
-
-            if ($isKeyCombo) {
-                if ([System.Windows.Input.Keyboard]::IsKeyDown('O')) {
-                    . $PsScriptRoot\Controls.ps1
-
-                    Set-ControlsWritableText `
-                        -Control $this `
-                        -Text ( `
-                            $this.Text `
-                            + (Open-ControlsFileDialog -Directory) `
-                        )
-
-                    $myEventArgs.Handled = $true
-                }
-
-                if ([System.Windows.Input.Keyboard]::IsKeyDown('D')) {
-                    . $PsScriptRoot\Controls.ps1
-
-                    $text = Open-ControlsMonthCalendar `
-                        -Preferences $monthCalendarPrefs
-
-                    Set-ControlsWritableText `
-                        -Control $this `
-                        -Text ($this.Text + $text)
-
-                    $myEventArgs.Handled = $true
-                }
+            # todo
+            'DebugWindow' {
+                [Controls]::SetCodeBlockStyle($textBox, $true)
+                $textBox.IsReadOnly = $true
+                $textBox.Height = $this.Preferences.LogHeight
             }
         }
 
-    $textBox.Add_PreViewKeyDown($keyDown)
+        $row2 = if ($Mandatory) {
+            [Controls]::Asterize($textBox)
+        } else {
+            $textBox
+        }
 
-    if ($null -ne $MaxLength) {
-        $textBox.MaxLength = $MaxLength
+        $monthCalendarPrefs = $this.Preferences.PsObject.Copy()
+        $monthCalendarPrefs.Caption = 'Get Date'
+        $monthCalendarPrefs.Width = 350
+
+        $keyDown = $this.NewClosure(
+            [Controls]::new($monthCalendarPrefs),
+            {
+                $myEventArgs = $_
+
+                $isKeyCombo =
+                    $myEventArgs.KeyboardDevice.Modifiers -contains `
+                    [System.Windows.Input.ModifierKeys]::Control
+
+                if ($isKeyCombo) {
+                    if ([System.Windows.Input.Keyboard]::IsKeyDown('O')) {
+                        . $PsScriptRoot\Controls.ps1
+
+                        [Controls]::SetWriteableText(
+                            $this,
+                            "$($this.Text)$($Parameters.ShowFileDialog($true))" # -Directory
+                        )
+
+                        $myEventArgs.Handled = $true
+                    }
+
+                    if ([System.Windows.Input.Keyboard]::IsKeyDown('D')) {
+                        $text = $Parameters.ShowMonthCalendar()
+
+                        [Controls]::SetWriteableText(
+                            $this,
+                            "$($this.Text)$text"
+                        )
+
+                        $myEventArgs.Handled = $true
+                    }
+                }
+            }
+        )
+
+        $textBox.Add_PreViewKeyDown($keyDown)
+
+        if ($null -ne $MaxLength) {
+            $textBox.MaxLength = $MaxLength
+        }
+
+        if ($null -ne $Default) {
+            [Controls]::SetWriteableText($textBox, $Default)
+        }
+
+        $stackPanel.AddChild($label)
+        $stackPanel.AddChild($row2)
+
+        return [PageElementControl]@{
+            Container = $stackPanel
+            Object = $textBox
+        }
     }
 
-    if ($null -ne $Default) {
-        Set-ControlsWritableText `
-            -Control $textBox `
-            -Text $Default
-    }
-
-    $stackPanel.AddChild($label)
-    $stackPanel.AddChild($row2)
-
-    return [PsCustomObject]@{
-        PsTypeName = 'PageElementControl'
-        Container = $stackPanel
-        Object = $textBox
-    }
-}
-
-function New-ControlsSlider {
-    [OutputType('PageElementControl')]
-    Param(
+    [PageElementControl] NewSlider(
         [String]
         $Text,
 
@@ -836,96 +798,68 @@ function New-ControlsSlider {
         $Minimum,
         $Maximum,
         $DecimalPlaces,
-        $Default,
+        $Default
+    ) {
+        if ($null -eq $Minimum) {
+            $Minimum = $this.Preferences.NumericMinimum
+        }
 
-        [System.Windows.Controls.Label]
-        $StatusLine,
+        if ($null -eq $Maximum) {
+            $Maximum = $this.Preferences.NumericMaximum
+        }
 
-        [PsCustomObject]
-        $Preferences
-    )
+        if ($null -eq $DecimalPlaces) {
+            $DecimalPlaces = $this.Preferences.NumericDecimalPlaces
+        }
 
-    if ($null -eq $Minimum) {
-        $Minimum = $Preferences.NumericMinimum
+        $dockPanel = [Controls]::NewControl('StackPanel')
+        $label = [Controls]::NewControl('Label')
+        $label.Content = $Text
+        $slider = [NumberSlider]::new($Default, $Minimum, $Maximum, 1)
+
+        $row2 = if ($Mandatory) {
+            [Controls]::Asterize($slider)
+        } else {
+            $slider
+        }
+
+        if ($null -ne $Minimum -or $null -ne $Maximum) {
+            $closure = $this.NewClosure(
+                $this,
+                { $Parameters.SetStatus('Idle') }
+            )
+
+            $slider.OnIdle += @($closure)
+        }
+
+        if ($null -ne $Minimum) {
+            $closure = $this.NewClosure(
+                $this,
+                { $Parameters.SetStatus('MinReached') }
+            )
+
+            $slider.OnMinReached += @($closure)
+        }
+
+        if ($null -ne $Maximum) {
+            $closure = $this.NewClosure(
+                $this,
+                { $Parameters.SetStatus('MaxReached') }
+            )
+
+            $slider.OnMaxReached += @($closure)
+        }
+
+        $dockPanel.AddChild($label)
+        $dockPanel.AddChild($row2)
+
+        return [PageElementControl]@{
+            Container = $dockPanel
+            Object = $slider
+        }
     }
 
-    if ($null -eq $Maximum) {
-        $Maximum = $Preferences.NumericMaximum
-    }
-
-    if ($null -eq $DecimalPlaces) {
-        $DecimalPlaces = $Preferences.NumericDecimalPlaces
-    }
-
-    $dockPanel = New-Control StackPanel
-    $label = New-Control Label
-    $label.Content = $Text
-
-    $slider = [NumberSlider]::new($Default, $Minimum, $Maximum, 1)
-
-    $row2 = if ($Mandatory) {
-        Get-ControlsAsterized `
-            -Control $slider
-    } else {
-        $slider
-    }
-
-    if ($null -ne $Minimum -or $null -ne $Maximum) {
-        $closure = New-Closure `
-            -Parameters $StatusLine `
-            -ScriptBlock {
-                . $PsScriptRoot\Controls.ps1
-
-                Set-ControlsStatus `
-                    -StatusLine $Parameters `
-                    -LineName 'Idle'
-            }
-
-        $slider.OnIdle += @($closure)
-    }
-
-    if ($null -ne $Minimum) {
-        $closure = New-Closure `
-            -Parameters $StatusLine `
-            -ScriptBlock {
-                . $PsScriptRoot\Controls.ps1
-
-                Set-ControlsStatus `
-                    -StatusLine $Parameters `
-                    -LineName 'MinReached'
-            }
-
-        $slider.OnMinReached += @($closure)
-    }
-
-    if ($null -ne $Maximum) {
-        $closure = New-Closure `
-            -Parameters $StatusLine `
-            -ScriptBlock {
-                . $PsScriptRoot\Controls.ps1
-
-                Set-ControlsStatus `
-                    -StatusLine $Parameters `
-                    -LineName 'MaxReached'
-            }
-
-        $slider.OnMaxReached += @($closure)
-    }
-
-    $dockPanel.AddChild($label)
-    $dockPanel.AddChild($row2)
-
-    return [PsCustomObject]@{
-        PsTypeName = 'PageElementControl'
-        Container = $dockPanel
-        Object = $slider
-        # UnitElement = $slider
-    }
-}
-
-function New-ControlsDropDown {
-    [OutputType('PageElementControl')]
-    Param(
+    [PageElementControl] NewDropDown(
         [String]
         $Text,
 
@@ -936,75 +870,68 @@ function New-ControlsDropDown {
         $Symbols,
 
         $Default
-    )
+    ) {
+        $stackPanel = [Controls]::NewControl('StackPanel')
+        $label = [Controls]::NewControl('Label')
+        $label.Content = $Text
+        $comboBox = [Controls]::NewControl('ComboBox')
+        $comboBox.IsReadOnly = $true
 
-    $stackPanel = New-Control StackPanel
-    $label = New-Control Label
-    $label.Content = $Text
-    $comboBox = New-Control ComboBox
-    $comboBox.IsReadOnly = $true
+        $stackPanel.AddChild($label)
+        $stackPanel.AddChild($comboBox)
 
-    $stackPanel.AddChild($label)
-    $stackPanel.AddChild($comboBox)
+        if (-not $Mandatory) {
+            [void] $comboBox.Items.Add('None')
+        }
 
-    if (-not $Mandatory) {
-        [void] $comboBox.Items.Add('None')
+        foreach ($symbol in $Symbols) {
+            $id = [Controls]::GetNameAndText($symbol)
+            [void] $comboBox.Items.Add($id.Text)
+        }
+
+        $comboBox.SelectedIndex = if ($null -eq $Default) {
+            0
+        } else {
+            $comboBox.Items.IndexOf($Default)
+        }
+
+        return [PageElementControl]@{
+            Container = $stackPanel
+            Object = $comboBox
+        }
     }
 
-    foreach ($symbol in $Symbols) {
-        $what = Get-ControlsNameAndText $symbol
-        [void] $comboBox.Items.Add($what.Text)
-    }
-
-    $comboBox.SelectedIndex = if ($null -eq $Default) {
-        0
-    } else {
-        $comboBox.Items.IndexOf($Default)
-    }
-
-    return [PsCustomObject]@{
-        PsTypeName = 'PageElementControl'
-        Container = $stackPanel
-        Object = $comboBox
-        # UnitElement = $comboBox
-    }
-}
-
-function Get-ControlsNameAndText {
-    Param(
+    [PsCustomObject] GetNameAndText(
         $InputObject
-    )
+    ) {
+        $text = ""
+        $name = ""
 
-    $text = ""
-    $name = ""
+        switch ($InputObject) {
+            { $_ -is [String] } {
+                $name =
+                $text =
+                    ConvertTo-UpperCamelCase $InputObject
+            }
 
-    switch ($InputObject) {
-        { $_ -is [String] } {
-            $name =
-            $text =
-                ConvertTo-UpperCamelCase $InputObject
+            { $_ -is [PsCustomObject] } {
+                $text = $InputObject | Get-PropertyOrDefault `
+                    -Name Text `
+                    -Default $InputObject.Name
+
+                $name = $InputObject | Get-PropertyOrDefault `
+                    -Name Name `
+                    -Default (ConvertTo-UpperCamelCase $text)
+            }
         }
 
-        { $_ -is [PsCustomObject] } {
-            $text = $InputObject | Get-PropertyOrDefault `
-                -Name Text `
-                -Default $InputObject.Name
-
-            $name = $InputObject | Get-PropertyOrDefault `
-                -Name Name `
-                -Default (ConvertTo-UpperCamelCase $text)
+        return [PsCustomObject]@{
+            Name = $name
+            Text = $text
         }
     }
 
-    return [PsCustomObject]@{
-        Name = $name
-        Text = $text
-    }
-}
-
-function New-ControlsRadioBox {
-    [OutputType('PageElementControl')]
-    Param(
+    [PageElementControl] NewRadioBox(
         [String]
         $Text,
 
@@ -1015,74 +942,55 @@ function New-ControlsRadioBox {
         $Symbols,
 
         $Default
-    )
+    ) {
+        $groupBox = [Controls]::NewControl('GroupBox')
+        $groupBox.Header = $Text
+        $stackPanel = [Controls]::NewControl('StackPanel')
+        $groupBox.AddChild($stackPanel)
+        $noneOptionSpecified = $false
+        $buttons = @{}
 
-    $groupBox = New-Control GroupBox
-    $groupBox.Header = $Text
-    $stackPanel = New-Control StackPanel
-    $groupBox.AddChild($stackPanel)
-    $noneOptionSpecified = $false
-    $buttons = @{}
+        if (-not $Mandatory -and @($Symbols | where {
+            $_.Name -like 'None'
+        }).Count -eq 0) {
+            $Symbols += @([PsCustomObject]@{ Name = 'None'; })
+        }
 
-    if (-not $Mandatory -and @($Symbols | where {
-        $_.Name -like 'None'
-    }).Count -eq 0) {
-        $Symbols += @([PsCustomObject]@{ Name = 'None'; })
+        foreach ($symbol in $Symbols) {
+            $button = [Controls]::NewControl('RadioButton')
+            $id = [Controls]::GetNameAndText($symbol)
+            $button.Content = $id.Text
+            $noneOptionSpecified = $button.Content -like 'None'
+            $buttons.Add($id.Name, $button)
+            $stackPanel.AddChild($button)
+        }
+
+        $key = if ($noneOptionSpecified -or (-not $Mandatory)) {
+            'None'
+        } elseif ($null -ne $Default) {
+            $Default
+        } elseif ($Symbols.Count -gt 0) {
+            $Symbols[0].Name
+        } else {
+            ''
+        }
+
+        if (-not [String]::IsNullOrEmpty($key)) {
+            $buttons[$key].IsChecked = $true
+        }
+
+        return [PageElementControl]@{
+            Container = $groupBox
+            Object = $buttons
+        }
     }
 
-    foreach ($symbol in $Symbols) {
-        $button = New-Control RadioButton
-        $what = Get-ControlsNameAndText $symbol
-        $button.Content = $what.Text
-        $noneOptionSpecified = $button.Content -like 'None'
-        $buttons.Add($what.Name, $button)
-        $stackPanel.AddChild($button)
-    }
-
-    $key = if ($noneOptionSpecified -or (-not $Mandatory)) {
-        'None'
-    } elseif ($null -ne $Default) {
-        $Default
-    } elseif ($Symbols.Count -gt 0) {
-        $Symbols[0].Name
-    } else {
-        ''
-    }
-
-    if (-not [String]::IsNullOrEmpty($key)) {
-        $buttons[$key].IsChecked = $true
-    }
-
-    return [PsCustomObject]@{
-        PsTypeName = 'PageElementControl'
-        Container = $groupBox
-        Object = $buttons
-        # UnitElement = @($buttons.Values)[0]
-    }
-}
-
-function New-ControlsTable {
-    [OutputType('PageElementControl')]
-    Param(
-        [String]
-        $Text,
-
-        [PsCustomObject[]]
-        $Rows,
-
-        [Switch]
-        $Asterized,
-
-        [Int]
-        $Margin
-    )
-
-    <#
-    .LINK
-    Url: <https://stackoverflow.com/questions/560581/how-to-autosize-and-right-align-gridviewcolumn-data-in-wpf>
-    Retrieved: 2023_03_16
-    #>
-    function Set-ColumnPreferredSize {
+<#
+.LINK
+Url: <https://stackoverflow.com/questions/560581/how-to-autosize-and-right-align-gridviewcolumn-data-in-wpf>
+Retrieved: 2023_03_16
+#>
+    static [ScriptBlock] $SetColumnPreferredSize = {
         Param(
             [System.Windows.Controls.GridView]
             $GridViewControl
@@ -1097,49 +1005,61 @@ function New-ControlsTable {
         }
     }
 
-    $groupBox = New-Control GroupBox
-    $groupBox.Header = $Text
+    [PageElementControl] NewTable(
+        [String]
+        $Text,
 
-    $stackPanel = New-Control StackPanel
-    $groupBox.AddChild($stackPanel)
+        [PsCustomObject[]]
+        $Rows,
 
-    $textBox = New-Control TextBox
-    $textBox.Margin = $Margin
-    $stackPanel.AddChild($textBox)
+        [Switch]
+        $Asterized,
 
-    Set-ControlsWritableText `
-        -Control $textBox
+        [Int]
+        $Margin
+    ) {
+        $groupBox = [Controls]::NewControl('GroupBox')
+        $groupBox.Header = $Text
 
-    $label = New-Control Label
-    $label.Content = 'Find in table:'
-    $stackPanel.AddChild($label)
+        $stackPanel = [Controls]::NewControl('StackPanel')
+        $groupBox.AddChild($stackPanel)
 
-    # karlr (2023_03_14)
-    $grid = New-Control Grid
+        $textBox = [Controls]::NewControl('TextBox')
+        $textBox.Margin = $Margin
+        $stackPanel.AddChild($textBox)
 
-    $asterism = if ($Asterized) {
-        Get-ControlsAsterized `
-            -Control $grid
-    } else {
-        $grid
-    }
+        [Controls]::SetWriteableText($textBox)
 
-    $grid.Margin = $Margin
-    $listView = New-Control ListView
-    $listView.HorizontalAlignment = 'Stretch'
-    $grid.AddChild($listView)
-    $stackPanel.AddChild($asterism)
+        $label = [Controls]::NewControl('Label')
+        $label.Content = 'Find in table:'
+        $stackPanel.AddChild($label)
 
-    if ($Rows.Count -gt 0) {
-        $header = $Rows[0]
-        $gridView = New-Control GridView
+        # karlr (2023_03_14)
+        $grid = [Controls]::NewControl('Grid')
 
-        foreach ($property in $header.PsObject.Properties) {
-            $column = New-Control GridViewColumn
-            $column.Header = $property.Name
-            $column.DisplayMemberBinding =
-                [System.Windows.Data.Binding]::new($property.Name)
-            $gridView.Columns.Add($column)
+        $asterism = if ($Asterized) {
+            [Controls]::Asterize($grid)
+        } else {
+            $grid
+        }
+
+        $grid.Margin = $Margin
+        $listView = [Controls]::NewControl('ListView')
+        $listView.HorizontalAlignment = 'Stretch'
+        $grid.AddChild($listView)
+        $stackPanel.AddChild($asterism)
+        $gridView = [Controls]::NewControl('GridView')
+
+        if ($Rows.Count -gt 0) {
+            $header = $Rows[0]
+
+            foreach ($property in $header.PsObject.Properties) {
+                $column = [Controls]::NewControl('GridViewColumn')
+                $column.Header = $property.Name
+                $column.DisplayMemberBinding =
+                    [System.Windows.Data.Binding]::new($property.Name)
+                $gridView.Columns.Add($column)
+            }
         }
 
         $listView.View = $gridView
@@ -1147,33 +1067,23 @@ function New-ControlsTable {
         foreach ($row in $Rows) {
             [void]$listView.Items.Add($row)
         }
-    }
 
-    $stackPanel.Add_Loaded(( `
-        New-Closure `
-            -Parameters ( `
-                [PsCustomObject]@{
-                    GridView = $gridView
-                    Resize =
-                        (Get-Command Set-ColumnPreferredSize).ScriptBlock
-                } `
-            ) `
-            -ScriptBlock {
-                & $Parameters.Resize $Parameters.GridView
-            } `
-    ))
+        $stackPanel.Add_Loaded($this.NewClosure(
+            [PsCustomObject]@{
+                GridView = $gridView
+                Resize = [Controls]::SetColumnPreferredSize
+            },
+            { & $Parameters.Resize $Parameters.GridView }
+        ))
 
-    $textBox.Add_TextChanged(( `
-        New-Closure `
-            -Parameters ( `
-                [PsCustomObject]@{
-                    TextBox = $textBox
-                    ListView = $listView
-                    GridView = $gridView
-                    Rows = $Rows
-                }
-            ) `
-            -ScriptBlock {
+        $textBox.Add_TextChanged($this.NewClosure(
+            [PsCustomObject]@{
+                TextBox = $textBox
+                ListView = $listView
+                GridView = $gridView
+                Rows = $Rows
+            },
+            {
                 $Parameters.ListView.Items.Clear()
                 $text = $Parameters.TextBox.Text
 
@@ -1189,107 +1099,83 @@ function New-ControlsTable {
                     [void]$Parameters.ListView.Items.Add($item)
                 }
             }
-    ))
+        ))
 
-    return [PsCustomObject]@{
-        PsTypeName = 'PageElementControl'
-        Container = $groupBox
-        Object = $listView
-        # UnitElement = $listView
-    }
-}
-
-function New-ControlsOkCancelButtons {
-    [OutputType('PageElementControl')]
-    Param(
-        [Int]
-        $Margin
-    )
-
-    $BUTTON_WIDTH = 50
-
-    $okButton = New-Control Button
-    $okButton.Width = $BUTTON_WIDTH
-    $okButton.Margin = $Margin
-    $okButton.Content = 'OK'
-
-    $cancelButton = New-Control Button
-    $cancelButton.Width = $BUTTON_WIDTH
-    $cancelButton.Margin = $Margin
-    $cancelButton.Content = 'Cancel'
-
-    $endButtons = New-Control WrapPanel
-    $endButtons.AddChild($okButton)
-    $endButtons.AddChild($cancelButton)
-    $endButtons.HorizontalAlignment = 'Center'
-
-    return [PsCustomObject]@{
-        PsTypeName = 'PageElementControl'
-        Container = $endButtons
-        Object = [PsCustomObject]@{
-            OkButton = $okButton
-            CancelButton = $cancelButton
+        return [PageElementControl]@{
+            Container = $groupBox
+            Object = $listView
         }
     }
-}
 
-function Open-ControlsTable {
-    Param(
-        [PsCustomObject]
-        $Preferences,
+    [PageElementControl] NewOkCancelButtons() {
+        $BUTTON_WIDTH = 50
 
+        $okButton = [Controls]::NewControl('Button')
+        $okButton.Width = $BUTTON_WIDTH
+        $okButton.Margin = $this.Preferences.Margin
+        $okButton.Content = 'OK'
+
+        $cancelButton = [Controls]::NewControl('Button')
+        $cancelButton.Width = $BUTTON_WIDTH
+        $cancelButton.Margin = $this.Preferences.Margin
+        $cancelButton.Content = 'Cancel'
+
+        $endButtons = [Controls]::NewControl('WrapPanel')
+        $endButtons.AddChild($okButton)
+        $endButtons.AddChild($cancelButton)
+        $endButtons.HorizontalAlignment = 'Center'
+
+        return [PsCustomObject]@{
+            PsTypeName = 'PageElementControl'
+            Container = $endButtons
+            Object = [PsCustomObject]@{
+                OkButton = $okButton
+                CancelButton = $cancelButton
+            }
+        }
+    }
+
+    [System.Collections.IList] ShowTable(
         [String]
         $Text,
 
         [PsCustomObject[]]
         $Rows
-    )
+    ) {
+        $main = $this.NewMain()
+        $tableControl = $this.NewTable($Text, $Rows)
+        $endButtons = $this.NewOkCancelButtons()
 
-    if ($null -eq $Preferences) {
-        $Preferences = Get-Content "$PsScriptRoot/../res/preference.json" `
-            | ConvertFrom-Json
-    }
+        $okAction = $this.NewClosure(
+            $main.Window,
+            {
+                $Parameters.DialogResult = $true
+                $Parameters.Close()
+            }
+        )
 
-    $main = New-ControlsMain `
-        -Preferences $Preferences
+        $cancelAction = $this.NewClosure(
+            $main.Window,
+            {
+                $Parameters.DialogResult = $false
+                $Parameters.Close()
+            }
+        )
 
-    $tableControl = New-ControlsTable `
-        -Text $Text `
-        -Rows $Rows `
-        -Margin $Preferences.Margin
+        $endButtons.Object.OkButton.Add_Click($okAction)
+        $endButtons.Object.CancelButton.Add_Click($cancelAction)
 
-    $endButtons = New-ControlsOkCancelButtons `
-        -Preferences $Preferences
+        $main.Grid.AddChild($tableControl.Container)
+        $main.Grid.AddChild($endButtons.Container)
 
-    $okAction = New-Closure `
-        -Parameters $main.Window `
-        -ScriptBlock {
-            $Parameters.DialogResult = $true
-            $Parameters.Close()
+        $parameters = [PsCustomObject]@{
+            OkAction = $okAction
+            CancelAction = $cancelAction
         }
 
-    $cancelAction = New-Closure `
-        -Parameters $main.Window `
-        -ScriptBlock {
-            $Parameters.DialogResult = $false
-            $Parameters.Close()
-        }
-
-    $endButtons.Object.OkButton.Add_Click($okAction)
-    $endButtons.Object.CancelButton.Add_Click($cancelAction)
-
-    $main.Grid.AddChild($tableControl.Container)
-    $main.Grid.AddChild($endButtons.Container)
-
-    $parameters = [PsCustomObject]@{
-        OkAction = $okAction
-        CancelAction = $cancelAction
-    }
-
-    $main.Window.Add_PreViewKeyDown(( `
-        New-Closure `
-            -Parameters $parameters `
-            -ScriptBlock {
+        $main.Window.Add_PreViewKeyDown($this.Closure(
+            $parameters,
+            {
                 if ($_.Key -eq 'Enter') {
                     & $Parameters.OkAction
                     $_.Handled = $true
@@ -1301,18 +1187,17 @@ function Open-ControlsTable {
                     $_.Handled = $true
                     return
                 }
-            } `
-    ))
+            }
+        ))
 
-    if (-not $main.Window.ShowDialog()) {
-        return
+        if (-not $main.Window.ShowDialog()) {
+            return [System.Collections.Generic.List[String]]::new()
+        }
+
+        return $tableControl.Object.SelectedItems
     }
 
-    return $tableControl.Object.SelectedItems
-}
-
-function Open-ControlsFileDialog {
-    Param(
+    [String[]] ShowFileDialog(
         [String]
         $Caption = 'Browse Files',
 
@@ -1327,102 +1212,95 @@ function Open-ControlsFileDialog {
 
         [Switch]
         $Multiselect
-    )
+    ) {
+        Add-Type -AssemblyName System.Windows.Forms
 
-    Add-Type -AssemblyName System.Windows.Forms
+        $openFile = New-Object System.Windows.Forms.OpenFileDialog
+        $openFile.Title = $Caption
+        $openFile.Filter = $Filter
+        $openFile.FilterIndex = 1
+        $openFile.MultiSelect = $Multiselect
 
-    $openFile = New-Object System.Windows.Forms.OpenFileDialog
-    $openFile.Title = $Caption
-    $openFile.Filter = $Filter
-    $openFile.FilterIndex = 1
-    $openFile.MultiSelect = $Multiselect
-
-    if ($Directory) {
-        $openFile.ValidateNames = $false
-        $openFile.CheckFileExists = $false
-        $openFile.CheckPathExists = $false
-        $openFile.FileName = 'Folder Selection.'
-    }
-
-    $openFile.InitialDirectory = if ($InitialDirectory) {
-        $InitialDirectory
-    } else {
-        (Get-Location).Path
-    }
-
-    if ($openFile.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         if ($Directory) {
-            return [System.IO.Path]::GetDirectoryName($openFile.FileName)
+            $openFile.ValidateNames = $false
+            $openFile.CheckFileExists = $false
+            $openFile.CheckPathExists = $false
+            $openFile.FileName = 'Folder Selection.'
         }
 
-        if ($Multiselect) {
-            return $openFile.FileNames
+        $openFile.InitialDirectory = if ($InitialDirectory) {
+            $InitialDirectory
+        } else {
+            (Get-Location).Path
         }
 
-        return $openFile.FileName
-    }
-}
+        if ($openFile.ShowDialog() -eq
+            [System.Windows.Forms.DialogResult]::OK
+        ) {
+            if ($Directory) {
+                return [System.IO.Path]::GetDirectoryName(
+                    $openFile.FileName
+                )
+            }
 
-function Open-ControlsMonthCalendar {
-    Param(
-        [PsCustomObject]
-        $Preferences
-    )
+            if ($Multiselect) {
+                return $openFile.FileNames
+            }
 
-    if ($null -eq $Preferences) {
-        $Preferences = Get-Content "$PsScriptRoot/../res/preference.json" `
-            | ConvertFrom-Json
-    }
-
-    $main = New-ControlsMain `
-        -Preferences $Preferences
-
-    $calendar = New-Control Calendar
-    $calendar.DisplayMode = 'Month'
-    $textBox = New-Control TextBox
-    $textBox.Width = $Preferences.Width
-    $textBox.Margin = $Preferences.Margin
-
-    Set-ControlsWritableText `
-        -Control $textBox `
-        -Text $Preferences.DateFormat
-
-    $label = New-Control Label
-    $label.Content = 'Format:'
-
-    $endButtons = New-ControlsOkCancelButtons `
-        -Preferences $Preferences
-
-    $okAction = New-Closure `
-        -Parameters $main.Window `
-        -ScriptBlock {
-            $Parameters.DialogResult = $true
-            $Parameters.Close()
+            return $openFile.FileName
         }
 
-    $cancelAction = New-Closure `
-        -Parameters $main.Window `
-        -ScriptBlock {
-            $Parameters.DialogResult = $false
-            $Parameters.Close()
-        }
-
-    $endButtons.Object.OkButton.Add_Click($okAction)
-    $endButtons.Object.CancelButton.Add_Click($cancelAction)
-    $main.Grid.AddChild($calendar)
-    $main.Grid.AddChild($label)
-    $main.Grid.AddChild($textBox)
-    $main.Grid.AddChild($endButtons.Container)
-
-    $parameters = [PsCustomObject]@{
-        OkAction = $okAction
-        CancelAction = $cancelAction
+        return ""
     }
 
-    $main.Window.Add_PreViewKeyDown(( `
-        New-Closure `
-            -Parameters $parameters `
-            -ScriptBlock {
+    [String] ShowMonthCalendar() {
+        $main = $this.NewMain()
+        $calendar = [Controls]::NewControl('Calendar')
+        $calendar.DisplayMode = 'Month'
+        $textBox = [Controls]::NewControl('TextBox')
+        $textBox.Width = $this.Preferences.Width
+        $textBox.Margin = $this.Preferences.Margin
+
+        [Controls]::SetWriteableText(
+            $textBox,
+            $this.Preferences.DateFormat
+        )
+
+        $label = [Controls]::NewControl('Label')
+        $label.Content = 'Format:'
+        $endButtons = $this.NewOkCancelButtons()
+
+        $okAction = $this.NewClosure(
+            $main.Window,
+            {
+                $Parameters.DialogResult = $true
+                $Parameters.Close()
+            }
+        )
+
+        $cancelAction = $this.NewClosure(
+            $main.Window,
+            {
+                $Parameters.DialogResult = $false
+                $Parameters.Close()
+            }
+        )
+
+        $endButtons.Object.OkButton.Add_Click($okAction)
+        $endButtons.Object.CancelButton.Add_Click($cancelAction)
+        $main.Grid.AddChild($calendar)
+        $main.Grid.AddChild($label)
+        $main.Grid.AddChild($textBox)
+        $main.Grid.AddChild($endButtons.Container)
+
+        $parameters = [PsCustomObject]@{
+            OkAction = $okAction
+            CancelAction = $cancelAction
+        }
+
+        $main.Window.Add_PreViewKeyDown($this.NewClosure(
+            $parameters,
+            {
                 if ($_.Key -eq 'Enter') {
                     & $Parameters.OkAction
                     $_.Handled = $true
@@ -1434,29 +1312,30 @@ function Open-ControlsMonthCalendar {
                     $_.Handled = $true
                     return
                 }
-            } `
-    ))
+            }
+        ))
 
-    if (-not $main.Window.ShowDialog()) {
-        return
-    }
-
-    $dates = $calendar.SelectedDates
-
-    if ($dates.Count -eq 0) {
-        if ($null -eq $textBox.Text) {
-            return Get-Date
+        if (-not $main.Window.ShowDialog()) {
+            return ""
         }
 
-        return Get-Date -Format $textBox.Text
+        $dates = $calendar.SelectedDates
+
+        if ($dates.Count -eq 0) {
+            if ($null -eq $textBox.Text) {
+                return Get-Date
+            }
+
+            return Get-Date -Format $textBox.Text
+        }
+
+        $item = $dates[0]
+
+        return $(if ($null -eq $textBox.Text) {
+            $item.ToString()
+        } else {
+            $item.ToString($textBox.Text)
+        })
     }
-
-    $item = $dates[0]
-
-    return $(if ($null -eq $textBox.Text) {
-        $item.ToString()
-    } else {
-        $item.ToString($textBox.Text)
-    })
 }
 

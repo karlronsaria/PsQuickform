@@ -52,6 +52,7 @@ function Get-QformMainLayout {
 
     $script:mainPanel = $null
 
+    # todo: verify that these two pipes need to be in separate statements
     $newMenuSpecs = $MenuSpecs `
         | Get-QformLayout `
             -Window $Window `
@@ -95,9 +96,8 @@ class Page {
     [String] $Name = ''
     [Hashtable] $Controls = @{}
     [PsCustomObject[]] $MenuSpecs = @()
+    [Controls] $Builder = $null
     $FillLayout = $null
-    $StatusLine = $null
-    [Logger] $Logger
 
     hidden static [ScriptBlock] $BuildMultipanelPage = {
         Param($MainPanel, $Control, $Preferences)
@@ -124,8 +124,6 @@ class Page {
         [String] $Type,
         [String] $Name
     ) {
-        $this.Logger = [Logger]::ToConsole()
-
         $Preferences = Get-QformPreference `
             -Preferences $Preferences
 
@@ -144,18 +142,25 @@ class Page {
             @('StatusLine', 'PageLine')
         }
 
+        $logger = [Logger]::ToConsole()
+
         $what = Get-QformMainLayout `
             -Window $Window `
             -MenuSpecs $MenuSpecs `
             -Preferences $Preferences `
             -AddLines $addLines `
             -AddToMainPanel $buildPage `
-            -Logger $this.Logger
+            -Logger $logger
+
+        $this.Builder = [Controls]::new(
+            $Preferences,
+            $what.StatusLine,
+            [Logger]::ToConsole()
+        )
 
         $this.Name = $Name
         $this.Controls = $what.Controls
         $this.FillLayout = $what.FillLayout
-        $this.StatusLine = $what.StatusLine
         $this.MenuSpecs = $what.MenuSpecs
     }
 }

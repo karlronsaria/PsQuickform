@@ -1,5 +1,6 @@
 #Requires -Assembly PresentationFramework
 
+# todo: this type should have its own Logger
 class NumberSlider : System.Windows.Controls.DockPanel {
     $InitialValue = $null;
     $Minimum = $null;

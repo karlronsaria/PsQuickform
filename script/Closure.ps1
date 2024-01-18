@@ -3,32 +3,31 @@ class Logger {
 
     [void] Log($Exception) {
         foreach ($handler in $this.Handlers) {
-            & $handler $Exception
+            $Exception | foreach $handler
         }
     }
 
-    [void] Add([ScriptBlock] $Log) {
+    [Logger] Add([ScriptBlock] $Log) {
         $this.Handlers += @($Log)
+        return $this
     }
 
     Logger([ScriptBlock] $Log) {
         $this.Add($Log)
     }
 
-    Logger() { }
+    Logger() {}
 
     static [Logger] ToConsole() {
-        return [Logger]::new({
-            Param($Exception)
-            Write-Host ($Exception | Out-String)
-        })
+        return [Logger]::new({ $_ | Out-String | Write-Host })
     }
 
-    [ScriptBlock] GetNewClosure([ScriptBlock] $ScriptBlock, $Parameters) {
+    hidden static [ScriptBlock]
+    ConvertToTryCatchBlock([ScriptBlock] $ScriptBlock) {
         $ast = $ScriptBlock.Ast
         $param = $ast.ParamBlock.Extent.Text
 
-        $myScript =
+        return $(
             [ScriptBlock]::Create(
                 (@($param) + @(
                     'Begin', 'Process', 'End' |
@@ -36,16 +35,30 @@ class Logger {
                         $null -ne $ast."$($_)Block"
                     } |
                     foreach {
-                        $block = $ast."$($_)Block".Statements.Extent.Text -join "`n"
+                        $block = $ast.
+                            "$($_)Block".
+                            Statements.
+                            Extent.
+                            Text -join "`n"
+
                         "$_ { try {$block} catch { `$Logger.Log(`$_) } }"
                     }
                 )) -join ' '
             )
+        )
+    }
+
+    [ScriptBlock] GetNewClosure($Parameters, [ScriptBlock] $ScriptBlock) {
+        $myScript = [Logger]::ConvertToTryCatchBlock($ScriptBlock)
 
         return & {
             Param($Parameters, $Logger)
             return $myScript.GetNewClosure()
         } $Parameters $this
+    }
+
+    [ScriptBlock] GetNewClosure([ScriptBlock] $ScriptBlock) {
+        return $this.GetNewClosure($null, $ScriptBlock)
     }
 }
 
