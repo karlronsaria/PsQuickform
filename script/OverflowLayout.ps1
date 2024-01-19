@@ -4,11 +4,11 @@
 
 function New-ControlsScrollPanel {
     Param(
-        [PsCustomObject]
-        $Preferences
+        [Controls]
+        $Builder
     )
 
-    $scrollViewer = New-Control ScrollViewer
+    $scrollViewer = [Controls]::NewControl('ScrollViewer')
     $scrollViewer.VerticalScrollBarVisibility =
         [System.Windows.Controls.ScrollBarVisibility]::Auto
 
@@ -18,11 +18,11 @@ function New-ControlsScrollPanel {
     $scrollViewer.MaxHeight =
         [System.Windows.SystemParameters]::WorkArea.Height - 200
 
-    $childPanel = New-Control StackPanel
-    $childPanel.MinWidth = $Preferences.Width
+    $childPanel = [Controls]::NewControl('StackPanel')
+    $childPanel.MinWidth = $Builder.Preferences.Width
     $childPanel.MaxWidth = [Double]::PositiveInfinity
     $childPanel.Orientation = 'Vertical'
-    $childPanel.Margin = $Preferences.Margin
+    $childPanel.Margin = $Builder.Preferences.Margin
 
     $scrollViewer.AddChild($childPanel)
 
@@ -40,13 +40,13 @@ function Add-ControlToScrollPanel {
         [System.Windows.FrameworkElement]
         $Control,
 
-        [PsCustomObject]
-        $Preferences
+        [Controls]
+        $Builder
     )
 
     if ($null -eq $ScrollPanel) {
         $ScrollPanel = New-ControlsScrollPanel `
-            -Preferences $Preferences
+            -Builder $Builder
     }
 
     # link
@@ -58,7 +58,7 @@ function Add-ControlToScrollPanel {
     ))
 
     $Control.Height = $Control.DesiredSize.Height
-    $Control.Margin = $Preferences.Margin
+    $Control.Margin = $Builder.Preferences.Margin
 
     $ScrollPanel.ChildPanel.AddChild($Control)
     return $ScrollPanel
@@ -66,14 +66,14 @@ function Add-ControlToScrollPanel {
 
 function New-ControlsMultipanel {
     Param(
-        [PsCustomObject]
-        $Preferences
+        [Controls]
+        $Builder
     )
 
-    $container = New-Control StackPanel
+    $container = [Controls]::NewControl('StackPanel')
     $container.MaxWidth = [Double]::PositiveInfinity
     $container.Orientation = 'Horizontal'
-    $container.Margin = $Preferences.Margin
+    $container.Margin = $Builder.Preferences.Margin
 
     # link
     # - url: <https://stackoverflow.com/questions/1927540/how-to-get-the-size-of-the-current-screen-in-wpf>
@@ -97,13 +97,13 @@ function Add-ControlToMultipanel {
         [System.Windows.FrameworkElement]
         $Control,
 
-        [PsCustomObject]
-        $Preferences
+        [Controls]
+        $Builder
     )
 
     if ($null -eq $Multipanel) {
         $Multipanel = New-ControlsMultipanel `
-            -Preferences $Preferences
+            -Builder $Builder
     }
 
     $nextHeight = if ($null -ne $Control) {
@@ -116,23 +116,21 @@ function Add-ControlToMultipanel {
         ))
 
         $Control.Height = $Control.DesiredSize.Height
-        $Control.Margin = $Preferences.Margin
+        $Control.Margin = $Builder.Preferences.Margin
 
         $Multipanel.CurrentHeight `
             + $Control.DesiredSize.Height `
-            + (2 * $Preferences.Margin)
+            + (2 * $Builder.Preferences.Margin)
     }
 
     $needNewSublayout =
         $null -eq $Control `
         -or $Multipanel.Container.Children.Count -eq 0 `
-        -or $nextHeight -gt $Preferences.Height `
+        -or $nextHeight -gt $Builder.Preferences.Height `
         -or $nextHeight -gt $Multipanel.MaxHeight
 
     if ($needNewSublayout) {
-        $layout = New-ControlsLayout `
-            -Preferences $Preferences
-
+        $layout = $Builder.NewLayout()
         $Multipanel.Container.AddChild($layout)
         $Multipanel.Sublayouts += @($layout)
         $Multipanel.CurrentHeight = 0

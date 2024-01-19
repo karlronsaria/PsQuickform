@@ -30,24 +30,37 @@ function Get-QformMainLayout {
     $controls = @{}
     $lineNames = @()
     $statusLine = $null
+    $builder = $null
 
     foreach ($lineName in $AddLines) {
         if ($lineName -in $lineNames) {
             continue
         }
 
-        $line = New-Control Label
+        $line = [Controls]::NewControl('Label')
 
         if ($lineName -eq 'StatusLine') {
             $statusLine = $line
 
-            Set-ControlsStatus `
-                -StatusLine $statusLine `
-                -LineName 'Idle'
+            $builder = [Controls]::new(
+                $Preferences,
+                $statusLine,
+                $Logger
+            )
+
+            $builder.SetStatus('Idle')
         }
 
         $lineNames += @($lineName)
         $controls.Add("__$($lineName)__", $line)
+    }
+
+    if ($null -eq $builder) {
+        $builder = [Controls]::new(
+            $Preferences,
+            $null,
+            $Logger
+        )
     }
 
     $script:mainPanel = $null
@@ -56,16 +69,14 @@ function Get-QformMainLayout {
     $newMenuSpecs = $MenuSpecs `
         | Get-QformLayout `
             -Window $Window `
-            -StatusLine $statusLine `
-            -Preferences $Preferences `
-            -Logger $Logger
+            -Builder $builder
 
     $newMenuSpecs `
         | foreach {
             $script:mainPanel = & $AddToMainPanel `
                 -MainPanel $script:mainPanel `
                 -Control $_.Container `
-                -Preferences $Preferences
+                -Builder $builder
 
             $controls.Add($_.Name, $_.Object)
 
@@ -77,7 +88,7 @@ function Get-QformMainLayout {
     # Resolve a possible race condition
     while ($null -eq $script:mainPanel.Container) {}
 
-    $fillLayout = New-Control StackPanel
+    $fillLayout = [Controls]::NewControl('StackPanel')
     $fillLayout.AddChild($script:mainPanel.Container)
 
     foreach ($lineName in $lineNames) {
@@ -87,8 +98,8 @@ function Get-QformMainLayout {
     return [PsCustomObject]@{
         FillLayout = $fillLayout
         Controls = $controls
-        StatusLine = $statusLine
         MenuSpecs = $newMenuSpecs
+        Builder = $builder
     }
 }
 
@@ -100,21 +111,21 @@ class Page {
     $FillLayout = $null
 
     hidden static [ScriptBlock] $BuildMultipanelPage = {
-        Param($MainPanel, $Control, $Preferences)
+        Param($MainPanel, $Control, $Builder)
 
         return Add-ControlToMultipanel `
             -Multipanel $MainPanel `
             -Control $Control `
-            -Preferences $Preferences
+            -Builder $Builder
     }
 
     hidden static [ScriptBlock] $BuildScrollPanelPage = {
-        Param($MainPanel, $Control, $Preferences)
+        Param($MainPanel, $Control, $Builder)
 
         return Add-ControlToScrollPanel `
             -ScrollPanel $MainPanel `
             -Control $Control `
-            -Preferences $Preferences
+            -Builder $Builder
     }
 
     Page(
@@ -122,7 +133,8 @@ class Page {
         [PsCustomObject] $Preferences,
         [PsCustomObject[]] $MenuSpecs,
         [String] $Type,
-        [String] $Name
+        [String] $Name,
+        [Logger] $Logger
     ) {
         $Preferences = Get-QformPreference `
             -Preferences $Preferences
@@ -136,13 +148,13 @@ class Page {
             }
         }
 
+        # The page has a name implies that it's part of a multi-page layout
+        # and a Page Line needs to be provided.
         $addLines = if ([String]::IsNullOrEmpty($Name)) {
             @('StatusLine')
         } else {
             @('StatusLine', 'PageLine')
         }
-
-        $logger = [Logger]::ToConsole()
 
         $what = Get-QformMainLayout `
             -Window $Window `
@@ -150,18 +162,13 @@ class Page {
             -Preferences $Preferences `
             -AddLines $addLines `
             -AddToMainPanel $buildPage `
-            -Logger $logger
-
-        $this.Builder = [Controls]::new(
-            $Preferences,
-            $what.StatusLine,
-            [Logger]::ToConsole()
-        )
+            -Logger $Logger
 
         $this.Name = $Name
         $this.Controls = $what.Controls
         $this.FillLayout = $what.FillLayout
         $this.MenuSpecs = $what.MenuSpecs
+        $this.Builder = $what.Builder
     }
 }
 
@@ -174,6 +181,7 @@ class Qform {
     $PageLine = $false
     $Caption = ''
     $TabControl = $null
+    $Logger = $null
 
     hidden static [ScriptBlock] $UpdateGrid = {
         Param([Qform] $Qform, [Int] $Index)
@@ -236,7 +244,7 @@ class Qform {
 
     hidden [void] InitTabControl() {
         $this.PageLine = $false
-        $this.TabControl = New-Control TabControl
+        $this.TabControl = [Controls]::NewControl('TabControl')
         $this.AddToMainGrid($this.TabControl)
         $this.MyUpdate = [Qform]::UpdateTabControl
         $this.MyAddPage = [Qform]::AddPageToTabControl
@@ -368,7 +376,8 @@ class Qform {
         [Boolean] $IsTabControl,
         [Nullable[Int]] $StartingIndex
     ) {
-        $this.Main = New-ControlsMain
+        $this.Logger = [Logger]::ToConsole()
+        $this.Main = [Controls]::NewMain($this.Logger)
         $this.PageLine = $false
 
         if ($IsTabControl) {
@@ -386,7 +395,8 @@ class Qform {
                 $Preferences.PsObject.Copy(),
                 $PageInfo,
                 'Multipanel',
-                ''
+                '',
+                $this.Logger
             )
 
             $this.AddPage($page)
@@ -412,7 +422,8 @@ class Qform {
                     $Preferences,
                     $item.MenuSpecs,
                     'ScrollPanel',
-                    $item.Name
+                    $item.Name,
+                    $this.Logger
                 )
 
                 $this.AddPage($page)
@@ -422,9 +433,9 @@ class Qform {
                 $null -ne $this.Pages -and
                 $this.Pages.Count -gt 0
             ) {
-                $closure = New-Closure `
-                    -Parameters $this `
-                    -ScriptBlock {
+                $closure = $this.Logger.NewClosure(
+                    $this,
+                    {
                         $refresh = $false
                         $keyboard = [System.Windows.Input.Keyboard]
                         $isKeyCombo =
@@ -452,6 +463,7 @@ class Qform {
                             $Parameters.SetPage($Parameters.CurrentIndex)
                         }
                     }
+                )
 
                 $this.Main.Window.Add_KeyDown($closure)
             }
@@ -463,41 +475,50 @@ class Qform {
     }
 
     hidden [void] InitKeyBindings() {
-        $prefs = $this.Pages[$this.MyIndex.Invoke($this)[0]].Preferences
+        $prefs = $this.
+            Pages[$this.MyIndex.Invoke($this)[0]].
+            Builder.
+            Preferences
 
         if ($prefs.EnterToConfirm) {
-            $this.Main.Window.Add_KeyDown({
-                if ($_.Key -eq 'Enter') {
-                    $this.DialogResult = $true
-                    $this.Close()
-                }
-            })
+            $this.Main.Window.Add_KeyDown(
+                $this.Logger.NewClosure({
+                    if ($_.Key -eq 'Enter') {
+                        $this.DialogResult = $true
+                        $this.Close()
+                    }
+                })
+            )
         }
 
         if ($prefs.EscapeToCancel) {
-            $this.Main.Window.Add_KeyDown({
-                if ($_.Key -eq 'Escape') {
-                    $this.DialogResult = $false
-                    $this.Close()
-                }
-            })
+            $this.Main.Window.Add_KeyDown(
+                $this.Logger.NewClosure({
+                    if ($_.Key -eq 'Escape') {
+                        $this.DialogResult = $false
+                        $this.Close()
+                    }
+                })
+            )
         }
 
-        $helpMessage = ( `
-            Get-Content `
-                "$PsScriptRoot/../res/text.json" `
-                | ConvertFrom-Json `
-        ).Help
+        $helpMessage =
+            "$PsScriptRoot/../res/text.json" |
+            Get-Item |
+            Get-Content |
+            ConvertFrom-Json |
+            foreach { $_.Help }
 
         $helpMessage = $helpMessage -Join "`r`n"
 
-        $closure = New-Closure `
-            -Parameters $helpMessage `
-            -ScriptBlock {
+        $closure = $this.Logger.NewClosure(
+            $helpMessage,
+            {
                 $isKeyCombo =
-                    $_.Key -eq [System.Windows.Input.Key]::OemQuestion `
-                    -and $_.KeyboardDevice.Modifiers `
-                        -eq [System.Windows.Input.ModifierKeys]::Control
+                    $_.Key -eq
+                    [System.Windows.Input.Key]::OemQuestion -and
+                    $_.KeyboardDevice.Modifiers -eq
+                    [System.Windows.Input.ModifierKeys]::Control
 
                 if ($isKeyCombo) {
                     [System.Windows.MessageBox]::Show(
@@ -508,6 +529,7 @@ class Qform {
                     $_.Handled = $true
                 }
             }
+        )
 
         $this.Main.Window.Add_KeyDown($closure)
     }

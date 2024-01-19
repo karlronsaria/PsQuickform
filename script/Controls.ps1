@@ -50,11 +50,11 @@ class Controls {
     }
 
     [ScriptBlock] NewClosure($Parameters, [ScriptBlock] $ScriptBlock) {
-        return $Logger.GetNewClosure($Parameters, $ScriptBlock)
+        return $this.Logger.NewClosure($Parameters, $ScriptBlock)
     }
 
     [ScriptBlock] NewClosure([ScriptBlock] $ScriptBlock) {
-        return $Logger.GetNewClosure($ScriptBlock)
+        return $this.Logger.NewClosure($ScriptBlock)
     }
 
 <#
@@ -109,12 +109,12 @@ Retreived: 2022_03_02
         return New-Object "System.Windows.Controls.$TypeName"
     }
 
-    [PsCustomObject] NewMain() {
+    static [PsCustomObject] NewMain([Logger] $Logger) {
         $form = New-Object System.Windows.Window
         $form.SizeToContent = 'WidthAndHeight'
         $form.WindowStartupLocation = 'CenterScreen'
 
-        $form.Add_ContentRendered($this.NewClosure({
+        $form.Add_ContentRendered($Logger.NewClosure({
             $this.Activate()
         }))
 
@@ -125,6 +125,10 @@ Retreived: 2022_03_02
             Window = $form
             Grid = $grid
         }
+    }
+
+    [PsCustomObject] NewMain() {
+        return [Controls]::NewMain($this.Logger)
     }
 
     [System.Windows.Controls.StackPanel] NewLayout() {
@@ -652,7 +656,7 @@ Retreived: 2022_03_02
         $view = [Controls]::NewControl('Label')
 
         if ($CodeBlockStyle) {
-            [Controls]::SetCodeBlockStyle($view)
+            [Controls]::SetCodeBlockStyle($view, $false)
         }
 
         $row2 = if ($Mandatory) {
@@ -735,7 +739,7 @@ Retreived: 2022_03_02
         $monthCalendarPrefs.Width = 350
 
         $keyDown = $this.NewClosure(
-            [Controls]::new($monthCalendarPrefs),
+            [Controls]::new($monthCalendarPrefs, $null, [Logger]::ToConsole()),
             {
                 $myEventArgs = $_
 
@@ -901,7 +905,7 @@ Retreived: 2022_03_02
         }
     }
 
-    [PsCustomObject] GetNameAndText(
+    static [PsCustomObject] GetNameAndText(
         $InputObject
     ) {
         $text = ""
@@ -1125,8 +1129,7 @@ Retrieved: 2023_03_16
         $endButtons.AddChild($cancelButton)
         $endButtons.HorizontalAlignment = 'Center'
 
-        return [PsCustomObject]@{
-            PsTypeName = 'PageElementControl'
+        return [PageElementControl]@{
             Container = $endButtons
             Object = [PsCustomObject]@{
                 OkButton = $okButton

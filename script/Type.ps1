@@ -43,7 +43,7 @@ Table = [PsCustomObject]@{
         }
         New = {
             [OutputType([PageElementControl])]
-            Param ($Item, [Controls] $C, $Text, $Default, $Mandatory)
+            Param ($Item, [Controls] $Builder, $Text, $Default, $Mandatory)
 
             $maxLength = $Item | Get-PropertyOrDefault `
                 -Name MaxLength
@@ -59,7 +59,7 @@ Table = [PsCustomObject]@{
         PostProcess = {
             Param ($PageInfo, $Controls, $Types, $ItemName, $Logger)
 
-            $closure = $Logger.GetNewClosure(
+            $closure = $Logger.NewClosure(
                 [PsCustomObject]@{
                     Controls = $Controls
                     ItemName = $ItemName
@@ -83,11 +83,11 @@ Table = [PsCustomObject]@{
         }
         New = {
             [OutputType([PageElementControl])]
-            Param ($Item, [Controls] $C, $Text, $Default, $Mandatory)
+            Param ($Item, [Controls] $Builder, $Text, $Default, $Mandatory)
 
             $codeBlockStyle = $true
 
-            return $($C.NewLabel($Text,
+            return $($Builder.NewLabel($Text,
                 $Mandatory,
                 $Default,
                 $codeBlockStyle
@@ -138,7 +138,7 @@ Table = [PsCustomObject]@{
                 $bindings += @($name)
             }
 
-            $closure = $Logger.GetNewClosure(
+            $closure = $Logger.NewClosure(
                 [PsCustomObject]@{
                     PageInfo = $PageInfo
                     Controls = $Controls
@@ -180,9 +180,9 @@ Table = [PsCustomObject]@{
         }
         New = {
             [OutputType([PageElementControl])]
-            Param ($Item, [Controls] $C, $Text, $Default, $Mandatory)
+            Param ($Item, [Controls] $Builder, $Text, $Default, $Mandatory)
 
-            return $C.NewCheckBox($Text, $Default)
+            return $Builder.NewCheckBox($Text, $Default)
         }
     }
     Field = [PsCustomObject]@{
@@ -195,12 +195,12 @@ Table = [PsCustomObject]@{
         }
         New = {
             [OutputType([PageElementControl])]
-            Param ($Item, [Controls] $C, $Text, $Default, $Mandatory)
+            Param ($Item, [Controls] $Builder, $Text, $Default, $Mandatory)
 
             $maxLength = $Item | Get-PropertyOrDefault `
                 -Name MaxLength
 
-            return $($C.NewFieldBox(
+            return $($Builder.NewFieldBox(
                 $Text,
                 $Mandatory,
                 $maxLength,
@@ -223,12 +223,12 @@ Table = [PsCustomObject]@{
         }
         New = {
             [OutputType([PageElementControl])]
-            Param ($Item, [Controls] $C, $Text, $Default, $Mandatory)
+            Param ($Item, [Controls] $Builder, $Text, $Default, $Mandatory)
 
             $maxLength = $Item | Get-PropertyOrDefault `
                 -Name MaxLength
 
-            return $($C.NewFieldBox(
+            return $($Builder.NewFieldBox(
                 $Text,
                 $Mandatory,
                 $maxLength,
@@ -250,13 +250,13 @@ Table = [PsCustomObject]@{
         }
         New = {
             [OutputType([PageElementControl])]
-            Param ($Item, [Controls] $C, $Text, $Default, $Mandatory)
+            Param ($Item, [Controls] $Builder, $Text, $Default, $Mandatory)
 
             $rows = $Item | Get-PropertyOrDefault `
                 -Name Rows `
                 -Default @()
 
-            return $($C.NewTable(
+            return $($Builder.NewTable(
                 $Text,
                 $Mandatory,
                 $rows
@@ -276,14 +276,14 @@ Table = [PsCustomObject]@{
         }
         New = {
             [OutputType([PageElementControl])]
-            Param ($Item, [Controls] $C, $Text, $Default, $Mandatory)
+            Param ($Item, [Controls] $Builder, $Text, $Default, $Mandatory)
 
             $maxCount = $Item | Get-PropertyOrDefault `
                 -Name MaxCount
             $maxLength = $Item | Get-PropertyOrDefault `
                 -Name MaxLength
 
-            return $($C.NewListBox(
+            return $($Builder.NewListBox(
                 $Text,
                 $Mandatory,
                 $maxCount,
@@ -309,7 +309,7 @@ Table = [PsCustomObject]@{
         }
         New = {
             [OutputType([PageElementControl])]
-            Param ($Item, [Controls] $C, $Text, $Default, $Mandatory)
+            Param ($Item, [Controls] $Builder, $Text, $Default, $Mandatory)
 
             $places = $item | Get-PropertyOrDefault `
                 -Name DecimalPlaces `
@@ -321,12 +321,12 @@ Table = [PsCustomObject]@{
                 -Name Maximum `
                 -Default $Pref.NumericMaximum
 
-            return $($C.NewSlider(
+            return $($Builder.NewSlider(
                 $Text,
                 $Mandatory,
-                $places,
                 $min,
                 $max,
+                $places,
                 $Default
             ))
         }
@@ -348,7 +348,7 @@ Table = [PsCustomObject]@{
             $script:item = $_
 
             return $(switch ($script:item.As) {
-                'RadioPanel' {
+                'RadioBox' {
                     $script:buttons = $script:item.Object
 
                     if (-not $script:buttons) {
@@ -399,11 +399,11 @@ Table = [PsCustomObject]@{
         }
         New = {
             [OutputType([PageElementControl])]
-            Param ($Item, [Controls] $C, $Text, $Default, $Mandatory)
+            Param ($Item, [Controls] $Builder, $Text, $Default, $Mandatory)
 
             $as = $Item | Get-PropertyOrDefault `
                 -Name As `
-                -Default 'RadioPanel'
+                -Default 'RadioBox'
             $to = $Item | Get-PropertyOrDefault `
                 -Name To `
                 -Default 'Key'
@@ -426,7 +426,7 @@ Table = [PsCustomObject]@{
                     }
                 }
 
-            $control = $C."New$($as)"($Text, $Mandatory, $mySymbols, $Default)
+            $control = $Builder."New$($as)"($Text, $Mandatory, $mySymbols, $Default)
 
             $object = [PsCustomObject]@{
                 As = $as
@@ -436,11 +436,15 @@ Table = [PsCustomObject]@{
             }
 
             switch ($as) {
-                'RadioPanel' {
+                'RadioBox' {
                     $object | Add-Member `
                         -MemberType 'ScriptMethod' `
                         -Name 'Add_Checked' `
                         -Value (
+                            # [!] This closure doesn't need a logger. It's
+                            # only meant to connect all of the subelements'
+                            # content-changed handlers and isn't subject
+                            # to refactoring.
                             New-Closure `
                                 -Parameters $control.Object.Values `
                                 -ScriptBlock {

@@ -321,75 +321,78 @@ function Get-QformLayout {
 
     Process {
         foreach ($item in $MenuSpecs) {
-            $id = [Controls]::GetNameAndText($item)
-            $text = $id.Text
-            $name = $id.Name
+            try {
+                $id = [Controls]::GetNameAndText($item)
+                $text = $id.Text
+                $name = $id.Name
 
-            $mandatory = $item | Get-PropertyOrDefault `
-                -Name Mandatory `
-                -Default $false
+                $mandatory = $item | Get-PropertyOrDefault `
+                    -Name Mandatory `
+                    -Default $false
 
-            $pattern = $item | Get-PropertyOrDefault `
-                -Name Pattern
+                $pattern = $item | Get-PropertyOrDefault `
+                    -Name Pattern
 
-            $default = $item | Get-PropertyOrDefault `
-                -Name 'Default'
+                $default = $item | Get-PropertyOrDefault `
+                    -Name 'Default'
 
-            $newParams = @{
-                Item = $item
-                Pref = $ControlBuilder.Preferences
-                Label = $ControlBuilder.StatusLine
-                Text = $id.Text
-                Default = $default
-                Mandatory = $mandatory
-            }
-
-            # Infer the Table type from the Rows property
-            if ($null -eq $item.Type) {
-                $rows = $item | Get-PropertyOrDefault `
-                    -Name 'Rows'
-
-                if ($null -ne $rows) {
-                    $item | Add-Member `
-                        -MemberType NoteProperty `
-                        -Name 'Type' `
-                        -Value 'Table'
+                $newParams = @{
+                    Item = $item
+                    Builder = $Builder
+                    Text = $id.Text
+                    Default = $default
+                    Mandatory = $mandatory
                 }
-            }
 
-            $what = & $types.Table.($item.Type).New @newParams
+                # Infer the Table type from the Rows property
+                if ($null -eq $item.Type) {
+                    $rows = $item | Get-PropertyOrDefault `
+                        -Name 'Rows'
 
-            if ($mandatory) {
-                $mandates += @([PsCustomObject]@{
-                    Type = $item.Type
-                    Control = $what.Object
-                })
-            }
+                    if ($null -ne $rows) {
+                        $item | Add-Member `
+                            -MemberType NoteProperty `
+                            -Name 'Type' `
+                            -Value 'Table'
+                    }
+                }
 
-            if ($pattern) {
-                $patterns += @([PsCustomObject]@{
-                    Type = $item.Type
+                $what = & $types.Table.($item.Type).New @newParams
+
+                if ($mandatory) {
+                    $mandates += @([PsCustomObject]@{
+                        Type = $item.Type
+                        Control = $what.Object
+                    })
+                }
+
+                if ($pattern) {
+                    $patterns += @([PsCustomObject]@{
+                        Type = $item.Type
+                        Name = $name
+                        Pattern = $pattern
+                        Control = $what.Object
+                    })
+                }
+
+                $list += @([PsCustomObject]@{
                     Name = $name
-                    Pattern = $pattern
-                    Control = $what.Object
+                    Type = $item.Type
+                    Container = $what.Container
+                    Object = $what.Object
                 })
+
+                $pageInfo += @($item)
+                $controls.Add($name, $what.Object)
             }
-
-            $list += @([PsCustomObject]@{
-                Name = $name
-                Type = $item.Type
-                Container = $what.Container
-                Object = $what.Object
-            })
-
-            $pageInfo += @($item)
-            $controls.Add($name, $what.Object)
+            catch {
+                throw $_
+            }
         }
     }
 
     End {
-        $what = New-ControlsOkCancelButtons `
-            -Margin $Preferences.Margin
+        $what = $Builder.NewOkCancelButtons()
 
         $list += @([PsCustomObject]@{
             Name = '__EndButtons__'
@@ -431,30 +434,30 @@ function Get-QformLayout {
 
                     foreach ($item in $Parameters.Mandates) {
                         $itemIsSet = $item.Control |
-                            foreach $Parameters.
+                            foreach ($Parameters.
                                 Types.
                                 Table.
                                 ($item.Type).
-                                HasAny
+                                HasAny)
 
                         $mandatesSet = $mandatesSet -and $itemIsSet
                     }
 
                     if (-not $mandatesSet) {
-                        $Builder.SetStatus('MandatoryValuesNotSet')
+                        $Parameters.Builder.SetStatus('MandatoryValuesNotSet')
                         return
                     }
 
                     foreach ($item in $Parameters.Patterns) {
                         $value = $item.Control |
-                            foreach $Parameters.
+                            foreach ($Parameters.
                                 Types.
                                 Table.
                                 ($item.Type).
-                                GetValue
+                                GetValue)
 
                         if ($value -notmatch $item.Pattern) {
-                            $Builder.SetStatus(
+                            $Parameters.Builder.SetStatus(
                                 "Text element '$($item.Name)' must match the pattern '$($item.Pattern)'"
                             )
 

@@ -48,7 +48,7 @@ class Logger {
         )
     }
 
-    [ScriptBlock] GetNewClosure($Parameters, [ScriptBlock] $ScriptBlock) {
+    [ScriptBlock] NewClosure($Parameters, [ScriptBlock] $ScriptBlock) {
         $myScript = [Logger]::ConvertToTryCatchBlock($ScriptBlock)
 
         return & {
@@ -57,8 +57,8 @@ class Logger {
         } $Parameters $this
     }
 
-    [ScriptBlock] GetNewClosure([ScriptBlock] $ScriptBlock) {
-        return $this.GetNewClosure($null, $ScriptBlock)
+    [ScriptBlock] NewClosure([ScriptBlock] $ScriptBlock) {
+        return $this.NewClosure($null, $ScriptBlock)
     }
 }
 
@@ -92,7 +92,7 @@ return $ScriptBlock.GetNewClosure()
             'NonThrowing' {
                 & {
 Param($Parameters, $Logger)
-return $Logger.GetNewClosure($ScriptBlock, $Parameters)
+return $Logger.NewClosure($ScriptBlock, $Parameters)
 } $Parameters $Logger
             }
         }
