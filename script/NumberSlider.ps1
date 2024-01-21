@@ -69,8 +69,19 @@ class NumberSlider : System.Windows.Controls.DockPanel {
     hidden [ScriptBlock] $ctrldown_action = { }
 
     NumberSlider($InitialValue, $Minimum, $Maximum, $Step) {
-        $this.Type = $InitialValue.GetType()
-        $this.InitialValue = $InitialValue
+        $this.InitialValue =
+            if ($null -eq $InitialValue) {
+                if ($null -eq $Minimum -or $Minimum -le 0) {
+                    0
+                }
+                else {
+                    $Minimum
+                }
+            }
+            else {
+                $InitialValue
+            }
+        $this.Type = $this.InitialValue.GetType()
         $this.Minimum = $Minimum
         $this.Maximum = $Maximum
         $this.Step = $Step

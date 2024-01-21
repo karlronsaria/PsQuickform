@@ -188,13 +188,13 @@ Retreived: 2022_03_02
         [System.Windows.FrameworkElement]
         $Control
     ) {
-        $asterisk = $this.NewControl('Label')
+        $asterisk = [Controls]::NewControl('Label')
         $asterisk.Content = '*'
         $asterisk.FontSize = $asterisk.FontSize + 5
         $asterisk.Foreground = 'DarkRed'
         $asterisk.VerticalContentAlignment = 'Center'
         $asterisk.HorizontalContentAlignment = 'Center'
-        $row = $this.NewControl('DockPanel')
+        $row = [Controls]::NewControl('DockPanel')
         $row.Margin = $Control.Margin
         $Control.Margin = 0
         $row.AddChild($asterisk)
@@ -280,11 +280,11 @@ Retreived: 2022_03_02
         $MaxCount,
         $Default
     ) {
-        $outerPanel = $this.NewControl('StackPanel')
-        $mainPanel = $this.NewControl('DockPanel')
-        $buttonPanel = $this.NewControl('StackPanel')
+        $outerPanel = [Controls]::NewControl('StackPanel')
+        $mainPanel = [Controls]::NewControl('DockPanel')
+        $buttonPanel = [Controls]::NewControl('StackPanel')
 
-        $label = $this.NewControl('Label')
+        $label = [Controls]::NewControl('Label')
         $label.Content = $Text
 
         $asterism = if ($Mandatory) {
@@ -307,13 +307,13 @@ Retreived: 2022_03_02
         $actionTable = @{}
 
         foreach ($name in $buttonNames.Keys) {
-            $button = $this.NewControl('Button')
+            $button = [Controls]::NewControl('Button')
             $button.Content = $buttonNames[$name]
             $buttonPanel.AddChild($button)
             $buttonTable.Add($name, $button)
         }
 
-        $listBox = $this.NewControl('ListBox')
+        $listBox = [Controls]::NewControl('ListBox')
         $listBox.Height = 200
         $listBox.SelectionMode = 'Multiple'
 

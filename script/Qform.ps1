@@ -1,6 +1,7 @@
 #Requires -Assembly PresentationFramework
 
 . $PsScriptRoot\Controls.ps1
+. $PsScriptRoot\Progress.ps1
 . $PsScriptRoot\OverflowLayout.ps1
 . $PsScriptRoot\Layout.ps1
 . $PsScriptRoot\Type.ps1
@@ -24,7 +25,10 @@ function Get-QformMainLayout {
         $AddToMainPanel,
 
         [Logger]
-        $Logger
+        $Logger,
+
+        [ProgressWriter]
+        $Progress
     )
 
     $controls = @{}
@@ -69,7 +73,8 @@ function Get-QformMainLayout {
     $newMenuSpecs = $MenuSpecs `
         | Get-QformLayout `
             -Window $Window `
-            -Builder $builder
+            -Builder $builder `
+            -Progress $Progress
 
     $newMenuSpecs `
         | foreach {
@@ -128,13 +133,14 @@ class Page {
             -Builder $Builder
     }
 
-    Page(
+    hidden [void] Init(
         [System.Windows.Window] $Window,
         [PsCustomObject] $Preferences,
         [PsCustomObject[]] $MenuSpecs,
         [String] $Type,
         [String] $Name,
-        [Logger] $Logger
+        [Logger] $Logger,
+        [ProgressWriter] $Progress
     ) {
         $Preferences = Get-QformPreference `
             -Preferences $Preferences
@@ -162,13 +168,53 @@ class Page {
             -Preferences $Preferences `
             -AddLines $addLines `
             -AddToMainPanel $buildPage `
-            -Logger $Logger
+            -Logger $Logger `
+            -Progress $Progress
 
         $this.Name = $Name
         $this.Controls = $what.Controls
         $this.FillLayout = $what.FillLayout
         $this.MenuSpecs = $what.MenuSpecs
         $this.Builder = $what.Builder
+    }
+
+    Page(
+        [System.Windows.Window] $Window,
+        [PsCustomObject] $Preferences,
+        [PsCustomObject[]] $MenuSpecs,
+        [String] $Type,
+        [String] $Name,
+        [Logger] $Logger
+    ) {
+        $this.Init(
+            $Window,
+            $Preferences,
+            $MenuSpecs,
+            $Type,
+            $Name,
+            $Logger,
+            $null
+        )
+    }
+
+    Page(
+        [System.Windows.Window] $Window,
+        [PsCustomObject] $Preferences,
+        [PsCustomObject[]] $MenuSpecs,
+        [String] $Type,
+        [String] $Name,
+        [Logger] $Logger,
+        [ProgressWriter] $Progress
+    ) {
+        $this.Init(
+            $Window,
+            $Preferences,
+            $MenuSpecs,
+            $Type,
+            $Name,
+            $Logger,
+            $Progress
+        )
     }
 }
 
@@ -206,12 +252,14 @@ class Qform {
 
     hidden static [ScriptBlock] $AddPageToTabControl = {
         Param([Qform] $Qform, [Page] $Page)
+
         $Qform.Pages += @($Page)
 
-        Add-ControlsTabItem `
-            -TabControl $Qform.TabControl `
-            -Control $Page.FillLayout `
-            -Header $Page.Name
+        [Controls]::AddTabItem(
+            $Qform.TabControl,
+            $Page.FillLayout,
+            $Page.Name
+        )
     }
 
     hidden static [ScriptBlock] $TabControlIndex = {
@@ -376,6 +424,21 @@ class Qform {
         [Boolean] $IsTabControl,
         [Nullable[Int]] $StartingIndex
     ) {
+        $itemTotal = if ($null -eq $StartingIndex) {
+            @($PageInfo).Count
+        }
+        else {
+            @($PageInfo) |
+                foreach { $_.Count } |
+                measure -Sum |
+                foreach { $_.Sum }
+        }
+
+        $progress = [ProgressWriter]::new(
+            0, 0, $itemTotal + 3, "Building Quickform"
+        )
+
+        $progress.Next({ 'New main window' })
         $this.Logger = [Logger]::ToConsole()
         $this.Main = [Controls]::NewMain($this.Logger)
         $this.PageLine = $false
@@ -396,18 +459,17 @@ class Qform {
                 $PageInfo,
                 'Multipanel',
                 '',
-                $this.Logger
+                $this.Logger,
+                $progress
             )
 
             $this.AddPage($page)
         }
         else {
             $this.DefaultIndex =
-                if (($StartingIndex -ge 0 `
-                    -and $StartingIndex -lt $PageInfo.Count) `
-                    -or ($StartingIndex -lt 0 `
-                    -and $StartingIndex -gt (-$PageInfo.Count - 1)))
-                {
+                if ($StartingIndex -gt (-$PageInfo.Count - 1) -and
+                    $StartingIndex -lt $PageInfo.Count
+                ) {
                     $StartingIndex
                 } else {
                     0
@@ -423,7 +485,8 @@ class Qform {
                     $item.MenuSpecs,
                     'ScrollPanel',
                     $item.Name,
-                    $this.Logger
+                    $this.Logger,
+                    $progress
                 )
 
                 $this.AddPage($page)
@@ -436,8 +499,8 @@ class Qform {
                 $closure = $this.Logger.NewClosure(
                     $this,
                     {
-                        $refresh = $false
                         $keyboard = [System.Windows.Input.Keyboard]
+
                         $isKeyCombo =
                             $keyboard::Modifiers -and
                             [System.Windows.Input.ModifierKeys]::Control
@@ -450,17 +513,13 @@ class Qform {
 
                                 if ($shiftDown) {
                                     $Parameters.Previous()
-                                    $refresh = $true
                                 }
                                 else {
                                     $Parameters.Next()
-                                    $refresh = $true
                                 }
-                            }
-                        }
 
-                        if ($refresh) {
-                            $Parameters.SetPage($Parameters.CurrentIndex)
+                                $Parameters.SetPage($Parameters.CurrentIndex)
+                            }
                         }
                     }
                 )
@@ -472,6 +531,7 @@ class Qform {
         [void] $this.MySetIndex.Invoke($this, $this.DefaultIndex)
         $this.Main.Window.Title = $Preferences.Caption
         $this.InitKeyBindings()
+        $progress.Complete()
     }
 
     hidden [void] InitKeyBindings() {

@@ -237,6 +237,30 @@ Table = [PsCustomObject]@{
             ))
         }
     }
+    DeferredScript = [PsCustomObject]@{
+        DataTypes = @(
+            [String]
+        )
+        HasAny = $script:default.TextHasAny
+        GetValue = {
+            "`$($($_.Text))"
+        }
+        New = {
+            [OutputType([PageElementControl])]
+            Param ($Item, [Controls] $Builder, $Text, $Default, $Mandatory)
+
+            $maxLength = $Item | Get-PropertyOrDefault `
+                -Name MaxLength
+
+            return $($Builder.NewFieldBox(
+                $Text,
+                $Mandatory,
+                $maxLength,
+                $Default,
+                'CodeBlock'
+            ))
+        }
+    }
     Table = [PsCustomObject]@{
         DataTypes = @(
             [PsCustomObject]

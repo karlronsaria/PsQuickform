@@ -1,3 +1,4 @@
+. $PsScriptRoot\Progress.ps1
 . $PsScriptRoot\Type.ps1
 
 <#
@@ -49,21 +50,28 @@ function Get-QformControlType {
         return $table
     }
 
-    $table.Keys |
-    where {
-        $TypeName -match $_ -and
-        (-not $IgnoreLists -or
-        $_ -ne $listPattern)
-    } |
-    foreach {
-        return $table[$_]
+    $what =
+        $table.Keys |
+        where {
+            $TypeName -match $_ -and
+            (-not $IgnoreLists -or
+            $_ -ne $listPattern)
+        } |
+        foreach {
+            $table[$_]
+        }
+
+    if ($what) {
+        return @($what)[0]
     }
 
     return $table[$defaultName]
 }
 
 function ConvertTo-QformParameter {
+    [OutputType([PsCustomObject[]])]
     Param(
+        [System.Management.Automation.CommandParameterInfo]
         $ParameterInfo,
 
         [Switch]
@@ -172,6 +180,7 @@ function ConvertTo-QformParameter {
             All properties associated with a given resource type.
 #>
 function Get-QformResource {
+    [OutputType([PsCustomObject])]
     Param(
         [Parameter(ValueFromPipeline = $true)]
         [ValidateSet('Object', 'Preference', 'MenuSpec')]
@@ -180,9 +189,10 @@ function Get-QformResource {
     )
 
     Begin {
-        $root = Get-Content `
-            -Path "$PsScriptRoot/../res/properties.json" `
-        | ConvertFrom-Json
+        $root =
+            dir "$PsScriptRoot/../res/properties.json" |
+            cat |
+            ConvertFrom-Json
     }
 
     Process {
@@ -229,16 +239,15 @@ function Get-QformPreference {
         [Parameter(
             ParameterSetName = 'QueryValues'
         )]
-        [ArgumentCompleter(
-            {
-                (Get-QformResource -Type Preference).Name
-            }
-        )]
-        [ValidateScript(
-            {
-                $_ -in (Get-QformResource -Type Preference).Name
-            }
-        )]
+        [ArgumentCompleter({
+            Param($A, $B, $C)
+
+            (Get-QformResource -Type Preference).Name |
+            where { $_ -like "$C*" }
+        })]
+        [ValidateScript({
+            $_ -in (Get-QformResource -Type Preference).Name
+        })]
         [String[]]
         $Name
     )
@@ -246,8 +255,9 @@ function Get-QformPreference {
     Begin {
         if ($null -eq $ReferencePreferences) {
             $ReferencePreferences =
-                Get-Content "$PsScriptRoot/../res/preference.json" `
-                    | ConvertFrom-Json
+                dir "$PsScriptRoot/../res/preference.json" |
+                cat |
+                ConvertFrom-Json
         }
     }
 
@@ -262,9 +272,9 @@ function Get-QformPreference {
                 $names = $Preferences.PsObject.Properties.Name
 
                 if ($Preferences) {
-                    $myProperties = $myPreferences `
-                        | Get-Member `
-                        | Where-Object {
+                    $myProperties = $myPreferences |
+                        Get-Member |
+                        Where-Object {
                             $_.MemberType -like 'NoteProperty'
                         }
 
@@ -308,7 +318,10 @@ function Get-QformLayout {
         $Window,
 
         [Controls]
-        $Builder
+        $Builder,
+
+        [ProgressWriter]
+        $Progress
     )
 
     Begin {
@@ -317,6 +330,12 @@ function Get-QformLayout {
         $list = @()
         $pageInfo = @()
         $controls = @{}
+
+        $deferScripts =
+            $Builder.Preferences |
+            Get-PropertyOrDefault `
+                -Name DeferScripts `
+                -Default $false
     }
 
     Process {
@@ -325,6 +344,14 @@ function Get-QformLayout {
                 $id = [Controls]::GetNameAndText($item)
                 $text = $id.Text
                 $name = $id.Name
+
+                if ($Progress -and $Progress.Any()) {
+                    [void] $Progress.Next({ "New $($item.Type) element: `"$name`"" })
+                }
+
+                if ($item.Type -eq 'Script' -and $deferScripts) {
+                    $item.Type = 'DeferredScript'
+                }
 
                 $mandatory = $item | Get-PropertyOrDefault `
                     -Name Mandatory `
@@ -360,6 +387,7 @@ function Get-QformLayout {
                 $what = & $types.Table.($item.Type).New @newParams
 
                 if ($mandatory) {
+                    # todo: yields to $mandates
                     $mandates += @([PsCustomObject]@{
                         Type = $item.Type
                         Control = $what.Object
@@ -367,6 +395,7 @@ function Get-QformLayout {
                 }
 
                 if ($pattern) {
+                    # todo: yields to $patterns
                     $patterns += @([PsCustomObject]@{
                         Type = $item.Type
                         Name = $name
@@ -375,6 +404,7 @@ function Get-QformLayout {
                     })
                 }
 
+                # todo: yields to $list
                 $list += @([PsCustomObject]@{
                     Name = $name
                     Type = $item.Type
@@ -382,7 +412,10 @@ function Get-QformLayout {
                     Object = $what.Object
                 })
 
+                # todo: yields to $pageInfo
                 $pageInfo += @($item)
+
+                # todo: alters $controls
                 $controls.Add($name, $what.Object)
             }
             catch {
@@ -392,6 +425,10 @@ function Get-QformLayout {
     }
 
     End {
+        if ($Progress -and $Progress.Any()) {
+            [void] $Progress.Next({ "New Ok-Cancel buttons" })
+        }
+
         $what = $Builder.NewOkCancelButtons()
 
         $list += @([PsCustomObject]@{
@@ -473,8 +510,13 @@ function Get-QformLayout {
 
         $endButtons.OkButton.Add_Click($action)
 
+        if ($Progress -and $Progress.Any()) {
+            [void] $Progress.Next({ 'Adding post-process scripts' })
+        }
+
         foreach ($item in $list) {
-            $postProcess = $types.Table.($item.Type) |
+            $postProcess =
+                $types.Table.($item.Type) |
                 Get-PropertyOrDefault `
                     -Name PostProcess `
                     -Default $null
@@ -497,7 +539,11 @@ function Get-QformLayout {
 }
 
 function Convert-CommandInfoToPageInfo {
+    [OutputType([PsCustomObject[]])]
     Param(
+        [System.Management.Automation.CommandInfo]
+        $CommandInfo,
+
         [String]
         $ParameterSetName,
 
@@ -532,15 +578,19 @@ function Convert-CommandInfoToPageInfo {
 
     $pageInfo = foreach ($parameterSet in $parameterSets) {
         [PsCustomObject]@{
-            Name = $parameterSet.Name
-            MenuSpecs = $parameterSet.Parameters | Where-Object {
-                $IncludeCommonParameters `
-                    -or -not (Test-IsCommonParameter -ParameterInfo $_)
-            } | ForEach-Object {
-                ConvertTo-QformParameter `
-                    -ParameterInfo $_ `
-                    -IgnoreLists:$IgnoreLists
-            }
+            Name =
+                $parameterSet.Name
+            MenuSpecs =
+                $parameterSet.Parameters |
+                Where-Object {
+                    $IncludeCommonParameters `
+                        -or -not (Test-IsCommonParameter -ParameterInfo $_)
+                } |
+                ForEach-Object {
+                    ConvertTo-QformParameter `
+                        -ParameterInfo $_ `
+                        -IgnoreLists:$IgnoreLists
+                }
         }
     }
 

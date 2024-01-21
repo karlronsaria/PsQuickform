@@ -797,7 +797,12 @@ function ConvertTo-QformString {
         $outStr += switch -Regex ($value.GetType().Name) {
             'String' {
                 if (-not [String]::IsNullOrEmpty($value)) {
-                    " -$name `"$value`""
+                    if ($value -match "^\$\(.*\)$") {
+                        " -$name $value"
+                    }
+                    else {
+                        " -$name `"$value`""
+                    }
                 }
             }
 
@@ -936,6 +941,7 @@ function Show-QformMenuForCommand {
         $preferences = Get-QformPreference `
             -Preferences ([PsCustomObject]@{
                 Caption = "Command: $CommandName"
+                DeferScripts = $true
             })
 
         $info = Convert-CommandInfoToPageInfo `
