@@ -327,9 +327,11 @@ function Get-QformLayout {
     Begin {
         $mandates = @()
         $patterns = @()
+        $scripts = @()
         $list = @()
         $pageInfo = @()
         $controls = @{}
+        $hasLog = $false
 
         $deferScripts =
             $Builder.Preferences |
@@ -347,10 +349,6 @@ function Get-QformLayout {
 
                 if ($Progress -and $Progress.Any()) {
                     [void] $Progress.Next({ "New $($item.Type) element: `"$name`"" })
-                }
-
-                if ($item.Type -eq 'Script' -and $deferScripts) {
-                    $item.Type = 'DeferredScript'
                 }
 
                 $mandatory = $item | Get-PropertyOrDefault `
@@ -404,6 +402,23 @@ function Get-QformLayout {
                     })
                 }
 
+                switch ($item.Type) {
+                    'Script' {
+                        if ($deferScripts) {
+                            $item.Type = 'DeferredScript'
+                        }
+
+                        $scripts += @([PsCustomObject]@{
+                            Type = $item.Type
+                            Control = $what.Object
+                        })
+                    }
+
+                    'Log' {
+                        $hasLog = $true
+                    }
+                }
+
                 # todo: yields to $list
                 $list += @([PsCustomObject]@{
                     Name = $name
@@ -429,6 +444,32 @@ function Get-QformLayout {
             [void] $Progress.Next({ "New Ok-Cancel buttons" })
         }
 
+        if (-not $hasLog -and $scripts.Count -gt 0) {
+            $item = [PsCustomObject]@{
+                Name = '__Log__'
+                Text = 'Error Log'
+                Type = 'Log'
+            }
+
+            $newParams = @{
+                Item = $item
+                Builder = $Builder
+                Text = $item.Text
+            }
+
+            $what = & $types.Table.Log.New @newParams
+
+            $list += @([PsCustomObject]@{
+                Name = $item.Name
+                Type = $item.Type
+                Container = $what.Container
+                Object = $what.Object
+            })
+
+            $pageInfo += @($item)
+            $controls.Add($item.Name, $what.Object)
+        }
+
         $what = $Builder.NewOkCancelButtons()
 
         $list += @([PsCustomObject]@{
@@ -447,7 +488,7 @@ function Get-QformLayout {
             }
         ))
 
-        $action = if (($mandates.Count + $patterns.Count) -eq 0) {
+        $action = if (($mandates.Count + $patterns.Count + $scripts.Count) -eq 0) {
             $Builder.NewClosure(
                 $Window,
                 {
@@ -461,6 +502,7 @@ function Get-QformLayout {
                 Window = $Window
                 Mandates = $mandates
                 Patterns = $patterns
+                Scripts = $scripts
                 Builder = $Builder
             }
 
@@ -502,6 +544,26 @@ function Get-QformLayout {
                         }
                     }
 
+                    foreach ($item in $Parameters.Scripts) {
+                        try {
+                            $value =
+                                $item.Control |
+                                foreach ($Parameters.
+                                    Types.
+                                    Table.
+                                    ($item.Type).
+                                    GetValue
+                                )
+
+                            if ($item.Type -eq 'DeferredScript') {
+                                iex $value
+                            }
+                        }
+                        catch {
+                            throw $_
+                        }
+                    }
+
                     $Parameters.Window.DialogResult = $true
                     $Parameters.Window.Close()
                 }
@@ -530,7 +592,8 @@ function Get-QformLayout {
                 -Controls $controls `
                 -Types $types `
                 -ItemName $item.Name `
-                -Logger $Builder.Logger
+                -Logger $Builder.Logger |
+                Out-Null
         }
 
         # todo: change return type, due to redundant use of Controls table

@@ -534,6 +534,7 @@ class Qform {
         $progress.Complete()
     }
 
+    # todo: Make this properly
     hidden [void] InitKeyBindings() {
         $prefs = $this.
             Pages[$this.MyIndex.Invoke($this)[0]].

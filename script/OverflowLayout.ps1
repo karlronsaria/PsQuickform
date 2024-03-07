@@ -61,6 +61,7 @@ function Add-ControlToScrollPanel {
     $Control.Margin = $Builder.Preferences.Margin
 
     $ScrollPanel.ChildPanel.AddChild($Control)
+
     return $ScrollPanel
 }
 
@@ -118,9 +119,9 @@ function Add-ControlToMultipanel {
         $Control.Height = $Control.DesiredSize.Height
         $Control.Margin = $Builder.Preferences.Margin
 
-        $Multipanel.CurrentHeight `
-            + $Control.DesiredSize.Height `
-            + (2 * $Builder.Preferences.Margin)
+        $Multipanel.CurrentHeight +
+            $Control.DesiredSize.Height +
+            (2 * $Builder.Preferences.Margin)
     }
 
     $needNewSublayout =

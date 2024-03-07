@@ -48,7 +48,7 @@ Table = [PsCustomObject]@{
             $maxLength = $Item | Get-PropertyOrDefault `
                 -Name MaxLength
 
-            return $([Controls]::NewFieldBox(
+            return $($Builder.NewFieldBox(
                 $Text,
                 $Mandatory,
                 $maxLength,
@@ -65,11 +65,9 @@ Table = [PsCustomObject]@{
                     ItemName = $ItemName
                 },
                 {
-                    Param($Exception)
-
                     $control = $Parameters.Controls[$Parameters.ItemName]
                     $control.Text =
-                        "$($control.Text)`n`n$($Exception | Out-String)"
+                        "$($control.Text)`n`n$($_ | Out-String)"
                 }
             )
 
