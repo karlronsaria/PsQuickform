@@ -23,7 +23,7 @@ class Controls {
     ) {
         $this.Preferences = $Preferences.PsObject.Copy()
 
-        $temp = cat "$PsScriptRoot/../res/text.json" |
+        $temp = Get-Content "$PsScriptRoot/../res/text.json" |
             ConvertFrom-Json
 
         $this.Help = $temp.Help
@@ -42,7 +42,7 @@ class Controls {
 
     Controls() {
         $this.Init(
-            (cat "$PsScriptRoot/../res/preference.json" |
+            (Get-Content "$PsScriptRoot/../res/preference.json" |
                 ConvertFrom-Json),
             [Controls]::NewControl('Label'),
             [Logger]::new()
@@ -472,7 +472,7 @@ Retreived: 2022_03_02
             {
                 $listBox = $Parameters
 
-                $items = $listBox.Items | sort | foreach {
+                $items = $listBox.Items | Sort-Object | foreach {
                     [String]::new($_)
                 }
 
@@ -611,7 +611,7 @@ Retreived: 2022_03_02
         [Switch]
         $IsField
     ) {
-        $style = (cat "$PsScriptRoot\..\res\setting.json" |
+        $style = (Get-Content "$PsScriptRoot\..\res\setting.json" |
             ConvertFrom-Json).
             CodeBlockStyle
 

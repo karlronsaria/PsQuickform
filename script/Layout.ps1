@@ -191,7 +191,7 @@ function Get-QformResource {
     Begin {
         $root =
             dir "$PsScriptRoot/../res/properties.json" |
-            cat |
+            Get-Content |
             ConvertFrom-Json
     }
 
@@ -256,7 +256,7 @@ function Get-QformPreference {
         if ($null -eq $ReferencePreferences) {
             $ReferencePreferences =
                 dir "$PsScriptRoot/../res/preference.json" |
-                cat |
+                Get-Content |
                 ConvertFrom-Json
         }
     }

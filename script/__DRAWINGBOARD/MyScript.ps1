@@ -6,7 +6,7 @@ $levels = 2
 . "$PsScriptRoot/$('../' * ($levels - 1))Controls.ps1"
 . "$PsScriptRoot/$('../' * ($levels - 1))Qform.ps1"
 
-# $formInfo = cat "$PsScriptRoot/$('../' * $levels)sample/myform.json" |
+# $formInfo = Get-Content "$PsScriptRoot/$('../' * $levels)sample/myform.json" |
 #     ConvertFrom-Json
 # 
 # return $formInfo.Preferences
