@@ -1,5 +1,19 @@
 # issue
 
+- [ ] 2025_01_03_065810
+
+  - when
+
+    ```powershell
+    Invoke-QformCommand Get-Item
+    ```
+
+    Click ``New`` in a list box
+
+  - actual
+
+    ![2025_01_03_065821](./res/2025_01_03_065821.png)
+
 - [ ] 2023_11_19_002106
 
   - when: Qform open
