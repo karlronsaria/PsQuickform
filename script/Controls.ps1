@@ -348,7 +348,7 @@ Retreived: 2022_03_02
                     $index = $listBox.Items.Count - 1
                 }
 
-                $listBox.Items[$index] = $this.ShowTextDialog(
+                $listBox.Items[$index] = $Parameters.This.ShowTextDialog(
                     $listBox.Items[$index],
                     'Edit ListBox Item',
                     $maxLength
@@ -374,7 +374,7 @@ Retreived: 2022_03_02
                     return
                 }
 
-                $listBox.Items[$index] = $this.ShowTextDialog(
+                $listBox.Items[$index] = $Parameters.This.ShowTextDialog(
                     $listBox.Items[$index],
                     'Edit ListBox Item',
                     $maxLength

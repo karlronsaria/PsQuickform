@@ -1,6 +1,32 @@
 # issue
 
-- [ ] 2025_01_03_065810
+- [ ] 2025_01_04_024250
+
+  - when
+
+    ```powershell
+    Invoke-QformCommand foreach-object
+    ```
+
+  - actual
+
+    ![2025_01_04_024317](./res/2025_01_04_024317.png)
+
+  - expected
+    - the ``Process`` element has a ``ScriptBlock`` list type
+
+- [ ] 2023_11_19_002106
+
+  - when: Qform open
+  - howto
+    1. focus Field control
+    2. <[kbd](kbd)>Ctl + O</kbd>
+  - actual: ``OpenFileDialog`` only selects folders
+  - expected: ``OpenFileDialog`` selects files and folders
+
+## complete
+
+- [x] 2025_01_03_065810
 
   - when
 
@@ -13,15 +39,6 @@
   - actual
 
     ![2025_01_03_065821](./res/2025_01_03_065821.png)
-
-- [ ] 2023_11_19_002106
-
-  - when: Qform open
-  - howto
-    1. focus Field control
-    2. <[kbd](kbd)>Ctl + O</kbd>
-  - actual: ``OpenFileDialog`` only selects folders
-  - expected: ``OpenFileDialog`` selects files and folders
 
 - [x] 2023_12_28_230434
 
