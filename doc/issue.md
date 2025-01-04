@@ -1,14 +1,5 @@
 # issue
 
-- [ ] 2025_01_04_025043
-
-  - when
-    - leaving a ``DeferredScript`` blank
-  - actual
-    - evaluates as ``"$()"``
-  - expected
-    - does not evaluate
-
 - [ ] 2025_01_04_024250
 
   - when
@@ -34,6 +25,15 @@
   - expected: ``OpenFileDialog`` selects files and folders
 
 ## complete
+
+- [x] 2025_01_04_025043
+
+  - when
+    - leaving a ``DeferredScript`` blank
+  - actual
+    - evaluates as ``"$()"``
+  - expected
+    - does not evaluate
 
 - [x] 2025_01_03_065810
 

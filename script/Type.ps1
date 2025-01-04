@@ -241,7 +241,13 @@ Table = [PsCustomObject]@{
         )
         HasAny = $script:default.TextHasAny
         GetValue = {
-            "`$($($_.Text))"
+            # todo
+            if (($_ | & $script:default.TextHasAny)) {
+                "`$($($_.Text))"
+            }
+            else {
+                $null
+            }
         }
         New = {
             [OutputType([PageElementControl])]

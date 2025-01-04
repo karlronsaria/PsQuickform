@@ -556,7 +556,12 @@ function Get-QformLayout {
                                 )
 
                             if ($item.Type -eq 'DeferredScript') {
-                                iex $value
+                                if ($null -eq $value) {
+                                    $null
+                                }
+                                else {
+                                    iex $value
+                                }
                             }
                         }
                         catch {

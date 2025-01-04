@@ -336,7 +336,7 @@ Retreived: 2022_03_02
                 if ($null -ne $maxCount `
                     -and $listBox.Items.Count -eq $maxCount)
                 {
-                    $parameters.This.SetStatus('MaxCountReached')
+                    $Parameters.This.SetStatus('MaxCountReached')
                     return
                 }
 
@@ -359,14 +359,14 @@ Retreived: 2022_03_02
         $parameters = [PsCustomObject]@{
             ListBox = $listBox
             MaxLength = $MaxLength
-            Preferences = $this.Preferences
+            This = $this
         }
 
         $actionTable['Edit'] = $this.NewClosure(
             $parameters,
             {
                 $listBox = $Parameters.ListBox
-                $prefs = $this.Parameters.Preferences
+                $prefs = $Parameters.This.Preferences
                 $maxLength = $Parameters.MaxLength
                 $index = $listBox.SelectedIndex
 
