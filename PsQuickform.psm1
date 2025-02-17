@@ -5,6 +5,7 @@
 . $PsScriptRoot\script\Progress.ps1
 . $PsScriptRoot\script\Qform.ps1
 . $PsScriptRoot\script\Quickform.ps1
+. $PsScriptRoot\script\Utility.ps1
 
 Export-ModuleMember -Function @(
 
@@ -23,5 +24,10 @@ Export-ModuleMember -Function @(
 
     ## I absolutely believe I should NOT need to expose these functions.
     ## -----------------------------------------------------------------
-    'Get-QformResource'
+    'Get-QformResource',
+
+    ## (karlr 2025_02_14)
+    ## ------------------
+    'Select-QformImagePreview'
 )
+

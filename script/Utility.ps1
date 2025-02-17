@@ -168,14 +168,15 @@ function Select-QformImagePreview {
             } |
             foreach {
                 [PsCustomObject]@{
-                    Position = $_
+                    Index = $_
                     File = $files[$_]
                 }
             }
 
         return [PsCustomObject]@{
-            Result = $result
+            Confirm = $result
             Images = $images
         }
     }
 }
+
