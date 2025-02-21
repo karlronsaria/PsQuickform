@@ -66,7 +66,7 @@ class Logger {
 .LINK
 Issue: Event handler fails to update variable from outer scope
 Url: <https://stackoverflow.com/questions/55403528/why-wont-variable-update>
-Retreived: 2022_03_02
+Retreived: 2022-03-02
 #>
 function New-Closure {
     [CmdletBinding(DefaultParameterSetName = 'Throwing')]

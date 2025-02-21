@@ -48,7 +48,7 @@ function Select-QformImagePreview {
 
         # link
         # - url: <https://stackoverflow.com/questions/1927540/how-to-get-the-size-of-the-current-screen-in-wpf>
-        # - retrieved: 2022_08_28
+        # - retrieved: 2022-08-28
         $scrollViewer.MaxHeight =
             [System.Windows.SystemParameters]::WorkArea.Height - 200
 

@@ -6,7 +6,7 @@
     "ConfirmType": "TrueOrFalse",
     "EnterToConfirm": true,
     "EscapeToCancel": true,
-    "DateFormat": "yyyy_MM_dd",
+    "DateFormat": "yyyy-MM-dd",
     "LogHeight": 300,
 
     "NumericMinimum": -9999,

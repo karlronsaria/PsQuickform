@@ -8,17 +8,17 @@ Create Windows forms on the fly using terse document object specifications.
 
 - tonsky/FiraCode
   - url: https://github.com/tonsky/FiraCode
-  - retrieved: 2023_11_19
+  - retrieved: 2023-11-19
 
 ## Cmdlets
 
 ### Show-QformMenu
 
-![Show-QformMenu](./res/2022_03_10_185307_Show-QformMenu.gif)
+![Show-QformMenu](./res/2022-03-10-185307_Show-QformMenu.gif)
 
 ### Invoke-QformCommand
 
-![Invoke-QformCommand](./res/2022_03_10_185307_Invoke-QformCommand.gif)
+![Invoke-QformCommand](./res/2022-03-10-185307_Invoke-QformCommand.gif)
 
 ## Objects
 
@@ -42,7 +42,7 @@ JSON Example:
 }
 ```
 
-![2022_03_10_020921](./res/2022_03_10_020921.png)
+![2022-03-10-020921](./res/2022-03-10-020921.png)
 
 ##### Field
 
@@ -60,7 +60,7 @@ JSON Example:
 }
 ```
 
-![2022_03_10_023018](./res/2022_03_10_023018.png)
+![2022-03-10-023018](./res/2022-03-10-023018.png)
 
 ##### Enum
 
@@ -96,7 +96,7 @@ JSON Example:
 }
 ```
 
-![2022_03_10_023557](./res/2022_03_10_023557.png)
+![2022-03-10-023557](./res/2022-03-10-023557.png)
 
 When `Mandatory` is omitted or set `false`, a 'None' button is added to the box and set by default.
 
@@ -118,7 +118,7 @@ JSON Example:
 }
 ```
 
-![2022_03_10_023739](./res/2022_03_10_023739.png)
+![2022-03-10-023739](./res/2022-03-10-023739.png)
 
 ##### Numeric
 
@@ -136,7 +136,7 @@ JSON Example:
 }
 ```
 
-![2022_03_10_023904](./res/2022_03_10_023904.png)
+![2022-03-10-023904](./res/2022-03-10-023904.png)
 
 ##### List
 
@@ -157,7 +157,7 @@ JSON Example:
 }
 ```
 
-![2022_03_12_071636](./res/2022_03_12_071636.png)
+![2022-03-12-071636](./res/2022-03-12-071636.png)
 
 #### Common Properties
 
@@ -214,7 +214,7 @@ An example form in JSON:
 
 The resulting form:
 
-![2022_03_10_014837](./res/2022_03_10_014837.png)
+![2022-03-10-014837](./res/2022-03-10-014837.png)
 
 PowerShell Output returned by the form:
 

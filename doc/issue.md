@@ -1,6 +1,6 @@
 # issue
 
-- [ ] 2025_01_04_024250
+- [ ] 2025-01-04-024250
 
   - when
 
@@ -10,12 +10,12 @@
 
   - actual
 
-    ![2025_01_04_024317](./res/2025_01_04_024317.png)
+    ![2025-01-04-024317](./res/2025-01-04-024317.png)
 
   - expected
     - the ``Process`` element has a ``ScriptBlock`` list type
 
-- [ ] 2023_11_19_002106
+- [ ] 2023-11-19-002106
 
   - when: Qform open
   - howto
@@ -26,7 +26,7 @@
 
 ## complete
 
-- [x] 2025_01_04_025043
+- [x] 2025-01-04-025043
 
   - when
     - leaving a ``DeferredScript`` blank
@@ -35,7 +35,7 @@
   - expected
     - does not evaluate
 
-- [x] 2025_01_03_065810
+- [x] 2025-01-03-065810
 
   - when
 
@@ -47,19 +47,19 @@
 
   - actual
 
-    ![2025_01_03_065821](./res/2025_01_03_065821.png)
+    ![2025-01-03-065821](./res/2025-01-03-065821.png)
 
-- [x] 2023_12_28_230434
+- [x] 2023-12-28-230434
 
   - actual: Enum As DropDown cannot return Pair
 
-- [x] 2023_11_19_002430
+- [x] 2023-11-19-002430
 
   - when: Qform open with refresh control instead of tab control
   - howto: use ``Get-QformMenu`` but set ``IsTabControl`` to ``False``
   - actual: page line missing
 
-- [x] 2023_11_14_233637
+- [x] 2023-11-14-233637
 
   - when: ``Show-QformMenu`` by ``-Command``
   - what: MenuAnswers only ever marshalls from the first tab in
@@ -70,8 +70,8 @@
     $result = Show-QformMenu -Command Qualify-Object
     ```
 
-    ![2023_11_15_194852](./res/2023_11_15_194852.png)
-    ![2023_11_15_194917](./res/2023_11_15_194917.png)
+    ![2023-11-15-194852](./res/2023-11-15-194852.png)
+    ![2023-11-15-194917](./res/2023-11-15-194917.png)
 
     ```powershell
     $result.MenuAnswers
@@ -93,7 +93,7 @@
     the         {Length}    False
     ```
 
-- [x] 2023_11_11_153220
+- [x] 2023-11-11-153220
 
   - ``Show-QformMenu`` fails on some PowerShell profiles
   - howto
@@ -122,10 +122,10 @@
   - actual
     - program hangs indefinitely and takes a long time to force-terminate
 
-- [x] 2023_04_17_015015
+- [x] 2023-04-17-015015
 
   - actual
-    ![2023_04_17_015102](./res/2023_04_17_015102.png)
+    ![2023-04-17-015102](./res/2023-04-17-015102.png)
 
     ```powershell
     C:\Users\karlr\Downloads\__POOL> .\MyScript.ps1
@@ -135,7 +135,7 @@
        True
     ```
 
-- [x] 2023_04_04_004414
+- [x] 2023-04-04-004414
 
   - when: calling ``Show-QformMenu`` with a set of specs containing a table
   - actual: truncated table
@@ -149,7 +149,7 @@
   - todo
     - [x] permanent solution for all overflow layout types
 
-- [x] 2023_03_20_234805
+- [x] 2023-03-20-234805
 
   - where: ``Controls#Add-ControlsListBox``
     - no multiselect

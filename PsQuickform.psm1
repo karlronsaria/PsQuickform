@@ -26,7 +26,7 @@ Export-ModuleMember -Function @(
     ## -----------------------------------------------------------------
     'Get-QformResource',
 
-    ## (karlr 2025_02_14)
+    ## (karlr 2025-02-14)
     ## ------------------
     'Select-QformImagePreview'
 )

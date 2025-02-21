@@ -61,7 +61,7 @@ class Controls {
 .LINK
 Url: <https://stackoverflow.com/questions/20423211/setting-cursor-at-the-end-of-any-text-of-a-textbox>
 Url: <https://stackoverflow.com/users/1042848/vishal-suthar>
-Retreived: 2022_03_02
+Retreived: 2022-03-02
 #>
     static [void] SetWriteableText(
         [System.Windows.Controls.Control]
@@ -539,7 +539,7 @@ Retreived: 2022_03_02
                         $Parameters.This.SetStatus('TextClipped')
                     }
 
-                    # karlr (2023_11_18_233610): Not necessary when using
+                    # karlr (2023-11-18-233610): Not necessary when using
                     # mnemonics. Cannot currently get mnemonics to work
                     # properly when multiple ListBox's appear in form.
                     if ([System.Windows.Input.Keyboard]::IsKeyDown('N')) {
@@ -992,7 +992,7 @@ Retreived: 2022_03_02
 <#
 .LINK
 Url: <https://stackoverflow.com/questions/560581/how-to-autosize-and-right-align-gridviewcolumn-data-in-wpf>
-Retrieved: 2023_03_16
+Retrieved: 2023-03-16
 #>
     static [ScriptBlock] $SetColumnPreferredSize = {
         Param(
@@ -1038,7 +1038,7 @@ Retrieved: 2023_03_16
         $label.Content = 'Find in table:'
         $stackPanel.AddChild($label)
 
-        # karlr (2023_03_14)
+        # karlr (2023-03-14)
         $grid = [Controls]::NewControl('Grid')
 
         $asterism = if ($Asterized) {

@@ -203,7 +203,7 @@ function ConvertTo-Hashtable {
     .LINK
     Url: <https://stackoverflow.com/questions/3689543/is-there-a-way-to-retrieve-a-powershell-function-name-from-within-a-function>
     Url: <https://stackoverflow.com/users/7407752/jakobii>
-    Retrieved: 2022_03_05
+    Retrieved: 2022-03-05
 #>
 function Get-ThisFunctionName {
     Param(
